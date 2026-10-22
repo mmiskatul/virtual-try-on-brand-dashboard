@@ -1,9 +1,9 @@
 /**
  * Production API Client for Brand Dashboard
- * Handles authenticated communication with brand-api (:4001) and ai-service (:8000)
+ * Handles authenticated communication with backend-api (:4000) and ai-service (:8000)
  */
 
-const BRAND_API_URL = process.env.NEXT_PUBLIC_BRAND_API_URL || 'http://localhost:4001';
+const BRAND_API_URL = process.env.NEXT_PUBLIC_BRAND_API_URL || 'http://localhost:4000';
 const AI_SERVICE_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:8000';
 
 export class ApiError extends Error {
