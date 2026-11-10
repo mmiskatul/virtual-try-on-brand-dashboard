@@ -125,15 +125,18 @@ export async function middleware(request: NextRequest) {
     }
 
     if (request.method === 'OPTIONS') {
+      const preflightHeaders: Record<string, string> = {
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-tenant-id, x-client-version',
+        'Access-Control-Max-Age': '86400',
+      };
+      if (origin && isOriginAllowed(origin)) {
+        preflightHeaders['Access-Control-Allow-Origin'] = origin;
+        preflightHeaders['Access-Control-Allow-Credentials'] = 'true';
+      }
       return new NextResponse(null, {
         status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': origin || '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-tenant-id, x-client-version',
-          'Access-Control-Allow-Credentials': 'true',
-          'Access-Control-Max-Age': '86400',
-        },
+        headers: preflightHeaders,
       });
     }
   }
@@ -202,8 +205,9 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET || 'vton-brand-dashboard-fallback-secret-key-32chars',
   });
 
-  // 5. Block unauthorized merchant requests at the edge
-  if (!token) {
+  // 5. Block unauthorized or non-merchant requests at the edge
+  const isMerchantRole = token?.role === 'BRAND_OWNER' || token?.role === 'STORE_MANAGER';
+  if (!token || !isMerchantRole) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json(
         {
@@ -233,7 +237,9 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set('x-edge-routed', 'true');
   requestHeaders.set('x-edge-runtime', 'vercel-edge-v8');
   requestHeaders.set('x-auth-user-id', (token.id as string) || (token.sub as string) || '');
-  requestHeaders.set('x-auth-tenant-id', (token.tenantId as string) || 'tenant_aura');
+  if (token.tenantId) {
+    requestHeaders.set('x-auth-tenant-id', token.tenantId as string);
+  }
   requestHeaders.set('x-auth-role', (token.role as string) || 'BRAND_OWNER');
   requestHeaders.set('x-auth-verified-edge', 'true');
 
@@ -249,7 +255,9 @@ export async function middleware(request: NextRequest) {
   response.headers.set('x-frame-options', 'DENY');
   response.headers.set('x-xss-protection', '1; mode=block');
   response.headers.set('x-edge-runtime', 'vercel-edge-v8');
-  response.headers.set('x-auth-tenant-id', (token.tenantId as string) || 'tenant_aura');
+  if (token.tenantId) {
+    response.headers.set('x-auth-tenant-id', token.tenantId as string);
+  }
 
   // Rate Limiting headers
   response.headers.set('X-RateLimit-Limit', String(rateLimit.limit));
