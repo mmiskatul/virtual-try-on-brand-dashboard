@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { RefreshCw, User, LogOut } from 'lucide-react';
 import { BrandProfile } from '../../types';
 
@@ -14,6 +15,13 @@ interface HeaderProps {
 
 export function BrandHeader({ activeTab, brand, onRefresh }: HeaderProps) {
   const { data: session } = useSession();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (session?.backendToken) {
+      localStorage.setItem('brand_token', session.backendToken);
+    }
+  }, [session?.backendToken]);
 
   const titles: Record<string, string> = {
     overview: 'Brand Command Center',
@@ -58,7 +66,10 @@ export function BrandHeader({ activeTab, brand, onRefresh }: HeaderProps) {
             )}
             <span className="font-semibold text-white">{session.user.name || brand.owner}</span>
             <button
-              onClick={() => signOut()}
+              onClick={() => {
+                if (typeof window !== 'undefined') localStorage.removeItem('brand_token');
+                signOut({ callbackUrl: '/login' });
+              }}
               title="Sign Out"
               className="ml-1 text-slate-400 hover:text-rose-400 transition-colors"
             >
@@ -66,13 +77,13 @@ export function BrandHeader({ activeTab, brand, onRefresh }: HeaderProps) {
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => signIn('credentials', { email: 'elena@auraatelier.com' })}
+          <Link
+            href="/login"
             className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1.5"
           >
             <User className="w-3.5 h-3.5" />
             <span>Merchant Sign In</span>
-          </button>
+          </Link>
         )}
 
         <button

@@ -6,6 +6,12 @@
 const BRAND_API_URL = process.env.NEXT_PUBLIC_BRAND_API_URL || 'http://localhost:4000';
 const AI_SERVICE_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:8000';
 
+export interface DevEmailPreview {
+  actionUrl?: string;
+  otpCode?: string;
+  expiresInMinutes?: number;
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string, public data?: any) {
     super(message);
@@ -46,11 +52,75 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const brandApi = {
-  // Authentication
+  // Authentication & Recovery
   login: (credentials: { email: string; password: string }) => {
-    return request<{ token: string; user: any }>(`${BRAND_API_URL}/api/v1/auth/login`, {
+    return request<{ token: string; user: any; tenant?: any }>(`${BRAND_API_URL}/api/v1/auth/login`, {
       method: 'POST',
       body: JSON.stringify(credentials)
+    });
+  },
+
+  register: (payload: {
+    brandName: string;
+    slug: string;
+    ownerName: string;
+    email: string;
+    password: string;
+  }) => {
+    return request<{
+      message: string;
+      requiresEmailVerification: boolean;
+      user: any;
+      tenant: any;
+      devPreview?: DevEmailPreview;
+    }>(`${BRAND_API_URL}/api/v1/auth/register`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  verifyEmail: (payload: { token?: string; email?: string; code?: string }) => {
+    return request<{ message: string; user: any }>(`${BRAND_API_URL}/api/v1/auth/verify-email`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  resendVerification: (email: string) => {
+    return request<{
+      message: string;
+      alreadyVerified?: boolean;
+      devPreview?: DevEmailPreview;
+    }>(`${BRAND_API_URL}/api/v1/auth/resend-verification`, {
+      method: 'POST',
+      body: JSON.stringify({ email, portal: 'brand' })
+    });
+  },
+
+  forgotPassword: (email: string) => {
+    return request<{ message: string; devPreview?: DevEmailPreview }>(
+      `${BRAND_API_URL}/api/v1/auth/forgot-password`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, portal: 'brand' })
+      }
+    );
+  },
+
+  verifyResetToken: (payload: { token?: string; email?: string; code?: string }) => {
+    return request<{ valid: boolean; email: string; expiresAt: number }>(
+      `${BRAND_API_URL}/api/v1/auth/verify-reset-token`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }
+    );
+  },
+
+  resetPassword: (payload: { token?: string; email?: string; code?: string; newPassword: string }) => {
+    return request<{ message: string }>(`${BRAND_API_URL}/api/v1/auth/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, portal: 'brand' })
     });
   },
 

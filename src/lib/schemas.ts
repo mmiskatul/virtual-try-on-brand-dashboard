@@ -51,3 +51,54 @@ export const fabricSchema = z.object({
 });
 
 export type FabricFormValues = z.infer<typeof fabricSchema>;
+
+const strongPasswordField = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(128, 'Password cannot exceed 128 characters')
+  .regex(/[A-Za-z]/, 'Password must include at least one letter')
+  .regex(/[0-9]/, 'Password must include at least one number');
+
+export const brandLoginSchema = z.object({
+  email: z.string().email('Please enter a valid business email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+export type BrandLoginFormValues = z.infer<typeof brandLoginSchema>;
+
+export const brandRegisterSchema = z
+  .object({
+    brandName: z.string().min(2, 'Brand name must be at least 2 characters').max(80),
+    slug: z
+      .string()
+      .min(2, 'Storefront slug must be at least 2 characters')
+      .max(50)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must use lowercase letters, numbers, and hyphens only'),
+    ownerName: z.string().min(2, 'Owner full name must be at least 2 characters').max(80),
+    email: z.string().email('Please enter a valid business email address'),
+    password: strongPasswordField,
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
+export type BrandRegisterFormValues = z.infer<typeof brandRegisterSchema>;
+
+export const verifyEmailSchema = z.object({
+  email: z.string().email('Please enter your business email address'),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Verification code must be exactly 6 digits'),
+});
+
+export type VerifyEmailFormValues = z.infer<typeof verifyEmailSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid business email address'),
+});
+
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+

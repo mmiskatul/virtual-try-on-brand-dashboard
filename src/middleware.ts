@@ -8,6 +8,12 @@ export const config = {
 
 // Public paths that do not require Brand Owner authentication
 const PUBLIC_PREFIXES = [
+  '/login',
+  '/register',
+  '/verify-email',
+  '/forgot-password',
+  '/forget-password',
+  '/reset-password',
   '/storefront',
   '/api/edge/storefront',
   '/api/auth',
@@ -103,6 +109,9 @@ function checkEdgeRateLimit(
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === '/forget-password') {
+    return NextResponse.redirect(new URL('/forgot-password', request.url));
+  }
   const origin = request.headers.get('origin');
   const clientIp = request.ip || request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
 
@@ -212,7 +221,7 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    const signInUrl = new URL('/api/auth/signin', request.url);
+    const signInUrl = new URL('/login', request.url);
     signInUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);
   }
