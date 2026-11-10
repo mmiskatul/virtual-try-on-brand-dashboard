@@ -88,7 +88,6 @@ const MERCHANT_SECRETS_TO_PROTECT: Array<[string | undefined, string]> = [
   [process.env.NEXTAUTH_SECRET, 'NEXTAUTH_SECRET'],
   [process.env.BRAND_API_KEY, 'BRAND_API_KEY'],
   [process.env.STRIPE_CONNECT_SECRET, 'STRIPE_CONNECT_SECRET'],
-  [process.env.INTERNAL_SERVICE_KEY, 'INTERNAL_SERVICE_KEY'],
   [process.env.DATABASE_URL, 'DATABASE_URL'],
 ];
 
