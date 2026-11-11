@@ -6,6 +6,7 @@ if (process.env.NODE_ENV !== 'production' && !process.env.NEXTAUTH_URL) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   experimental: {
     taint: true,
     instrumentationHook: true,
