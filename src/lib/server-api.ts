@@ -5,7 +5,7 @@ import { Product } from '../types';
  * Fetches merchant brand catalog with Next.js extended fetch options and granular cache tags.
  */
 export async function getBrandServerProducts(): Promise<Product[]> {
-  const brandApiUrl = process.env.NEXT_PUBLIC_BRAND_API_URL || 'http://localhost:4000';
+  const brandApiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
 
   try {
     const res = await fetch(`${brandApiUrl}/api/products`, {

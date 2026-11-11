@@ -76,7 +76,7 @@ export async function GET(
   let store = BRAND_STOREFRONTS[slug];
 
   // Try fetching upstream from brand-api microservice
-  const brandApiUrl = process.env.NEXT_PUBLIC_BRAND_API_URL;
+  const brandApiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
   if (brandApiUrl) {
     try {
       const controller = new AbortController();

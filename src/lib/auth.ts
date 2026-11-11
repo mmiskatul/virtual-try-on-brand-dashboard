@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 
 const BACKEND_API_URL =
-  process.env.BRAND_API_URL || process.env.NEXT_PUBLIC_BRAND_API_URL || 'http://localhost:4000';
+  process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
 
 const providers: NextAuthOptions['providers'] = [
   CredentialsProvider({

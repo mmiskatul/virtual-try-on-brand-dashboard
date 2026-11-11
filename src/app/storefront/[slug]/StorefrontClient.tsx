@@ -171,7 +171,7 @@ export function StorefrontClient({ brand, products }: StorefrontClientProps) {
                   onClick={async () => {
                     setTryOnStep('processing');
                     try {
-                      const brandApiUrl = process.env.NEXT_PUBLIC_BRAND_API_URL || 'http://localhost:4000';
+                      const brandApiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
                       const res = await fetch(`${brandApiUrl}/api/v1/try-on/direct`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
