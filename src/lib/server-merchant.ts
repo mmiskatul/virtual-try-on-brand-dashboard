@@ -27,14 +27,15 @@ export interface PublicMerchantDTO {
  * Protects merchant API keys, banking IBANs, and corporate tax registration numbers.
  */
 export async function getTaintedMerchantRecord(tenantId: string = 'tenant_aura'): Promise<RawMerchantRecord> {
+  const runtimeSuffix = crypto.randomUUID().replace(/-/g, '');
   const rawMerchant: RawMerchantRecord = {
     tenantId,
     brandName: 'Aura Atelier',
     contactEmail: 'partnerships@auraatelier.it',
     role: 'BRAND_OWNER',
-    apiKey: 'vton_sk_live_9a8b7c6d5e4f3a2b1c0d9e8f7',
-    payoutIban: 'IT60X0542811101000000123456',
-    taxRegistrationNumber: 'IT12345678901',
+    apiKey: process.env.BRAND_API_KEY || `ephemeral_merchant_${runtimeSuffix}`,
+    payoutIban: process.env.MERCHANT_PAYOUT_IBAN || `EPHEMERAL_IBAN_${runtimeSuffix}`,
+    taxRegistrationNumber: process.env.MERCHANT_TAX_REG || `EPHEMERAL_TAX_${runtimeSuffix}`,
     monthlyRevenueGross: 148500,
   };
 

@@ -214,7 +214,7 @@ export async function middleware(request: NextRequest) {
   // 4. Edge Token Verification using NextAuth JWT
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET || 'vton-brand-dashboard-fallback-secret-key-32chars',
+    secret: process.env.NEXTAUTH_SECRET,
   });
 
   // 5. Block unauthorized or non-merchant requests at the edge
