@@ -129,17 +129,8 @@ function BrandRegisterContent() {
   return (
     <AuthShell
       authTab="register"
-      title="Register your fashion brand"
-      subtitle="Launch your dedicated AI Virtual Try-On storefront and catalog workspace."
-      badge="Brand Onboarding"
-      footer={
-        <p>
-          Already registered?{' '}
-          <Link href="/login" className="text-black hover:text-gray-700 font-semibold">
-            Log in
-          </Link>
-        </p>
-      }
+      title="Create brand account"
+      subtitle="Set up your brand workspace."
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {errorMsg && (

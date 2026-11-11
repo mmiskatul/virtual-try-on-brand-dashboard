@@ -2,11 +2,12 @@
 
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { brandApi } from '../lib/api';
 import { brandWorkspaceApi } from '../services';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 
 export function useBrandSync() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const setLiveSync = useWorkspaceStore((s) => s.setLiveSync);
   const updateProfile = useWorkspaceStore((s) => s.updateProfile);
   const setProducts = useWorkspaceStore((s) => s.setProducts);
@@ -14,16 +15,27 @@ export function useBrandSync() {
   const setFabrics = useWorkspaceStore((s) => s.setFabrics);
 
   const syncNow = async () => {
-    const token =
-      session?.backendToken ||
-      (typeof window !== 'undefined' ? localStorage.getItem('brand_token') : null);
-    if (!token) {
-      setLiveSync(false);
+    if (typeof window !== 'undefined' && localStorage.getItem('brand_token')) {
+      localStorage.removeItem('brand_token');
+    }
+
+    if (status === 'loading') {
       return false;
     }
 
-    if (typeof window !== 'undefined' && session?.backendToken) {
-      localStorage.setItem('brand_token', session.backendToken);
+    let hasSession = Boolean(session?.user?.id);
+    if (!hasSession) {
+      try {
+        const s = await brandApi.session();
+        hasSession = Boolean(s?.authenticated);
+      } catch {
+        hasSession = false;
+      }
+    }
+
+    if (!hasSession) {
+      setLiveSync(false);
+      return false;
     }
 
     try {
@@ -72,7 +84,7 @@ export function useBrandSync() {
   useEffect(() => {
     syncNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.backendToken]);
+  }, [session?.user?.id, status]);
 
   return { syncNow };
 }

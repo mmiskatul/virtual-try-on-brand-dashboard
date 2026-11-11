@@ -3,7 +3,6 @@ import 'next-auth/jwt';
 
 declare module 'next-auth' {
   interface Session {
-    backendToken?: string;
     user: {
       id: string;
       name?: string | null;
@@ -19,7 +18,6 @@ declare module 'next-auth' {
     id: string;
     role?: string;
     tenantId?: string;
-    backendToken?: string;
     emailVerified?: boolean;
   }
 }
@@ -29,7 +27,6 @@ declare module 'next-auth/jwt' {
     id?: string;
     role?: string;
     tenantId?: string;
-    backendToken?: string;
     emailVerified?: boolean;
   }
 }

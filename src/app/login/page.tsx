@@ -63,6 +63,20 @@ function BrandLoginContent() {
     setNeedsVerificationEmail(null);
     setResendMessage(null);
 
+    try {
+      await brandApi.login({ email, password });
+    } catch (err: any) {
+      if (err?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        setNeedsVerificationEmail(email);
+        setErrorMsg('Please verify your business email address before accessing your brand workspace.');
+      } else if (err?.data?.error === 'TenantSuspended') {
+        setErrorMsg('Your brand account has been suspended by platform administration.');
+      } else {
+        setErrorMsg(err?.message || 'Invalid merchant email or password.');
+      }
+      return;
+    }
+
     const result = await signIn('credentials', {
       redirect: false,
       email,
@@ -70,23 +84,15 @@ function BrandLoginContent() {
     });
 
     if (result?.error) {
-      if (result.error === 'EMAIL_NOT_VERIFIED') {
-        setNeedsVerificationEmail(email);
-        setErrorMsg('Please verify your business email address before accessing your brand workspace.');
-      } else if (result.error === 'TENANT_SUSPENDED') {
-        setErrorMsg('Your brand account has been suspended by platform administration.');
-      } else if (result.error === 'SERVICE_UNAVAILABLE') {
+      if (result.error === 'SERVICE_UNAVAILABLE') {
         setErrorMsg('Backend server is unreachable. Please ensure the backend API is running on port 4000.');
       } else {
-        setErrorMsg(result.error === 'CredentialsSignin' ? 'Invalid merchant email or password.' : result.error);
+        setErrorMsg(result.error === 'CredentialsSignin' ? 'Could not verify merchant session.' : result.error);
       }
       return;
     }
 
-    const updatedSession = await getSession();
-    if (updatedSession?.backendToken && typeof window !== 'undefined') {
-      localStorage.setItem('brand_token', updatedSession.backendToken);
-    }
+    await getSession();
 
     if (typeof window !== 'undefined') {
       window.location.assign(callbackUrl);
@@ -118,17 +124,8 @@ function BrandLoginContent() {
   return (
     <AuthShell
       authTab="login"
-      title="Log in to Brand Workspace"
-      subtitle="Manage your garments, fabrics, inventory, orders, and custom storefront."
-      badge="Merchant Account"
-      footer={
-        <p>
-          Launching a new fashion label?{' '}
-          <Link href="/register" className="text-black hover:text-gray-700 font-semibold">
-            Register your brand
-          </Link>
-        </p>
-      }
+      title="Welcome back"
+      subtitle="Sign in to your brand account."
     >
       {session?.user && (
         <div className="p-3.5 rounded-2xl bg-gray-100 border border-gray-300 flex items-center justify-between gap-3 text-xs">
@@ -145,9 +142,9 @@ function BrandLoginContent() {
             </Link>
             <button
               type="button"
-              onClick={() => {
-                if (typeof window !== 'undefined') localStorage.removeItem('brand_token');
-                signOut({ redirect: false });
+              onClick={async () => {
+                const { logoutBrand } = await import('../../lib/logout');
+                await logoutBrand({ redirect: false });
               }}
               className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"
             >
@@ -189,7 +186,7 @@ function BrandLoginContent() {
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-stone-200" />
             <span className="text-[10px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
-              or merchant credentials
+              or
             </span>
             <div className="h-px flex-1 bg-stone-200" />
           </div>
@@ -233,10 +230,10 @@ function BrandLoginContent() {
         )}
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Business Email</label>
+          <label className="block text-xs font-medium text-gray-700">Email</label>
           <Input
             type="email"
-            placeholder="elena@auraatelier.com"
+            placeholder="you@brand.com"
             autoComplete="email"
             {...register('email')}
             className={errors.email ? 'border-rose-500 focus-visible:border-rose-500' : ''}

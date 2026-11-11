@@ -1,6 +1,7 @@
+import { BRAND_API_URL, brandFetch } from '../lib/api';
 import { BrandProfile, Fabric, InventoryMovement, Order, Product } from '../types';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
+const API_BASE = BRAND_API_URL;
 
 export class ServiceError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -9,33 +10,12 @@ export class ServiceError extends Error {
   }
 }
 
-function authHeaders(extra?: Record<string, string>): Headers {
-  const headers = new Headers(extra || {});
-  if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('brand_token');
-    if (token && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-  }
-  return headers;
-}
-
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const isFormData = init.body instanceof FormData;
-    const headers = authHeaders(
-      init.headers ? (Object.fromEntries(new Headers(init.headers).entries()) as Record<string, string>) : undefined
-    );
-    if (isFormData) headers.delete('Content-Type');
-
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await brandFetch(`${API_BASE}${path}`, {
       ...init,
-      headers,
       signal: controller.signal,
       cache: 'no-store',
     });
