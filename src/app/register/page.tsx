@@ -128,6 +128,7 @@ function BrandRegisterContent() {
 
   return (
     <AuthShell
+      authTab="register"
       title="Register your fashion brand"
       subtitle="Launch your dedicated AI Virtual Try-On storefront and catalog workspace."
       badge="Brand Onboarding"
@@ -135,7 +136,7 @@ function BrandRegisterContent() {
         <p>
           Already registered?{' '}
           <Link href="/login" className="text-black hover:text-gray-700 font-semibold">
-            Sign in
+            Log in
           </Link>
         </p>
       }
@@ -201,14 +202,17 @@ function BrandRegisterContent() {
           {...register('confirmPassword')}
         />
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button type="submit" disabled={isSubmitting} className="w-full h-11 font-bold gap-2">
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
+            <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Creating Brand Workspace...
-            </span>
+              <span>Creating Brand Workspace...</span>
+            </>
           ) : (
-            'Create Brand Account'
+            <>
+              <span>Create Brand Account</span>
+              <ArrowRight className="w-4 h-4" />
+            </>
           )}
         </Button>
       </form>

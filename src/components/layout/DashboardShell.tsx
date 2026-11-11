@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Search,
   Settings,
+  ShieldCheck,
   ShoppingBag,
   Sparkles,
   Store,
@@ -97,6 +98,41 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const accountWrapperRef = useRef<HTMLDivElement>(null);
+  const notifWrapperRef = useRef<HTMLDivElement>(null);
+  const quickCreateWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (accountWrapperRef.current && !accountWrapperRef.current.contains(target)) {
+        setAccountMenuOpen(false);
+      }
+      if (notifWrapperRef.current && !notifWrapperRef.current.contains(target)) {
+        setNotifOpen(false);
+      }
+      if (quickCreateWrapperRef.current && !quickCreateWrapperRef.current.contains(target)) {
+        setQuickCreateOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setAccountMenuOpen(false);
+        setNotifOpen(false);
+        setQuickCreateOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
+  const merchantDisplayName = session?.user?.name?.trim() || profile.owner || 'Merchant';
+  const merchantInitial = merchantDisplayName.charAt(0).toUpperCase() || 'M';
 
   const safeProducts = mounted ? products : [];
   const safeOrders = mounted ? orders : [];
@@ -441,7 +477,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </select>
 
             {/* Quick Create Dropdown */}
-            <div className="relative">
+            <div ref={quickCreateWrapperRef} className="relative">
               <button
                 type="button"
                 onClick={() => setQuickCreateOpen((o) => !o)}
@@ -479,7 +515,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
 
             {/* Notifications */}
-            <div className="relative">
+            <div ref={notifWrapperRef} className="relative">
               <button
                 type="button"
                 onClick={() => setNotifOpen((o) => !o)}
@@ -521,33 +557,100 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
 
             {/* Account */}
-            <div className="relative">
+            <div ref={accountWrapperRef} className="relative">
               <button
                 type="button"
-                onClick={() => setAccountMenuOpen((o) => !o)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold"
+                onClick={() => {
+                  setAccountMenuOpen((o) => !o);
+                  setNotifOpen(false);
+                  setQuickCreateOpen(false);
+                }}
+                aria-expanded={accountMenuOpen}
+                aria-label="Open merchant profile menu"
+                className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-900 transition-colors"
               >
-                <User className="w-3.5 h-3.5" />
-                <span className="hidden md:inline max-w-[100px] truncate">
-                  {session?.user?.name || profile.owner}
+                <div className="relative w-6 h-6 rounded-full bg-slate-950 text-white flex items-center justify-center text-[11px] font-bold shrink-0">
+                  <span>{merchantInitial}</span>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                </div>
+                <span className="max-w-[110px] sm:max-w-[140px] truncate font-semibold">
+                  {merchantDisplayName}
                 </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-500 shrink-0 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {accountMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-50 text-xs">
-                  <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                    <p className="font-bold text-slate-900 truncate">{session?.user?.name || profile.owner}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{session?.user?.email || profile.email}</p>
+                <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 z-50 text-xs">
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-slate-950 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      {merchantInitial}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-slate-950 truncate">{merchantDisplayName}</p>
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate">{session?.user?.email || profile.email}</p>
+                    </div>
                   </div>
-                  <Link href="/dashboard/settings/account" onClick={() => setAccountMenuOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-medium">
-                    Account &amp; Security
-                  </Link>
-                  <Link href="/dashboard/team" onClick={() => setAccountMenuOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-medium">
-                    Team &amp; Permissions
-                  </Link>
-                  <Link href="/dashboard/billing" onClick={() => setAccountMenuOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-medium">
-                    Billing &amp; AI Credits
-                  </Link>
+
+                  <div className="grid grid-cols-3 gap-1.5 mb-2">
+                    <Link
+                      href="/dashboard/products"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="p-2 rounded-xl border border-slate-100 hover:border-slate-300 bg-white text-center transition-colors"
+                    >
+                      <p className="font-bold text-slate-950 text-sm">{safeProducts.length}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">Products</p>
+                    </Link>
+                    <Link
+                      href="/dashboard/orders"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="p-2 rounded-xl border border-slate-100 hover:border-slate-300 bg-white text-center transition-colors"
+                    >
+                      <p className="font-bold text-slate-950 text-sm">{pendingOrdersCount}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">Pending</p>
+                    </Link>
+                    <Link
+                      href="/dashboard/marketplace"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="p-2 rounded-xl border border-slate-100 hover:border-slate-300 bg-white text-center transition-colors"
+                    >
+                      <p className="font-bold text-slate-950 text-sm">{safePosts.length}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">Posts</p>
+                    </Link>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <Link href="/dashboard/brand/profile" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                      <Store className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Brand Profile</span>
+                    </Link>
+                    <Link href="/dashboard/virtual-try-on/studio" onClick={() => setAccountMenuOpen(false)} className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                      <span className="inline-flex items-center gap-2.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Virtual Try-On Test Studio</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">Test</span>
+                    </Link>
+                    <Link href="/dashboard/orders" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                      <ShoppingBag className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Orders &amp; Fulfillment</span>
+                    </Link>
+                    <Link href="/dashboard/team" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                      <Users className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Team &amp; Permissions</span>
+                    </Link>
+                    <Link href="/dashboard/billing" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                      <CreditCard className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Billing &amp; AI Credits</span>
+                    </Link>
+                    <Link href="/dashboard/settings/account" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                      <Settings className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Account &amp; Settings</span>
+                    </Link>
+                  </div>
+
                   {session?.user ? (
                     <button
                       type="button"
@@ -555,12 +658,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         if (typeof window !== 'undefined') localStorage.removeItem('brand_token');
                         signOut({ callbackUrl: '/login' });
                       }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 font-bold text-rose-600 flex items-center gap-2 mt-1 border-t border-slate-100 pt-2"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 font-bold text-rose-600 flex items-center gap-2.5 mt-2 border-t border-slate-100 pt-2.5"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Sign Out
                     </button>
                   ) : (
-                    <Link href="/login" className="block px-3 py-2 rounded-xl bg-slate-950 text-white font-bold text-center mt-1">
+                    <Link href="/login" className="block px-3 py-2 rounded-xl bg-slate-950 text-white font-bold text-center mt-2">
                       Merchant Sign In
                     </Link>
                   )}

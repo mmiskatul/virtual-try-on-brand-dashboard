@@ -2,10 +2,10 @@
 
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle2, AlertCircle, Loader2, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Mail, ArrowRight } from 'lucide-react';
 import { verifyEmailSchema, VerifyEmailFormValues } from '../../lib/schemas';
 import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
@@ -13,6 +13,7 @@ import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
 function BrandVerifyEmailContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlToken = searchParams.get('token');
   const urlEmail = searchParams.get('email') || '';
@@ -51,19 +52,26 @@ function BrandVerifyEmailContent() {
       .then((res) => {
         setStatus('verified');
         setMessage(res.message);
+        setTimeout(() => {
+          router.replace(`/login?verified=1${urlEmail ? `&email=${encodeURIComponent(urlEmail)}` : ''}`);
+        }, 700);
       })
       .catch((err: any) => {
         setStatus('error');
         setMessage(err?.message || 'Verification link is invalid or has expired.');
       });
-  }, [urlToken]);
+  }, [urlToken, router, urlEmail]);
 
   const onSubmitCode = async (data: VerifyEmailFormValues) => {
     setMessage(null);
+    setStatus('verifying');
     try {
       const res = await brandApi.verifyEmail({ email: data.email, code: data.code });
       setStatus('verified');
       setMessage(res.message);
+      setTimeout(() => {
+        router.replace(`/login?verified=1&email=${encodeURIComponent(data.email)}`);
+      }, 700);
     } catch (err: any) {
       setStatus('error');
       setMessage(err?.message || 'Invalid or expired verification code.');
@@ -99,10 +107,16 @@ function BrandVerifyEmailContent() {
 
   if (status === 'verifying') {
     return (
-      <AuthShell title="Verifying merchant email..." subtitle="Confirming your verification link." badge="Email Verification">
-        <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
-          <Loader2 className="w-8 h-8 text-black animate-spin" />
-          <p className="text-xs text-gray-700">Validating verification token...</p>
+      <AuthShell title="Verifying merchant email..." subtitle="Please wait while we confirm your brand account." badge="Email Verification">
+        <div className="py-12 flex flex-col items-center justify-center gap-4 text-center">
+          <div className="relative flex items-center justify-center w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-2 border-stone-200 border-t-stone-950 animate-spin" />
+            <Loader2 className="w-7 h-7 text-stone-950 animate-spin" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-stone-900">Verifying code...</p>
+            <p className="text-xs text-stone-500">Preparing your Brand Workspace sign-in.</p>
+          </div>
         </div>
       </AuthShell>
     );
@@ -181,9 +195,9 @@ function BrandVerifyEmailContent() {
           {errors.code && <p className="text-rose-600 text-[11px] font-medium">{errors.code.message}</p>}
         </div>
 
-        <Button type="submit" disabled={isSubmitting} className="w-full gap-2">
-          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-          <span>{isSubmitting ? 'Verifying...' : 'Verify Email'}</span>
+        <Button type="submit" disabled={isSubmitting} className="w-full h-11 font-bold gap-2">
+          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+          <span>Verify</span>
         </Button>
 
         <Button

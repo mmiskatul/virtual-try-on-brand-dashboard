@@ -15,8 +15,8 @@ import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
 function sanitizeCallbackUrl(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) {
-    return '/';
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw === '/' || raw.startsWith('/login')) {
+    return '/dashboard';
   }
   return raw;
 }
@@ -88,8 +88,12 @@ function BrandLoginContent() {
       localStorage.setItem('brand_token', updatedSession.backendToken);
     }
 
-    router.push(callbackUrl);
-    router.refresh();
+    if (typeof window !== 'undefined') {
+      window.location.assign(callbackUrl);
+    } else {
+      router.replace(callbackUrl);
+      router.refresh();
+    }
   };
 
   const onSubmit = async (data: BrandLoginFormValues) => {
@@ -113,9 +117,10 @@ function BrandLoginContent() {
 
   return (
     <AuthShell
-      title="Sign in to Brand Portal"
+      authTab="login"
+      title="Log in to Brand Workspace"
       subtitle="Manage your garments, fabrics, inventory, orders, and custom storefront."
-      badge="Merchant Sign In"
+      badge="Merchant Account"
       footer={
         <p>
           Launching a new fashion label?{' '}
@@ -171,14 +176,22 @@ function BrandLoginContent() {
           <button
             type="button"
             onClick={() => signIn('google', { callbackUrl })}
-            className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-900 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
+            className="w-full h-11 px-4 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-900 font-semibold text-xs flex items-center justify-center gap-2.5 shadow-sm transition-colors"
           >
-            Continue with Google
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.25-.96 2.31-2.04 3.02l3.3 2.56c1.92-1.77 3.03-4.38 3.03-7.48 0-.72-.06-1.41-.19-2.08H12z" />
+              <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.42l-3.3-2.56c-.91.61-2.08.98-3.31.98-2.54 0-4.69-1.71-5.46-4.02H3.13v2.64C4.77 19.87 8.13 22 12 22z" />
+              <path fill="#4A90E2" d="M6.54 13.98A5.99 5.99 0 0 1 6.23 12c0-.69.12-1.35.31-1.98V7.38H3.13A9.97 9.97 0 0 0 2 12c0 1.61.39 3.13 1.13 4.62l3.41-2.64z" />
+              <path fill="#FBBC05" d="M12 6.01c1.47 0 2.78.51 3.82 1.5l2.86-2.86C16.95 3.04 14.7 2 12 2 8.13 2 4.77 4.13 3.13 7.38l3.41 2.64C7.31 7.72 9.46 6.01 12 6.01z" />
+            </svg>
+            <span>Continue with Google</span>
           </button>
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-gray-200 w-full" />
-            <span className="bg-white px-3 text-[10px] text-gray-500 uppercase font-mono">or merchant credentials</span>
-            <div className="border-t border-gray-200 w-full" />
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-stone-200" />
+            <span className="text-[10px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
+              or merchant credentials
+            </span>
+            <div className="h-px flex-1 bg-stone-200" />
           </div>
         </>
       )}
@@ -244,14 +257,17 @@ function BrandLoginContent() {
           {...register('password')}
         />
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button type="submit" disabled={isSubmitting} className="w-full h-11 font-bold gap-2">
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
+            <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Signing In...
-            </span>
+              <span>Logging in...</span>
+            </>
           ) : (
-            'Sign In to Brand Workspace'
+            <>
+              <span>Log In</span>
+              <ArrowRight className="w-4 h-4" />
+            </>
           )}
         </Button>
 

@@ -51,7 +51,6 @@ const providers: NextAuthOptions['providers'] = [
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
-        image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
         role: data.user.role || 'BRAND_OWNER',
         tenantId: data.user.tenantId || data.tenant?.id || 'tenant_aura',
         emailVerified: Boolean(data.user.emailVerified),
