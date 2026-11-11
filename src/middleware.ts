@@ -15,6 +15,8 @@ const PUBLIC_PREFIXES = [
   '/forget-password',
   '/reset-password',
   '/storefront',
+  '/brands',
+  '/try',
   '/api/edge/storefront',
   '/api/auth',
   '/manifest.webmanifest',
