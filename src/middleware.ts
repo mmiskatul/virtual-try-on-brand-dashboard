@@ -51,11 +51,21 @@ function createContentSecurityPolicy(nonce: string) {
 const ALLOWED_ORIGIN_PATTERNS = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/[a-z0-9-]+\.vercel\.app$/,
   /^https:\/\/([a-z0-9-]+\.)?vton-platform\.io$/,
 ];
 
-function isOriginAllowed(origin: string | null): boolean {
+function isOriginAllowed(origin: string | null, requestOrigin?: string): boolean {
   if (!origin) return true; // Server-to-server or same-origin
+  if (requestOrigin && origin === requestOrigin) return true;
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configuredSiteUrl) {
+    try {
+      if (origin === new URL(configuredSiteUrl).origin) return true;
+    } catch {
+      // Ignore invalid URL env
+    }
+  }
   return ALLOWED_ORIGIN_PATTERNS.some((p) => p.test(origin));
 }
 
@@ -117,7 +127,7 @@ export async function middleware(request: NextRequest) {
 
   // 1. Edge-Level Strict CORS Preflight & Origin Verification
   if (pathname.startsWith('/api/')) {
-    if (origin && !isOriginAllowed(origin)) {
+    if (origin && !isOriginAllowed(origin, request.nextUrl.origin)) {
       return NextResponse.json(
         { error: 'Forbidden', message: 'Cross-origin request blocked by Edge CORS policy' },
         { status: 403 }
@@ -130,7 +140,7 @@ export async function middleware(request: NextRequest) {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-tenant-id, x-client-version',
         'Access-Control-Max-Age': '86400',
       };
-      if (origin && isOriginAllowed(origin)) {
+      if (origin && isOriginAllowed(origin, request.nextUrl.origin)) {
         preflightHeaders['Access-Control-Allow-Origin'] = origin;
         preflightHeaders['Access-Control-Allow-Credentials'] = 'true';
       }

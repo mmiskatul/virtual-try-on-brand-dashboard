@@ -56,7 +56,7 @@ export default function StorefrontError({
             Retry Boutique
           </Button>
 
-          <Link href="http://localhost:3000" className="flex-1">
+          <Link href={process.env.NEXT_PUBLIC_MARKETPLACE_URL || 'http://localhost:3000'} className="flex-1">
             <Button
               variant="outline"
               type="button"
