@@ -123,22 +123,22 @@ function BrandLoginContent() {
       footer={
         <p>
           Launching a new fashion label?{' '}
-          <Link href="/register" className="text-sky-400 hover:text-sky-300 font-semibold">
+          <Link href="/register" className="text-black hover:text-gray-700 font-semibold">
             Register your brand
           </Link>
         </p>
       }
     >
       {session?.user && (
-        <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 rounded-2xl bg-gray-100 border border-gray-300 flex items-center justify-between gap-3 text-xs">
           <div>
-            <p className="text-white font-semibold">Signed in as {session.user.name || session.user.email}</p>
-            <p className="text-slate-400 text-[11px]">{session.user.email}</p>
+            <p className="text-gray-900 font-semibold">Signed in as {session.user.name || session.user.email}</p>
+            <p className="text-gray-500 text-[11px]">{session.user.email}</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
               href={callbackUrl}
-              className="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold"
+              className="px-3 py-1.5 rounded-lg bg-black hover:bg-gray-800 text-white font-bold"
             >
               Dashboard
             </Link>
@@ -148,7 +148,7 @@ function BrandLoginContent() {
                 if (typeof window !== 'undefined') localStorage.removeItem('brand_token');
                 signOut({ redirect: false });
               }}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"
             >
               Switch
             </button>
@@ -157,14 +157,14 @@ function BrandLoginContent() {
       )}
 
       {verifiedParam === '1' && (
-        <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+        <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Merchant email verified! Sign in to enter your workspace.</span>
         </div>
       )}
 
       {resetParam === '1' && (
-        <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+        <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Password updated! Sign in with your new credentials.</span>
         </div>
@@ -175,21 +175,21 @@ function BrandLoginContent() {
           <button
             type="button"
             onClick={() => signIn('google', { callbackUrl })}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-900 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
           >
             Continue with Google
           </button>
           <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-800 w-full" />
-            <span className="bg-slate-900 px-3 text-[10px] text-slate-500 uppercase font-mono">or merchant credentials</span>
-            <div className="border-t border-slate-800 w-full" />
+            <div className="border-t border-gray-200 w-full" />
+            <span className="bg-white px-3 text-[10px] text-gray-500 uppercase font-mono">or merchant credentials</span>
+            <div className="border-t border-gray-200 w-full" />
           </div>
         </>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs space-y-2">
+          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs space-y-2">
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
@@ -200,14 +200,14 @@ function BrandLoginContent() {
                   type="button"
                   onClick={handleResendVerification}
                   disabled={resendLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-800 font-semibold"
                 >
                   {resendLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MailCheck className="w-3.5 h-3.5" />}
                   <span>Resend Verification Email</span>
                 </button>
                 <Link
                   href={`/verify-email?email=${encodeURIComponent(needsVerificationEmail)}`}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold"
                 >
                   <span>Enter 6-Digit Code</span>
                   <ArrowRight className="w-3 h-3" />
@@ -218,7 +218,7 @@ function BrandLoginContent() {
         )}
 
         {resendMessage && (
-          <div className="p-3 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs">
+          <div className="p-3 rounded-xl bg-gray-100 border border-gray-300 text-black text-xs">
             {resendMessage}
           </div>
         )}
@@ -226,7 +226,7 @@ function BrandLoginContent() {
         <DevEmailPreviewCard preview={devPreview} actionLabel="Verify Merchant Email" />
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-slate-300">Business Email</label>
+          <label className="block text-xs font-medium text-gray-700">Business Email</label>
           <Input
             type="email"
             placeholder="elena@auraatelier.com"
@@ -234,7 +234,7 @@ function BrandLoginContent() {
             {...register('email')}
             className={errors.email ? 'border-rose-500 focus-visible:border-rose-500' : ''}
           />
-          {errors.email && <p className="text-rose-400 text-[11px] font-medium">{errors.email.message}</p>}
+          {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
         <PasswordField
@@ -243,7 +243,7 @@ function BrandLoginContent() {
           autoComplete="current-password"
           error={errors.password?.message}
           rightSlot={
-            <Link href="/forgot-password" className="text-[11px] text-sky-400 hover:text-sky-300 font-medium">
+            <Link href="/forgot-password" className="text-[11px] text-black hover:text-gray-700 font-medium">
               Forgot password?
             </Link>
           }
@@ -268,7 +268,7 @@ function BrandLoginContent() {
 
 export default function BrandLoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
       <BrandLoginContent />
     </Suspense>
   );

@@ -67,7 +67,7 @@ export default function RootLayout({
         {nonce && <meta name="csp-nonce" content={nonce} />}
       </head>
       <body
-        className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased"
+        className="min-h-screen bg-white text-gray-900 font-sans antialiased"
         data-csp-protected={nonce ? 'true' : undefined}
       >
         <QueryProvider>

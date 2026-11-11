@@ -1,3 +1,9 @@
+// Local default so next-auth does not warn when .env only holds the backend URL.
+// In production the host (e.g. Vercel) provides the URL.
+if (process.env.NODE_ENV !== 'production' && !process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = 'http://localhost:3001';
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {

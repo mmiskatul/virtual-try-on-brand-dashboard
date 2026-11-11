@@ -61,7 +61,6 @@ export const brandApi = {
 
   register: (payload: {
     brandName: string;
-    slug: string;
     ownerName: string;
     email: string;
     password: string;

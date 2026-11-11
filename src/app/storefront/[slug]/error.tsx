@@ -16,9 +16,9 @@ export default function StorefrontError({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
-        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-400">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white border border-gray-200 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-600">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -30,28 +30,28 @@ export default function StorefrontError({
         </div>
 
         <div className="space-y-2">
-          <span className="text-[11px] font-mono uppercase tracking-widest text-sky-400 font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/20">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-black font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 border border-gray-300">
             Storefront Offline
           </span>
-          <h2 className="text-2xl font-bold text-white tracking-tight pt-1">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight pt-1">
             Unable to Load Boutique
           </h2>
-          <p className="text-sm text-slate-400 leading-relaxed">
+          <p className="text-sm text-gray-500 leading-relaxed">
             This designer storefront is currently undergoing a live catalog update or experienced an unexpected sync issue.
           </p>
         </div>
 
         {error.digest && (
-          <div className="bg-slate-950 rounded-lg p-3 border border-slate-800 text-left">
-            <p className="text-[10px] font-mono text-slate-500">Trace Digest:</p>
-            <p className="text-xs font-mono text-slate-300 truncate">{error.digest}</p>
+          <div className="bg-white rounded-lg p-3 border border-gray-200 text-left">
+            <p className="text-[10px] font-mono text-gray-500">Trace Digest:</p>
+            <p className="text-xs font-mono text-gray-700 truncate">{error.digest}</p>
           </div>
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button
             onClick={() => reset()}
-            className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-medium shadow-lg shadow-sky-600/20"
+            className="flex-1 bg-black hover:bg-gray-800 text-white font-medium shadow-lg shadow-black/10"
           >
             Retry Boutique
           </Button>
@@ -60,7 +60,7 @@ export default function StorefrontError({
             <Button
               variant="outline"
               type="button"
-              className="w-full border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white"
+              className="w-full border-gray-200 text-gray-700 hover:bg-gray-100 hover:text-black"
             >
               Visit Marketplace
             </Button>

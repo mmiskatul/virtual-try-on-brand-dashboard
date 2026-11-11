@@ -69,11 +69,6 @@ export type BrandLoginFormValues = z.infer<typeof brandLoginSchema>;
 export const brandRegisterSchema = z
   .object({
     brandName: z.string().min(2, 'Brand name must be at least 2 characters').max(80),
-    slug: z
-      .string()
-      .min(2, 'Storefront slug must be at least 2 characters')
-      .max(50)
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must use lowercase letters, numbers, and hyphens only'),
     ownerName: z.string().min(2, 'Owner full name must be at least 2 characters').max(80),
     email: z.string().email('Please enter a valid business email address'),
     password: strongPasswordField,

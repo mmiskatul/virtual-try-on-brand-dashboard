@@ -39,7 +39,7 @@ const STOREFRONTS: Record<string, {
     logo: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&auto=format&fit=crop&q=80',
     announcement: 'Complimentary worldwide express delivery on orders over $150',
     about: 'Born in Milan, Aura Atelier crafts timeless silhouette pieces using certified organic mulberry silks and heirloom Belgian linens.',
-    accent: '#38bdf8',
+    accent: '#000000',
     products: [
       {
         id: 'p1',

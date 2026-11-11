@@ -13,7 +13,7 @@ interface PasswordFieldProps extends Omit<InputProps, 'type'> {
 }
 
 function getPasswordStrength(value: string): { score: number; label: string; color: string } {
-  if (!value) return { score: 0, label: '', color: 'bg-slate-800' };
+  if (!value) return { score: 0, label: '', color: 'bg-gray-100' };
   let score = 0;
   if (value.length >= 8) score += 1;
   if (/[A-Za-z]/.test(value)) score += 1;
@@ -22,7 +22,7 @@ function getPasswordStrength(value: string): { score: number; label: string; col
 
   if (score <= 1) return { score: 1, label: 'Weak', color: 'bg-rose-500' };
   if (score === 2) return { score: 2, label: 'Fair', color: 'bg-amber-500' };
-  if (score === 3) return { score: 3, label: 'Good', color: 'bg-sky-500' };
+  if (score === 3) return { score: 3, label: 'Good', color: 'bg-black' };
   return { score: 4, label: 'Strong', color: 'bg-emerald-500' };
 }
 
@@ -34,7 +34,7 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <label className="block text-xs font-medium text-slate-300">{label}</label>
+          <label className="block text-xs font-medium text-gray-700">{label}</label>
           {rightSlot}
         </div>
         <div className="relative">
@@ -49,7 +49,7 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
             tabIndex={-1}
             onClick={() => setVisible((prev) => !prev)}
             aria-label={visible ? 'Hide password' : 'Show password'}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors"
           >
             {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -62,18 +62,18 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
                 <div
                   key={step}
                   className={`h-1 rounded-full transition-colors ${
-                    step <= strength.score ? strength.color : 'bg-slate-800'
+                    step <= strength.score ? strength.color : 'bg-gray-100'
                   }`}
                 />
               ))}
             </div>
-            <p className="text-[11px] text-slate-400">
-              Strength: <span className="text-slate-200 font-semibold">{strength.label}</span> — 8+ chars, at least 1 letter & 1 number
+            <p className="text-[11px] text-gray-500">
+              Strength: <span className="text-gray-800 font-semibold">{strength.label}</span> — 8+ chars, at least 1 letter & 1 number
             </p>
           </div>
         )}
 
-        {error && <p className="text-rose-400 text-[11px] font-medium">{error}</p>}
+        {error && <p className="text-rose-600 text-[11px] font-medium">{error}</p>}
       </div>
     );
   }

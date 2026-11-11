@@ -13,14 +13,6 @@ import { DevEmailPreviewCard } from '../../components/auth/DevEmailPreviewCard';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
-function toSlug(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
-
 function BrandRegisterContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
@@ -28,19 +20,16 @@ function BrandRegisterContent() {
   const [devPreview, setDevPreview] = useState<DevEmailPreview | null>(null);
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
-  const [slugTouched, setSlugTouched] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<BrandRegisterFormValues>({
     resolver: zodResolver(brandRegisterSchema),
     defaultValues: {
       brandName: '',
-      slug: '',
       ownerName: '',
       email: '',
       password: '',
@@ -49,20 +38,18 @@ function BrandRegisterContent() {
   });
 
   const passwordVal = watch('password') || '';
-  const slugVal = watch('slug') || '';
 
   const onSubmit = async (data: BrandRegisterFormValues) => {
     setErrorMsg(null);
     try {
       const res = await brandApi.register({
         brandName: data.brandName,
-        slug: data.slug,
         ownerName: data.ownerName,
         email: data.email,
         password: data.password,
       });
       setRegisteredEmail(res.user.email);
-      setRegisteredSlug(res.tenant?.slug || data.slug);
+      setRegisteredSlug(res.tenant?.slug || null);
       setDevPreview(res.devPreview || null);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to register brand account.');
@@ -93,27 +80,27 @@ function BrandRegisterContent() {
         footer={
           <p>
             Already verified?{' '}
-            <Link href="/login" className="text-sky-400 hover:text-sky-300 font-semibold">
+            <Link href="/login" className="text-black hover:text-gray-700 font-semibold">
               Sign in to workspace
             </Link>
           </p>
         }
       >
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2 text-xs">
-          <div className="flex items-center gap-2 text-emerald-300 font-bold">
+          <div className="flex items-center gap-2 text-emerald-700 font-bold">
             <CheckCircle2 className="w-4 h-4" />
             <span>Brand registered! Verification email sent</span>
           </div>
-          <p className="text-slate-300 leading-relaxed">
-            Storefront <span className="font-mono text-sky-300">/storefront/{registeredSlug}</span> is ready. Verify{' '}
-            <span className="font-semibold text-white">{registeredEmail}</span> using the link or 6-digit code we sent.
+          <p className="text-gray-700 leading-relaxed">
+            Storefront <span className="font-mono text-black">/storefront/{registeredSlug}</span> is ready. Verify{' '}
+            <span className="font-semibold text-gray-900">{registeredEmail}</span> using the link or 6-digit code we sent.
           </p>
         </div>
 
         <DevEmailPreviewCard preview={devPreview} actionLabel="Verify Brand Email" />
 
         {resendStatus && (
-          <div className="p-3 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs">
+          <div className="p-3 rounded-xl bg-gray-100 border border-gray-300 text-black text-xs">
             {resendStatus}
           </div>
         )}
@@ -121,7 +108,7 @@ function BrandRegisterContent() {
         <div className="space-y-2.5">
           <Link
             href={`/verify-email?email=${encodeURIComponent(registeredEmail)}`}
-            className="w-full h-10 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs inline-flex items-center justify-center gap-2 shadow-lg shadow-sky-500/25 transition-all"
+            className="w-full h-10 px-4 rounded-xl bg-black hover:bg-gray-800 text-white font-bold text-xs inline-flex items-center justify-center gap-2 shadow-lg shadow-black/10 transition-all"
           >
             <span>Enter 6-Digit Verification Code</span>
             <ArrowRight className="w-4 h-4" />
@@ -150,7 +137,7 @@ function BrandRegisterContent() {
       footer={
         <p>
           Already registered?{' '}
-          <Link href="/login" className="text-sky-400 hover:text-sky-300 font-semibold">
+          <Link href="/login" className="text-black hover:text-gray-700 font-semibold">
             Sign in
           </Link>
         </p>
@@ -158,47 +145,25 @@ function BrandRegisterContent() {
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-slate-300">Brand / Atelier Name</label>
+          <label className="block text-xs font-medium text-gray-700">Brand Name</label>
           <Input
             type="text"
             placeholder="Lumiere Couture"
-            {...register('brandName', {
-              onChange: (e) => {
-                if (!slugTouched) {
-                  setValue('slug', toSlug(e.target.value), { shouldValidate: true });
-                }
-              },
-            })}
+            {...register('brandName')}
             className={errors.brandName ? 'border-rose-500' : ''}
           />
-          {errors.brandName && <p className="text-rose-400 text-[11px] font-medium">{errors.brandName.message}</p>}
+          {errors.brandName && <p className="text-rose-600 text-[11px] font-medium">{errors.brandName.message}</p>}
         </div>
 
         <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-medium text-slate-300">Storefront Slug</label>
-            <span className="text-[10px] font-mono text-sky-400">/storefront/{slugVal || 'your-brand'}</span>
-          </div>
-          <Input
-            type="text"
-            placeholder="lumiere-couture"
-            {...register('slug', {
-              onChange: () => setSlugTouched(true),
-            })}
-            className={`font-mono ${errors.slug ? 'border-rose-500' : ''}`}
-          />
-          {errors.slug && <p className="text-rose-400 text-[11px] font-medium">{errors.slug.message}</p>}
-        </div>
-
-        <div className="space-y-1">
-          <label className="block text-xs font-medium text-slate-300">Owner Full Name</label>
+          <label className="block text-xs font-medium text-gray-700">Owner Full Name</label>
           <Input
             type="text"
             placeholder="Claire Moreau"
@@ -206,11 +171,11 @@ function BrandRegisterContent() {
             {...register('ownerName')}
             className={errors.ownerName ? 'border-rose-500' : ''}
           />
-          {errors.ownerName && <p className="text-rose-400 text-[11px] font-medium">{errors.ownerName.message}</p>}
+          {errors.ownerName && <p className="text-rose-600 text-[11px] font-medium">{errors.ownerName.message}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-slate-300">Business Email</label>
+          <label className="block text-xs font-medium text-gray-700">Business Email</label>
           <Input
             type="email"
             placeholder="claire@lumiere.com"
@@ -218,7 +183,7 @@ function BrandRegisterContent() {
             {...register('email')}
             className={errors.email ? 'border-rose-500' : ''}
           />
-          {errors.email && <p className="text-rose-400 text-[11px] font-medium">{errors.email.message}</p>}
+          {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
         <PasswordField
@@ -256,7 +221,7 @@ function BrandRegisterContent() {
 
 export default function BrandRegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
       <BrandRegisterContent />
     </Suspense>
   );

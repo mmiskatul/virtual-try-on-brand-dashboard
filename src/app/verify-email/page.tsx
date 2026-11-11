@@ -104,8 +104,8 @@ function BrandVerifyEmailContent() {
     return (
       <AuthShell title="Verifying merchant email..." subtitle="Confirming your verification link." badge="Email Verification">
         <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
-          <Loader2 className="w-8 h-8 text-sky-400 animate-spin" />
-          <p className="text-xs text-slate-300">Validating verification token...</p>
+          <Loader2 className="w-8 h-8 text-black animate-spin" />
+          <p className="text-xs text-gray-700">Validating verification token...</p>
         </div>
       </AuthShell>
     );
@@ -114,16 +114,16 @@ function BrandVerifyEmailContent() {
   if (status === 'verified') {
     return (
       <AuthShell title="Merchant email verified!" subtitle="Your brand workspace is ready for sign-in." badge="Verified Account">
-        <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2.5">
+        <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 text-xs flex items-start gap-2.5">
           <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="font-bold text-white">Verification complete</p>
+            <p className="font-bold text-gray-900">Verification complete</p>
             <p>{message || 'Your email has been verified successfully.'}</p>
           </div>
         </div>
         <Link
           href={`/login?verified=1${urlEmail ? `&email=${encodeURIComponent(urlEmail)}` : ''}`}
-          className="w-full h-10 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs inline-flex items-center justify-center gap-2 shadow-lg shadow-sky-500/25 transition-all"
+          className="w-full h-10 px-4 rounded-xl bg-black hover:bg-gray-800 text-white font-bold text-xs inline-flex items-center justify-center gap-2 shadow-lg shadow-black/10 transition-all"
         >
           <span>Continue to Sign In</span>
           <ArrowRight className="w-4 h-4" />
@@ -140,7 +140,7 @@ function BrandVerifyEmailContent() {
       footer={
         <p>
           Already verified?{' '}
-          <Link href="/login" className="text-sky-400 hover:text-sky-300 font-semibold">
+          <Link href="/login" className="text-black hover:text-gray-700 font-semibold">
             Sign in
           </Link>
         </p>
@@ -150,8 +150,8 @@ function BrandVerifyEmailContent() {
         <div
           className={`p-3 rounded-xl text-xs flex items-start gap-2 border ${
             status === 'error'
-              ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
-              : 'bg-sky-500/15 border-sky-500/30 text-sky-300'
+              ? 'bg-rose-500/15 border-rose-500/30 text-rose-700'
+              : 'bg-gray-100 border-gray-300 text-black'
           }`}
         >
           {status === 'error' ? <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> : <Mail className="w-4 h-4 shrink-0 mt-0.5" />}
@@ -163,18 +163,18 @@ function BrandVerifyEmailContent() {
 
       <form onSubmit={handleSubmit(onSubmitCode)} className="space-y-4">
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-slate-300">Business Email</label>
+          <label className="block text-xs font-medium text-gray-700">Business Email</label>
           <Input
             type="email"
             placeholder="claire@lumiere.com"
             {...register('email')}
             className={errors.email ? 'border-rose-500' : ''}
           />
-          {errors.email && <p className="text-rose-400 text-[11px] font-medium">{errors.email.message}</p>}
+          {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-slate-300">6-Digit Verification Code</label>
+          <label className="block text-xs font-medium text-gray-700">6-Digit Verification Code</label>
           <Input
             type="text"
             inputMode="numeric"
@@ -183,7 +183,7 @@ function BrandVerifyEmailContent() {
             {...register('code')}
             className={`font-mono text-center text-base tracking-[0.4em] ${errors.code ? 'border-rose-500' : ''}`}
           />
-          {errors.code && <p className="text-rose-400 text-[11px] font-medium">{errors.code.message}</p>}
+          {errors.code && <p className="text-rose-600 text-[11px] font-medium">{errors.code.message}</p>}
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full gap-2">
@@ -208,7 +208,7 @@ function BrandVerifyEmailContent() {
 
 export default function BrandVerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
       <BrandVerifyEmailContent />
     </Suspense>
   );

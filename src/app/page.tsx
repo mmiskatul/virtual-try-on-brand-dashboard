@@ -169,7 +169,7 @@ export default function BrandDashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex min-h-screen bg-white text-gray-900">
       <ToastNotification message={toastMessage} />
 
       <BrandSidebar
