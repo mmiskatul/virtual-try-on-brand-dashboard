@@ -261,26 +261,6 @@ function BrandLoginContent() {
           )}
         </Button>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSubmitting}
-            onClick={() => performLogin('elena@auraatelier.com', 'Aura@123456')}
-            className="text-[11px]"
-          >
-            Demo: Aura Atelier
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSubmitting}
-            onClick={() => performLogin('marcus@voguenova.com', 'Vogue@123456')}
-            className="text-[11px]"
-          >
-            Demo: Vogue Nova
-          </Button>
-        </div>
       </form>
     </AuthShell>
   );
