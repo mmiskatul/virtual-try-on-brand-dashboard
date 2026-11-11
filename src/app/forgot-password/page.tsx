@@ -7,9 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, CheckCircle2, KeyRound, Loader2, Mail, ArrowRight } from 'lucide-react';
 import { forgotPasswordSchema, ForgotPasswordFormValues } from '../../lib/schemas';
-import { brandApi, DevEmailPreview } from '../../lib/api';
+import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
-import { DevEmailPreviewCard } from '../../components/auth/DevEmailPreviewCard';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
@@ -20,7 +19,6 @@ function BrandForgotPasswordContent() {
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [devPreview, setDevPreview] = useState<DevEmailPreview | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const [resending, setResending] = useState(false);
 
@@ -44,7 +42,6 @@ function BrandForgotPasswordContent() {
     const res = await brandApi.forgotPassword(email);
     setSubmittedEmail(email);
     setStatusMsg(res.message);
-    setDevPreview(res.devPreview || null);
     setCooldown(30);
   };
 
@@ -99,8 +96,6 @@ function BrandForgotPasswordContent() {
             <span>{errorMsg}</span>
           </div>
         )}
-
-        <DevEmailPreviewCard preview={devPreview} actionLabel="Open Reset Password Page" />
 
         <div className="space-y-2.5">
           <Link

@@ -5,12 +5,6 @@
 
 const BRAND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
 
-export interface DevEmailPreview {
-  actionUrl?: string;
-  otpCode?: string;
-  expiresInMinutes?: number;
-}
-
 export class ApiError extends Error {
   constructor(public status: number, message: string, public data?: any) {
     super(message);
@@ -68,9 +62,10 @@ export const brandApi = {
     return request<{
       message: string;
       requiresEmailVerification: boolean;
+      emailDelivered?: boolean;
+      warning?: string;
       user: any;
       tenant: any;
-      devPreview?: DevEmailPreview;
     }>(`${BRAND_API_URL}/api/v1/auth/register`, {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -88,7 +83,6 @@ export const brandApi = {
     return request<{
       message: string;
       alreadyVerified?: boolean;
-      devPreview?: DevEmailPreview;
     }>(`${BRAND_API_URL}/api/v1/auth/resend-verification`, {
       method: 'POST',
       body: JSON.stringify({ email, portal: 'brand' })
@@ -96,7 +90,7 @@ export const brandApi = {
   },
 
   forgotPassword: (email: string) => {
-    return request<{ message: string; devPreview?: DevEmailPreview }>(
+    return request<{ message: string }>(
       `${BRAND_API_URL}/api/v1/auth/forgot-password`,
       {
         method: 'POST',

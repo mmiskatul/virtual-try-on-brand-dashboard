@@ -7,9 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, AlertCircle, Loader2, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
 import { verifyEmailSchema, VerifyEmailFormValues } from '../../lib/schemas';
-import { brandApi, DevEmailPreview } from '../../lib/api';
+import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
-import { DevEmailPreviewCard } from '../../components/auth/DevEmailPreviewCard';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
@@ -24,7 +23,6 @@ function BrandVerifyEmailContent() {
   const [message, setMessage] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [devPreview, setDevPreview] = useState<DevEmailPreview | null>(null);
   const attemptedAutoToken = useRef(false);
 
   const {
@@ -91,7 +89,6 @@ function BrandVerifyEmailContent() {
         setStatus('idle');
         setCooldown(30);
       }
-      if (res.devPreview) setDevPreview(res.devPreview);
     } catch (err: any) {
       setStatus('error');
       setMessage(err?.message || 'Could not resend verification email.');
@@ -158,8 +155,6 @@ function BrandVerifyEmailContent() {
           <span>{message}</span>
         </div>
       )}
-
-      <DevEmailPreviewCard preview={devPreview} actionLabel="Verify with New Link" />
 
       <form onSubmit={handleSubmit(onSubmitCode)} className="space-y-4">
         <div className="space-y-1">

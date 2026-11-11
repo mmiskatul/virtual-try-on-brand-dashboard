@@ -6,10 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, CheckCircle2, Loader2, Mail, ArrowRight } from 'lucide-react';
 import { brandRegisterSchema, BrandRegisterFormValues } from '../../lib/schemas';
-import { brandApi, DevEmailPreview } from '../../lib/api';
+import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
 import { PasswordField } from '../../components/auth/PasswordField';
-import { DevEmailPreviewCard } from '../../components/auth/DevEmailPreviewCard';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
@@ -17,7 +16,6 @@ function BrandRegisterContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [registeredSlug, setRegisteredSlug] = useState<string | null>(null);
-  const [devPreview, setDevPreview] = useState<DevEmailPreview | null>(null);
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
 
@@ -50,7 +48,9 @@ function BrandRegisterContent() {
       });
       setRegisteredEmail(res.user.email);
       setRegisteredSlug(res.tenant?.slug || null);
-      setDevPreview(res.devPreview || null);
+      if (res.warning) {
+        setResendStatus(res.warning);
+      }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to register brand account.');
     }
@@ -63,7 +63,6 @@ function BrandRegisterContent() {
     try {
       const res = await brandApi.resendVerification(registeredEmail);
       setResendStatus(res.message);
-      if (res.devPreview) setDevPreview(res.devPreview);
     } catch (err: any) {
       setResendStatus(err?.message || 'Unable to resend verification email right now.');
     } finally {
@@ -96,8 +95,6 @@ function BrandRegisterContent() {
             <span className="font-semibold text-gray-900">{registeredEmail}</span> using the link or 6-digit code we sent.
           </p>
         </div>
-
-        <DevEmailPreviewCard preview={devPreview} actionLabel="Verify Brand Email" />
 
         {resendStatus && (
           <div className="p-3 rounded-xl bg-gray-100 border border-gray-300 text-black text-xs">
