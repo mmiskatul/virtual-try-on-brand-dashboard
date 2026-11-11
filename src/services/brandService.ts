@@ -191,6 +191,38 @@ export const brandWorkspaceApi = {
       method: 'DELETE',
     }),
 
+  // Brand Categories, Collections & SKU Variants (Phase 3 Enterprise Catalog)
+  getCategories: async () => {
+    const res = await apiFetch<any>('/api/v1/brand/categories');
+    return res?.data?.categories || res?.categories || [];
+  },
+
+  createCategory: (payload: { name: string; slug?: string; sortOrder?: number; seoTitle?: string }) =>
+    apiFetch<any>('/api/v1/brand/categories', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getCollections: async () => {
+    const res = await apiFetch<any>('/api/v1/brand/collections');
+    return res?.data?.collections || res?.collections || [];
+  },
+
+  createCollection: (payload: { title: string; slug?: string; description?: string }) =>
+    apiFetch<any>('/api/v1/brand/collections', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  upsertVariant: (
+    productId: string,
+    payload: { sku: string; size: string; color: string; priceOverride?: number; stockQuantity: number; available?: boolean }
+  ) =>
+    apiFetch<any>(`/api/v1/products/${encodeURIComponent(productId)}/variants`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   // Fabrics
   getFabrics: async (): Promise<Fabric[]> => {
     const res = await apiFetch<{ fabrics: Fabric[] } | Fabric[]>('/api/v1/fabrics');
@@ -284,12 +316,91 @@ export const brandWorkspaceApi = {
   getTryOnProviderStatus: () =>
     apiFetch<{ mode: string; provider: string; status: string }>('/api/v1/try-on/provider'),
 
+  // Plans, Subscription & Real-Time Credit Accounting
+  getPublicPlans: async () => {
+    const res = await apiFetch<any>('/api/v1/plans');
+    return res?.data?.plans || res?.plans || [];
+  },
+
+  getBillingSummary: async () => {
+    const res = await apiFetch<any>('/api/v1/brand/billing');
+    return res?.data || res;
+  },
+
+  subscribePlan: async (planSlug: 'STARTER' | 'PRO' | 'ENTERPRISE', billingInterval: 'MONTHLY' | 'ANNUAL' = 'MONTHLY') => {
+    const res = await apiFetch<any>('/api/v1/brand/billing/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ planSlug, billingInterval }),
+    });
+    return res?.data || res;
+  },
+
+  // Reviews & Brand Support Tickets
+  getProductReviews: async (productId: string) => {
+    const res = await apiFetch<any>(`/api/v1/products/${encodeURIComponent(productId)}/reviews`);
+    return res?.data || res;
+  },
+
+  replyToReview: async (reviewId: string, reply: string) => {
+    const res = await apiFetch<any>(`/api/v1/reviews/${encodeURIComponent(reviewId)}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ reply }),
+    });
+    return res?.data || res;
+  },
+
+  getSupportTickets: async () => {
+    const res = await apiFetch<any>('/api/v1/support/tickets');
+    return res?.data?.tickets || [];
+  },
+
+  createSupportTicket: async (payload: { subject: string; category?: string; priority?: 'LOW' | 'MEDIUM' | 'HIGH'; message: string }) => {
+    const res = await apiFetch<any>('/api/v1/support/tickets', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res?.data || res;
+  },
+
   executeTryOn: async (params: {
     productId: string;
     personImage: string;
     garmentImage: string;
     category: string;
   }): Promise<{ mode: 'live_ai' | 'unavailable'; resultUrl?: string; message?: string }> => {
+    // 1. Prefer enterprise async job orchestrator (Outbox -> Worker/AI Service -> Signed Result URL)
+    try {
+      const submitRes = await apiFetch<any>('/api/v1/try-on/jobs', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': `studio_${params.productId}_${Date.now()}` },
+        body: JSON.stringify({
+          productId: params.productId,
+          personImageUrl: params.personImage,
+          garmentImageUrl: params.garmentImage,
+          category: params.category,
+        }),
+      });
+      const job = submitRes?.data || submitRes;
+      if (job?.jobId) {
+        if (job.status === 'COMPLETED' && job.resultUrl) {
+          return { mode: 'live_ai', resultUrl: job.resultUrl };
+        }
+        for (let i = 0; i < 15; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const statusRes = await apiFetch<any>(`/api/v1/try-on/jobs/${encodeURIComponent(job.jobId)}`);
+          const poll = statusRes?.data || statusRes;
+          if (poll?.status === 'COMPLETED' && poll?.resultUrl) {
+            return { mode: 'live_ai', resultUrl: poll.resultUrl };
+          }
+          if (poll?.status === 'FAILED' || poll?.status === 'CANCELLED') {
+            return { mode: 'unavailable', message: poll.errorMessage || 'AI try-on generation failed.' };
+          }
+        }
+      }
+    } catch {
+      // Fallback transparently to synchronous /direct endpoint if async job orchestrator is unreachable
+    }
+
     try {
       const res = await apiFetch<any>('/api/v1/try-on/direct', {
         method: 'POST',
