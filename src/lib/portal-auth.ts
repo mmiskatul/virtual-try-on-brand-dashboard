@@ -137,45 +137,91 @@ export function extractSetCookieHeaders(headers: Headers): string[] {
   return single ? [single] : [];
 }
 
-export async function refreshBrandSessionFromBackend(cookieHeader: string): Promise<{
+type RefreshResult = {
   ok: boolean;
   setCookies: string[];
   revoked: boolean;
-}> {
+};
+
+const refreshInFlightByToken = new Map<string, Promise<RefreshResult>>();
+const recentRefreshSuccessCache = new Map<string, { result: RefreshResult; expiresAt: number }>();
+
+function extractCookieValue(cookieHeader: string, cookieName: string): string {
+  for (const part of cookieHeader.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx <= 0) continue;
+    const key = part.slice(0, idx).trim();
+    if (key === cookieName) {
+      return part.slice(idx + 1).trim();
+    }
+  }
+  return '';
+}
+
+export async function refreshBrandSessionFromBackend(cookieHeader: string): Promise<RefreshResult> {
   if (!cookieHeader) {
     return { ok: false, setCookies: [], revoked: false };
   }
 
-  try {
-    const res = await fetch(`${getBackendApiBaseUrl()}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        Cookie: cookieHeader,
-        'X-Auth-Portal': 'brand',
-        'X-Auth-Transport': 'cookie',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(3500),
-    });
-
-    if (res.ok) {
-      return {
-        ok: true,
-        setCookies: extractSetCookieHeaders(res.headers),
-        revoked: false,
-      };
-    }
-
-    return {
-      ok: false,
-      setCookies: extractSetCookieHeaders(res.headers),
-      revoked: res.status === 401 || res.status === 403,
-    };
-  } catch {
-    return { ok: false, setCookies: [], revoked: false };
+  const refreshKey = extractCookieValue(cookieHeader, BRAND_REFRESH_COOKIE) || cookieHeader;
+  const now = Date.now();
+  const cached = recentRefreshSuccessCache.get(refreshKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.result;
   }
+  if (cached) {
+    recentRefreshSuccessCache.delete(refreshKey);
+  }
+
+  const existingPromise = refreshInFlightByToken.get(refreshKey);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const promise: Promise<RefreshResult> = (async () => {
+    try {
+      const res = await fetch(`${getBackendApiBaseUrl()}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          Cookie: cookieHeader,
+          'X-Auth-Portal': 'brand',
+          'X-Auth-Transport': 'cookie',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(3500),
+      });
+
+      if (res.ok) {
+        const result: RefreshResult = {
+          ok: true,
+          setCookies: extractSetCookieHeaders(res.headers),
+          revoked: false,
+        };
+        // Short grace cache prevents concurrent Next.js requests with the previous
+        // refresh cookie from hitting refresh token reuse detection.
+        recentRefreshSuccessCache.set(refreshKey, {
+          result,
+          expiresAt: Date.now() + 3000,
+        });
+        return result;
+      }
+
+      return {
+        ok: false,
+        setCookies: extractSetCookieHeaders(res.headers),
+        revoked: res.status === 401 || res.status === 403,
+      };
+    } catch {
+      return { ok: false, setCookies: [], revoked: false };
+    } finally {
+      refreshInFlightByToken.delete(refreshKey);
+    }
+  })();
+
+  refreshInFlightByToken.set(refreshKey, promise);
+  return promise;
 }
 
 export async function exchangeBrandOAuthCodeFromBackend(code: string): Promise<{
@@ -218,6 +264,7 @@ export async function verifyBrandSessionWithBackend(
 ): Promise<{
   ok: boolean;
   tenantId?: string;
+  onboardingCompleted?: boolean;
   user?: { id?: string; role?: string };
 }> {
   if (!cookieHeader) {
@@ -256,9 +303,15 @@ export async function verifyBrandSessionWithBackend(
           ? data.tenant.id
           : undefined;
 
+    const onboardingCompleted =
+      typeof data.tenant?.storefrontSettings?.onboardingCompleted === 'boolean'
+        ? data.tenant.storefrontSettings.onboardingCompleted
+        : undefined;
+
     return {
       ok: true,
       tenantId,
+      onboardingCompleted,
       user: {
         id: typeof data.user.id === 'string' ? data.user.id : undefined,
         role: data.user.role,

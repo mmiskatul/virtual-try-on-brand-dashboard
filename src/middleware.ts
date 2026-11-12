@@ -31,6 +31,7 @@ const PUBLIC_AUTH_FLOW_PREFIXES = [
 const PUBLIC_STOREFRONT_PREFIXES = ['/storefront', '/brands', '/try', '/api/edge/storefront'];
 const PUBLIC_META_PREFIXES = [
   '/api/auth',
+  '/api/telemetry',
   '/manifest.webmanifest',
   '/robots.txt',
   '/sitemap.xml',
@@ -302,12 +303,18 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  const isPrefetchRequest =
+    request.headers.has('next-router-prefetch') ||
+    request.headers.get('purpose') === 'prefetch' ||
+    request.headers.get('x-middleware-prefetch') === '1';
+
   let refreshedSetCookies: string[] = [];
   let refreshedOk = false;
 
   if (
     hasNextAuthBrand &&
     !hasValidAccess &&
+    !isPrefetchRequest &&
     isValidBrandRefreshCookie(refreshCookie, nextAuthUserId, sessionCookie)
   ) {
     const refreshResult = await refreshBrandSessionFromBackend(request.headers.get('cookie') || '');
@@ -326,9 +333,7 @@ export async function middleware(request: NextRequest) {
     hasNextAuthBrand &&
     !hasValidAccess &&
     !refreshedOk &&
-    !request.headers.has('next-router-prefetch') &&
-    request.headers.get('purpose') !== 'prefetch' &&
-    request.headers.get('x-middleware-prefetch') !== '1' &&
+    !isPrefetchRequest &&
     typeof token?.oauthExchangeCode === 'string' &&
     token.oauthExchangeCode
   ) {

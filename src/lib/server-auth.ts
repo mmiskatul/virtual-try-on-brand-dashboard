@@ -19,6 +19,7 @@ export interface VerifiedBrandSession {
   name?: string | null;
   role: string;
   tenantId?: string;
+  onboardingCompleted?: boolean;
 }
 
 /**
@@ -63,6 +64,7 @@ export async function getVerifiedBrandSession(): Promise<VerifiedBrandSession | 
     name: session.user.name,
     role,
     tenantId: resolvedTenantId,
+    onboardingCompleted: verification.onboardingCompleted,
   };
 }
 

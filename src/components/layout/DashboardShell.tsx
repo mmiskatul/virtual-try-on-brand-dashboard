@@ -54,6 +54,7 @@ export interface VerifiedBrandShellUser {
   name?: string | null;
   role: string;
   tenantId?: string;
+  onboardingCompleted?: boolean;
 }
 
 const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -85,7 +86,10 @@ export function DashboardShell({
   const router = useRouter();
   const mounted = useMounted();
   const { data: session } = useSession();
-  const { syncNow } = useBrandSync(verifiedUser?.tenantId);
+  const { syncNow, authInvalid } = useBrandSync(
+    verifiedUser?.tenantId,
+    Boolean(verifiedUser?.userId)
+  );
 
   const profile = useWorkspaceStore((s) => s.profile);
   const products = useWorkspaceStore((s) => s.products);
@@ -190,7 +194,7 @@ export function DashboardShell({
 
   const effectiveRole = authSession?.user?.role || verifiedUser?.role || '';
   const activeTenantId = String(
-    authSession?.user?.tenantId || verifiedUser?.tenantId || profile.id || 'tenant_aura'
+    verifiedUser?.tenantId || authSession?.user?.tenantId || profile.id || 'tenant_aura'
   ).trim();
   const sessionRoleUpper = String(effectiveRole).toUpperCase();
   const isOwnerUser = sessionRoleUpper === 'BRAND_OWNER' || sessionRoleUpper === 'OWNER';
@@ -198,6 +202,7 @@ export function DashboardShell({
   const backendOnboardingStatus = activeTenantId
     ? backendOnboardingStatusByTenant[activeTenantId]
     : undefined;
+  const setBackendOnboardingStatus = useWorkspaceStore((s) => s.setBackendOnboardingStatus);
   const isBackendCheckPending =
     isAuthenticated &&
     isOwnerUser &&
@@ -206,6 +211,8 @@ export function DashboardShell({
   const isTenantOnboarded =
     typeof backendOnboardingStatus === 'boolean'
       ? backendOnboardingStatus
+      : typeof verifiedUser?.onboardingCompleted === 'boolean'
+      ? verifiedUser.onboardingCompleted
       : activeTenantId
       ? onboardedTenantIds.includes(activeTenantId)
       : true;
@@ -220,6 +227,51 @@ export function DashboardShell({
     isOwnerUser &&
     Boolean(activeTenantId) &&
     !isTenantOnboarded;
+
+  useEffect(() => {
+    if (!authInvalid) return;
+    let cancelled = false;
+    void (async () => {
+      const { logoutBrand } = await import('../../lib/logout');
+      if (!cancelled) {
+        await logoutBrand({ callbackUrl: '/login' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authInvalid]);
+
+  useEffect(() => {
+    if (!isCheckingOnboardingGate || !activeTenantId || !mounted || !storeHydrated) return;
+    const retryTimer = setTimeout(() => {
+      void syncNow();
+    }, 2000);
+    const fallbackTimer = setTimeout(() => {
+      const currentStatus =
+        useWorkspaceStore.getState().backendOnboardingStatusByTenant[activeTenantId];
+      if (currentStatus === undefined) {
+        setBackendOnboardingStatus(
+          activeTenantId,
+          typeof verifiedUser?.onboardingCompleted === 'boolean'
+            ? verifiedUser.onboardingCompleted
+            : null
+        );
+      }
+    }, 6000);
+    return () => {
+      clearTimeout(retryTimer);
+      clearTimeout(fallbackTimer);
+    };
+  }, [
+    activeTenantId,
+    isCheckingOnboardingGate,
+    mounted,
+    setBackendOnboardingStatus,
+    storeHydrated,
+    syncNow,
+    verifiedUser?.onboardingCompleted,
+  ]);
 
   useEffect(() => {
     if (!storeHydrated || !mounted || !activeTenantId) return;

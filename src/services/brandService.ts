@@ -448,5 +448,186 @@ export const brandWorkspaceApi = {
       };
     }
   },
+
+  async getOverviewSummary(): Promise<BrandOverviewSummary> {
+    return apiFetch<BrandOverviewSummary>('/api/v1/brand/overview');
+  },
+
+  async getOverviewTimeseries(params: {
+    period: OverviewPeriod;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<BrandOverviewTimeseries> {
+    const query = new URLSearchParams({ period: params.period });
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    return apiFetch<BrandOverviewTimeseries>(`/api/v1/brand/overview/timeseries?${query.toString()}`);
+  },
+
+  async getOverviewActivity(limit = 15): Promise<BrandOverviewActivityResponse> {
+    return apiFetch<BrandOverviewActivityResponse>(
+      `/api/v1/brand/overview/activity?limit=${encodeURIComponent(String(limit))}`
+    );
+  },
+
+  async getOverviewChecklist(): Promise<BrandOverviewChecklist> {
+    return apiFetch<BrandOverviewChecklist>('/api/v1/brand/overview/checklist');
+  },
+
+  async updateOverviewChecklist(
+    payload: { toggleId?: OverviewChecklistId; completedIds?: OverviewChecklistId[] }
+  ): Promise<BrandOverviewChecklist> {
+    return apiFetch<BrandOverviewChecklist>('/api/v1/brand/overview/checklist', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
 };
+
+export type OverviewPeriod = 'today' | '7d' | '30d' | '90d' | 'custom';
+
+export type OverviewChecklistId =
+  | 'chk_profile'
+  | 'chk_logo'
+  | 'chk_cover'
+  | 'chk_biz'
+  | 'chk_product'
+  | 'chk_variants'
+  | 'chk_storefront'
+  | 'chk_tryon'
+  | 'chk_publish'
+  | 'chk_test_tryon';
+
+export interface BrandOverviewSummary {
+  currency: 'BDT';
+  generatedAt: number;
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl?: string | null;
+    status: string;
+    plan: string;
+    storeStatus: 'LIVE' | 'MAINTENANCE';
+    marketplaceStatus: 'CONNECTED' | 'NOT_CONNECTED';
+    tryOnStatus: 'TRY-ON ACTIVE' | 'PAUSED';
+  };
+  kpis: {
+    totalRevenue: number;
+    revenueChangeLabel: string;
+    totalOrders: number;
+    ordersChangeLabel: string;
+    totalProducts: number;
+    publishedStorefrontProducts: number;
+    publishedMarketplaceProducts: number;
+    totalCustomers: number;
+    marketplaceViews: number;
+    productSalesUnits: number;
+    tryOnSessionsCount: number;
+    tryOnUsed: number;
+    tryOnQuota: number;
+    tryOnCreditsLeft: number;
+  };
+  salesOverview: {
+    totalRevenue: number;
+    paidOrders: number;
+    pendingOrders: number;
+    cancelledOrders: number;
+    refundedOrders: number;
+    averageOrderValue: number;
+  };
+  tryOnPerformance: {
+    loggedSessions: number;
+    successful: number;
+    failed: number;
+    processingOrQueued: number;
+    avgSpeedSec: number;
+    cartConversions: number;
+    attributedOrders: number;
+    attributedRevenue: number;
+    creditsUsed: number;
+  };
+  marketplaceActivity: {
+    publishedPosts: number;
+    draftOrScheduled: number;
+    totalClicks: number;
+    postRevenue: number;
+  };
+  topProducts: Array<{
+    id: string;
+    name: string;
+    sku: string;
+    price: number;
+    stock: number;
+    lowStockThreshold: number;
+    salesCount: number;
+    image: string;
+  }>;
+  lowStockProducts: Array<{
+    id: string;
+    name: string;
+    sku: string;
+    stock: number;
+    lowStockThreshold: number;
+  }>;
+  recentOrders: Array<{
+    id: string;
+    customerName: string;
+    customerEmail: string;
+    total: number;
+    status: string;
+    paymentStatus: string;
+    itemCount: number;
+    date: string;
+    createdAt: number;
+  }>;
+}
+
+export interface BrandOverviewTimeseries {
+  currency: 'BDT';
+  period: OverviewPeriod;
+  rangeStart: number;
+  rangeEnd: number;
+  totals: {
+    revenue: number;
+    orders: number;
+    tryOns: number;
+  };
+  series: Array<{
+    label: string;
+    revenue: number;
+    orders: number;
+    tryOns: number;
+  }>;
+}
+
+export interface BrandOverviewActivityResponse {
+  activities: Array<{
+    id: string;
+    action: string;
+    entity: string;
+    details: string;
+    actor: string;
+    role: string;
+    timestamp: string;
+    createdAt: number;
+  }>;
+}
+
+export interface BrandOverviewChecklist {
+  completedIds: string[];
+  autoCompletedIds: string[];
+  manualCompletedIds: string[];
+  completedCount: number;
+  totalCount: number;
+  completionPct: number;
+  items: Array<{
+    id: OverviewChecklistId;
+    label: string;
+    href: string;
+    completed: boolean;
+    autoCompleted: boolean;
+  }>;
+}
 
