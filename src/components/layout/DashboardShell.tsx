@@ -481,9 +481,6 @@ export function DashboardShell({
               if (href === '/dashboard/brand') {
                 return pathname === '/dashboard/brand' || pathname.startsWith('/dashboard/brand/');
               }
-              if (href === '/dashboard/storefront/editor') {
-                return pathname === '/dashboard/storefront' || pathname.startsWith('/dashboard/storefront/');
-              }
               return pathname === href;
             };
 

@@ -45,7 +45,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Getting Started', href: '/dashboard/getting-started', module: 'overview' },
       { label: 'Brand Verification & Assets', href: '/dashboard/brand', module: 'brand' },
-      { label: 'Storefront Builder', href: '/dashboard/storefront/editor', module: 'storefront' },
     ],
   },
   {

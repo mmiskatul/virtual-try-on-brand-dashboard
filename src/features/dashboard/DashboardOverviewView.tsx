@@ -51,7 +51,7 @@ const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: str
   { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/getting-started' },
   { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/create' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },
-  { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/storefront/editor' },
+  { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/brand' },
   { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on/configuration' },
   { id: 'chk_publish', label: 'Publish first product to global marketplace', href: '/dashboard/marketplace/create' },
   { id: 'chk_test_tryon', label: 'Test public Virtual Try-On studio', href: '/dashboard/virtual-try-on/studio' },
@@ -373,10 +373,10 @@ export function DashboardOverviewView() {
               <span className="truncate">Try-On Studio</span>
             </Button>
           </Link>
-          <Link href="/dashboard/storefront/editor" className="w-full lg:w-auto">
+          <Link href="/dashboard/brand" className="w-full lg:w-auto">
             <Button variant="outline" size="sm" className="gap-1.5 w-full lg:w-auto justify-center text-xs">
               <Palette className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Storefront</span>
+              <span className="truncate">Brand & Theme</span>
             </Button>
           </Link>
         </div>
