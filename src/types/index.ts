@@ -424,6 +424,8 @@ export interface BrandProfile {
   slug: string;
   owner: string;
   email: string;
+  onboardingCompleted?: boolean;
+  onboardingCompletedAt?: number;
   legalName?: string;
   businessType?: string;
   registrationNumber?: string;

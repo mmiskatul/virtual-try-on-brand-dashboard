@@ -6,13 +6,14 @@ import { brandApi } from '../lib/api';
 import { brandWorkspaceApi } from '../services';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 
-export function useBrandSync() {
+export function useBrandSync(preferredTenantId?: string) {
   const { data: session, status } = useSession();
   const setLiveSync = useWorkspaceStore((s) => s.setLiveSync);
   const updateProfile = useWorkspaceStore((s) => s.updateProfile);
   const setProducts = useWorkspaceStore((s) => s.setProducts);
   const setOrders = useWorkspaceStore((s) => s.setOrders);
   const setFabrics = useWorkspaceStore((s) => s.setFabrics);
+  const setBackendOnboardingStatus = useWorkspaceStore((s) => s.setBackendOnboardingStatus);
 
   const syncNow = async () => {
     if (typeof window !== 'undefined' && localStorage.getItem('brand_token')) {
@@ -22,6 +23,12 @@ export function useBrandSync() {
     if (status === 'loading') {
       return false;
     }
+
+    const fallbackTenantId =
+      preferredTenantId ||
+      session?.user?.tenantId ||
+      useWorkspaceStore.getState().profile.id ||
+      '';
 
     let hasSession = Boolean(session?.user?.id);
     if (!hasSession) {
@@ -35,6 +42,9 @@ export function useBrandSync() {
 
     if (!hasSession) {
       setLiveSync(false);
+      if (fallbackTenantId) {
+        setBackendOnboardingStatus(fallbackTenantId, null);
+      }
       return false;
     }
 
@@ -55,11 +65,13 @@ export function useBrandSync() {
 
         updateProfile({
           ...p,
-          owner: session?.user?.name || p.owner,
+          owner: p.owner || session?.user?.name || '',
           quotaUsed: analytics?.tryOnUsage?.used ?? undefined,
           quotaMax: analytics?.tryOnUsage?.quota ?? undefined,
           plan: analytics?.tryOnUsage?.plan ?? undefined,
         });
+
+        setBackendOnboardingStatus(p.id, Boolean(p.onboardingCompleted));
 
         if (productsRes.status === 'fulfilled' && productsRes.value.length > 0) {
           setProducts(productsRes.value);
@@ -75,7 +87,10 @@ export function useBrandSync() {
         return true;
       }
     } catch {
-      // Fallback safely to demo mode
+      // Fallback safely when backend is unreachable
+    }
+    if (fallbackTenantId) {
+      setBackendOnboardingStatus(fallbackTenantId, null);
     }
     setLiveSync(false);
     return false;

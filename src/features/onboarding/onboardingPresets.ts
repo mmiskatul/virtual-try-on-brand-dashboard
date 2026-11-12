@@ -5,7 +5,7 @@ export const ONBOARDING_STEPS = [
   '2. Business & Contact',
   '3. Identity & Media',
   '4. Starter Catalog & Try-On',
-  '5. Review & Launch',
+  '5. Review & Save',
 ] as const;
 
 export const CATEGORY_FOCUS_OPTIONS = [
@@ -108,101 +108,68 @@ export function createInitialOnboardingForm(params: {
   tenantId: string;
   profile: BrandProfile;
   savedDraft?: Partial<BrandProfile>;
-  sessionName?: string | null;
+  isOnboarded?: boolean;
   sessionEmail?: string | null;
 }): OnboardingFormState {
-  const { tenantId, profile, savedDraft, sessionName, sessionEmail } = params;
-  const isDemoTenant = tenantId === 'tenant_aura';
+  const { tenantId, profile, savedDraft, isOnboarded = false, sessionEmail } = params;
   const liveMatchesTenant = profile.id === tenantId;
+  const allowLiveProfileFallback = isOnboarded && liveMatchesTenant;
 
-  const baseName =
-    savedDraft?.name ||
-    (liveMatchesTenant ? profile.name : '') ||
-    (isDemoTenant ? profile.name : '');
-  const fallbackName = baseName || profile.name || '';
-  const slug = toBrandSlug(fallbackName);
-
-  const getBackendField = <K extends keyof BrandProfile>(
+  const pick = <K extends keyof BrandProfile>(
     key: K,
     fallback: NonNullable<BrandProfile[K]> | ''
   ): any => {
     if (savedDraft?.[key] !== undefined && savedDraft[key] !== '') {
       return savedDraft[key];
     }
-    if ((liveMatchesTenant || isDemoTenant) && profile[key]) {
+    if (allowLiveProfileFallback && profile[key]) {
       return profile[key];
     }
     return fallback;
   };
-
-  const getExtendedField = <K extends keyof BrandProfile>(
-    key: K,
-    fallback: NonNullable<BrandProfile[K]> | ''
-  ): any => {
-    if (savedDraft?.[key] !== undefined && savedDraft[key] !== '') {
-      return savedDraft[key];
-    }
-    if (isDemoTenant && profile[key]) {
-      return profile[key];
-    }
-    return fallback;
-  };
-
-  const liveDescription = getBackendField('description', '');
 
   return {
-    brandName: fallbackName,
+    brandName: pick('name', ''),
     storefrontTitle:
       savedDraft?.seo?.title ||
-      (isDemoTenant ? profile.seo?.title || '' : '') ||
-      (fallbackName ? `${fallbackName} — Official Storefront & Virtual Try-On` : ''),
-    slogan: getExtendedField('slogan', ''),
-    announcement: getBackendField('announcement', ''),
-    categoryFocus: getExtendedField('categoryFocus', CATEGORY_FOCUS_OPTIONS[2]),
-    shortDescription: getExtendedField('shortDescription', '') || liveDescription,
-    brandStory: getExtendedField('brandStory', '') || liveDescription,
-    ownerName:
-      savedDraft?.owner ||
-      sessionName ||
-      (isDemoTenant ? profile.owner : '') ||
-      '',
-    legalName: getExtendedField('legalName', fallbackName ? `${fallbackName} Studio` : ''),
-    businessType: getExtendedField('businessType', BUSINESS_TYPE_OPTIONS[0]),
+      (allowLiveProfileFallback ? profile.seo?.title || '' : ''),
+    slogan: pick('slogan', ''),
+    announcement: pick('announcement', ''),
+    categoryFocus: pick('categoryFocus', CATEGORY_FOCUS_OPTIONS[0]),
+    shortDescription: pick('shortDescription', ''),
+    brandStory: pick('brandStory', '') || (allowLiveProfileFallback ? profile.description || '' : ''),
+    ownerName: pick('owner', ''),
+    legalName: pick('legalName', ''),
+    businessType: pick('businessType', BUSINESS_TYPE_OPTIONS[0]),
     bizEmail:
       savedDraft?.email ||
-      (liveMatchesTenant ? profile.email : '') ||
+      (allowLiveProfileFallback ? profile.email : '') ||
       sessionEmail ||
-      (isDemoTenant ? profile.email : ''),
-    phone: getExtendedField('phone', ''),
-    city: getExtendedField('city', ''),
-    country: getExtendedField('country', ''),
-    address: getExtendedField('address', ''),
+      '',
+    phone: pick('phone', ''),
+    city: pick('city', ''),
+    country: pick('country', ''),
+    address: pick('address', ''),
     currency:
       savedDraft?.settings?.currency ||
-      (isDemoTenant ? profile.settings?.currency : undefined) ||
+      (allowLiveProfileFallback ? profile.settings?.currency : undefined) ||
       'USD',
     instagram:
       savedDraft?.socialLinks?.instagram ||
-      (isDemoTenant ? profile.socialLinks?.instagram || '' : `@${slug}`),
+      (allowLiveProfileFallback ? profile.socialLinks?.instagram || '' : ''),
     website:
       savedDraft?.socialLinks?.website ||
-      (isDemoTenant ? profile.socialLinks?.website || '' : ''),
+      (allowLiveProfileFallback ? profile.socialLinks?.website || '' : ''),
     primaryColor:
       savedDraft?.primaryColor ||
-      (liveMatchesTenant || isDemoTenant ? profile.primaryColor : '') ||
+      (allowLiveProfileFallback ? profile.primaryColor : '') ||
       BRAND_COLOR_PRESETS[0].primaryColor,
     accentColor:
       savedDraft?.accentColor ||
-      (liveMatchesTenant || isDemoTenant ? profile.accentColor : undefined) ||
+      (allowLiveProfileFallback ? profile.accentColor : undefined) ||
       BRAND_COLOR_PRESETS[0].accentColor,
-    logoUrl:
-      savedDraft?.logo ||
-      (liveMatchesTenant ? profile.logo : '') ||
-      (isDemoTenant ? profile.logo : SAMPLE_LOGO_PRESETS[0].url),
-    bannerUrl:
-      savedDraft?.banner ||
-      (liveMatchesTenant ? profile.banner : '') ||
-      (isDemoTenant ? profile.banner : SAMPLE_BANNER_PRESETS[0].url),
+    logoUrl: savedDraft?.logo || (allowLiveProfileFallback ? profile.logo || '' : ''),
+    bannerUrl: savedDraft?.banner || (allowLiveProfileFallback ? profile.banner || '' : ''),
   };
 }
 

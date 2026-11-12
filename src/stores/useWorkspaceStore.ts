@@ -89,9 +89,12 @@ export interface WorkspaceState {
   apiKeys: ApiCredential[];
   webhooks: WebhookSubscription[];
   onboardingStep: number;
+  onboardingStepByTenant: Record<string, number>;
+  onboardingCompletedStepsByTenant: Record<string, number[]>;
   onboardingCompletedIds: string[];
   onboardedTenantIds: string[];
   onboardingProfileDrafts: Record<string, Partial<BrandProfile>>;
+  backendOnboardingStatusByTenant: Record<string, boolean | null>;
 
   setLiveSync: (live: boolean) => void;
   setActiveRole: (role: StaffRole) => void;
@@ -141,10 +144,12 @@ export interface WorkspaceState {
   addWebhook: (w: Omit<WebhookSubscription, 'id' | 'lastDeliveryStatus' | 'lastDeliveryAt'>) => void;
   removeWebhook: (id: string) => void;
 
-  setOnboardingStep: (step: number) => void;
+  setOnboardingStep: (step: number, tenantId?: string) => void;
+  markOnboardingStepCompleted: (tenantId: string, stepNumber: number) => void;
   toggleOnboardingChecklist: (id: string) => void;
   markOnboardingCompleted: (tenantId: string) => void;
   reopenOnboarding: (tenantId: string) => void;
+  setBackendOnboardingStatus: (tenantId: string, onboarded: boolean | null) => void;
   saveOnboardingProfileForTenant: (tenantId: string, partial: Partial<BrandProfile>) => void;
   addFabricRecord: (fabric: Fabric) => void;
   recordAudit: (action: string, entity: string, details: string) => void;
@@ -186,9 +191,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       apiKeys: DEMO_API_KEYS,
       webhooks: DEMO_WEBHOOKS,
       onboardingStep: 1,
+      onboardingStepByTenant: {},
+      onboardingCompletedStepsByTenant: {},
       onboardingCompletedIds: [],
       onboardedTenantIds: [],
       onboardingProfileDrafts: {},
+      backendOnboardingStatusByTenant: {},
 
       setLiveSync: (live) =>
         set({ isLiveBackend: live, lastSyncedAt: new Date().toLocaleTimeString() }),
@@ -428,7 +436,34 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       removeWebhook: (id) =>
         set((s) => ({ webhooks: s.webhooks.filter((w) => w.id !== id) })),
 
-      setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
+      setOnboardingStep: (onboardingStep, tenantId) =>
+        set((s) => {
+          const cleanTenantId = String(tenantId || s.profile.id || '').trim();
+          return {
+            onboardingStep,
+            ...(cleanTenantId
+              ? {
+                  onboardingStepByTenant: {
+                    ...s.onboardingStepByTenant,
+                    [cleanTenantId]: onboardingStep,
+                  },
+                }
+              : {}),
+          };
+        }),
+
+      markOnboardingStepCompleted: (tenantId, stepNumber) =>
+        set((s) => {
+          const cleanTenantId = String(tenantId || s.profile.id || 'tenant_aura').trim();
+          const prev = s.onboardingCompletedStepsByTenant[cleanTenantId] || [];
+          if (prev.includes(stepNumber)) return {};
+          return {
+            onboardingCompletedStepsByTenant: {
+              ...s.onboardingCompletedStepsByTenant,
+              [cleanTenantId]: [...prev, stepNumber].sort((a, b) => a - b),
+            },
+          };
+        }),
 
       toggleOnboardingChecklist: (id) =>
         set((s) => ({
@@ -443,6 +478,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           onboardedTenantIds: s.onboardedTenantIds.includes(cleanTenantId)
             ? s.onboardedTenantIds
             : [...s.onboardedTenantIds, cleanTenantId],
+          onboardingCompletedStepsByTenant: {
+            ...s.onboardingCompletedStepsByTenant,
+            [cleanTenantId]: [1, 2, 3, 4, 5],
+          },
+          onboardingStepByTenant: {
+            ...s.onboardingStepByTenant,
+            [cleanTenantId]: 5,
+          },
           onboardingCompletedIds: Array.from(
             new Set([
               ...s.onboardingCompletedIds,
@@ -469,8 +512,44 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           onboardedTenantIds: cleanTenantId
             ? s.onboardedTenantIds.filter((id) => id !== cleanTenantId)
             : s.onboardedTenantIds,
+          ...(cleanTenantId
+            ? {
+                backendOnboardingStatusByTenant: {
+                  ...s.backendOnboardingStatusByTenant,
+                  [cleanTenantId]: false,
+                },
+              }
+            : {}),
           onboardingStep: 1,
+          ...(cleanTenantId
+            ? {
+                onboardingStepByTenant: {
+                  ...s.onboardingStepByTenant,
+                  [cleanTenantId]: 1,
+                },
+              }
+            : {}),
         }));
+      },
+
+      setBackendOnboardingStatus: (tenantId, onboarded) => {
+        const cleanTenantId = String(tenantId || '').trim();
+        if (!cleanTenantId) return;
+        set((s) => {
+          let nextOnboarded = s.onboardedTenantIds;
+          if (onboarded === true) {
+            nextOnboarded = Array.from(new Set([...s.onboardedTenantIds, cleanTenantId]));
+          } else if (onboarded === false) {
+            nextOnboarded = s.onboardedTenantIds.filter((id) => id !== cleanTenantId);
+          }
+          return {
+            onboardedTenantIds: nextOnboarded,
+            backendOnboardingStatusByTenant: {
+              ...s.backendOnboardingStatusByTenant,
+              [cleanTenantId]: onboarded,
+            },
+          };
+        });
       },
 
       saveOnboardingProfileForTenant: (tenantId, partial) => {
@@ -593,6 +672,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         openGroups: state.openGroups,
         onboardingStep: state.onboardingStep,
+        onboardingStepByTenant: state.onboardingStepByTenant,
+        onboardingCompletedStepsByTenant: state.onboardingCompletedStepsByTenant,
         onboardingCompletedIds: state.onboardingCompletedIds,
         onboardedTenantIds: state.onboardedTenantIds,
         onboardingProfileDrafts: state.onboardingProfileDrafts,

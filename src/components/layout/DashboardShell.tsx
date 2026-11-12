@@ -15,6 +15,7 @@ import {
   Globe,
   HelpCircle,
   LayoutDashboard,
+  Lock,
   LogOut,
   Megaphone,
   Menu,
@@ -45,6 +46,15 @@ import { useBrandSync } from '../../hooks/useBrandSync';
 import { useMounted } from '../../hooks/useMounted';
 import { ToastNotification } from '../ui/ToastNotification';
 import { SafeImage } from '../shared/UiPrimitives';
+import { GettingStartedWizard } from '../../features/onboarding/GettingStartedWizard';
+
+export interface VerifiedBrandShellUser {
+  userId: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  tenantId?: string;
+}
 
 const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -64,12 +74,18 @@ const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   Settings,
 };
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  verifiedUser,
+}: {
+  children: React.ReactNode;
+  verifiedUser?: VerifiedBrandShellUser;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const mounted = useMounted();
   const { data: session } = useSession();
-  const { syncNow } = useBrandSync();
+  const { syncNow } = useBrandSync(verifiedUser?.tenantId);
 
   const profile = useWorkspaceStore((s) => s.profile);
   const products = useWorkspaceStore((s) => s.products);
@@ -153,6 +169,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data: authSession, status: authSessionStatus } = useSession();
   const lastSyncedAt = useWorkspaceStore((s) => s.lastSyncedAt);
   const onboardedTenantIds = useWorkspaceStore((s) => s.onboardedTenantIds);
+  const backendOnboardingStatusByTenant = useWorkspaceStore(
+    (s) => s.backendOnboardingStatusByTenant
+  );
   const onboardingProfileDrafts = useWorkspaceStore((s) => s.onboardingProfileDrafts);
   const saveOnboardingProfileForTenant = useWorkspaceStore((s) => s.saveOnboardingProfileForTenant);
 
@@ -169,16 +188,35 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const activeTenantId = String(authSession?.user?.tenantId || profile.id || 'tenant_aura').trim();
-  const sessionRoleUpper = String(authSession?.user?.role || '').toUpperCase();
+  const effectiveRole = authSession?.user?.role || verifiedUser?.role || '';
+  const activeTenantId = String(
+    authSession?.user?.tenantId || verifiedUser?.tenantId || profile.id || 'tenant_aura'
+  ).trim();
+  const sessionRoleUpper = String(effectiveRole).toUpperCase();
   const isOwnerUser = sessionRoleUpper === 'BRAND_OWNER' || sessionRoleUpper === 'OWNER';
-  const isGettingStartedRoute = pathname.startsWith('/dashboard/getting-started');
-  const isTenantOnboarded = activeTenantId ? onboardedTenantIds.includes(activeTenantId) : true;
+  const isAuthenticated = Boolean(verifiedUser?.userId) || authSessionStatus === 'authenticated';
+  const backendOnboardingStatus = activeTenantId
+    ? backendOnboardingStatusByTenant[activeTenantId]
+    : undefined;
+  const isBackendCheckPending =
+    isAuthenticated &&
+    isOwnerUser &&
+    Boolean(activeTenantId) &&
+    backendOnboardingStatus === undefined;
+  const isTenantOnboarded =
+    typeof backendOnboardingStatus === 'boolean'
+      ? backendOnboardingStatus
+      : activeTenantId
+      ? onboardedTenantIds.includes(activeTenantId)
+      : true;
 
+  const isCheckingOnboardingGate =
+    isAuthenticated && isOwnerUser && (!mounted || !storeHydrated || isBackendCheckPending);
   const isOnboardingGateActive =
     mounted &&
     storeHydrated &&
-    authSessionStatus === 'authenticated' &&
+    !isBackendCheckPending &&
+    isAuthenticated &&
     isOwnerUser &&
     Boolean(activeTenantId) &&
     !isTenantOnboarded;
@@ -190,19 +228,33 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     syncedDraftKeyRef.current = syncKey;
 
     const savedDraft = onboardingProfileDrafts[activeTenantId];
-    if (!savedDraft) return;
-
     const liveMatchesTenant = profile.id === activeTenantId;
+    if (!savedDraft && !liveMatchesTenant) return;
+
     saveOnboardingProfileForTenant(activeTenantId, {
-      ...savedDraft,
+      ...(savedDraft || {}),
       ...(liveMatchesTenant && profile.name ? { name: profile.name } : {}),
       ...(liveMatchesTenant && profile.email ? { email: profile.email } : {}),
+      ...(liveMatchesTenant && profile.owner ? { owner: profile.owner } : {}),
+      ...(liveMatchesTenant && profile.legalName ? { legalName: profile.legalName } : {}),
+      ...(liveMatchesTenant && profile.businessType ? { businessType: profile.businessType } : {}),
+      ...(liveMatchesTenant && profile.phone ? { phone: profile.phone } : {}),
+      ...(liveMatchesTenant && profile.city ? { city: profile.city } : {}),
+      ...(liveMatchesTenant && profile.country ? { country: profile.country } : {}),
+      ...(liveMatchesTenant && profile.address ? { address: profile.address } : {}),
+      ...(liveMatchesTenant && profile.categoryFocus ? { categoryFocus: profile.categoryFocus } : {}),
+      ...(liveMatchesTenant && profile.slogan ? { slogan: profile.slogan } : {}),
+      ...(liveMatchesTenant && profile.shortDescription ? { shortDescription: profile.shortDescription } : {}),
       ...(liveMatchesTenant && profile.description ? { description: profile.description } : {}),
+      ...(liveMatchesTenant && profile.brandStory ? { brandStory: profile.brandStory } : {}),
       ...(liveMatchesTenant && profile.logo ? { logo: profile.logo } : {}),
       ...(liveMatchesTenant && profile.banner ? { banner: profile.banner } : {}),
       ...(liveMatchesTenant && profile.primaryColor ? { primaryColor: profile.primaryColor } : {}),
       ...(liveMatchesTenant && profile.accentColor ? { accentColor: profile.accentColor } : {}),
       ...(liveMatchesTenant && profile.announcement ? { announcement: profile.announcement } : {}),
+      ...(liveMatchesTenant && profile.seo?.title ? { seo: profile.seo } : {}),
+      ...(liveMatchesTenant && profile.socialLinks ? { socialLinks: profile.socialLinks } : {}),
+      ...(liveMatchesTenant && profile.settings ? { settings: profile.settings } : {}),
     });
   }, [
     storeHydrated,
@@ -212,21 +264,38 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     profile.id,
     profile.name,
     profile.email,
+    profile.owner,
+    profile.legalName,
+    profile.businessType,
+    profile.phone,
+    profile.city,
+    profile.country,
+    profile.address,
+    profile.categoryFocus,
+    profile.slogan,
+    profile.shortDescription,
     profile.description,
+    profile.brandStory,
     profile.logo,
     profile.banner,
     profile.primaryColor,
     profile.accentColor,
     profile.announcement,
+    profile.seo,
+    profile.socialLinks,
+    profile.settings,
     onboardingProfileDrafts,
     saveOnboardingProfileForTenant,
   ]);
 
   useEffect(() => {
-    if (isOnboardingGateActive && !isGettingStartedRoute) {
-      router.replace('/dashboard/getting-started');
-    }
-  }, [isOnboardingGateActive, isGettingStartedRoute, router]);
+    if (!isOnboardingGateActive && !isCheckingOnboardingGate) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOnboardingGateActive, isCheckingOnboardingGate]);
 
   // Dynamic Breadcrumbs
   const breadcrumbs = useMemo(() => {
@@ -506,17 +575,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
+  const shellBlocked = isOnboardingGateActive || isCheckingOnboardingGate;
+
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 overflow-x-clip">
       <ToastNotification message={toastMessage} />
 
       {/* Desktop Left Sidebar */}
-      <aside className={`hidden lg:block sticky top-0 h-screen shrink-0 transition-all duration-200 ${sidebarCollapsed ? 'w-16' : 'w-[272px]'}`}>
+      <aside
+        aria-hidden={shellBlocked || undefined}
+        className={`hidden lg:block sticky top-0 h-screen shrink-0 transition-all duration-200 ${
+          sidebarCollapsed ? 'w-16' : 'w-[272px]'
+        } ${shellBlocked ? 'pointer-events-none select-none opacity-40 blur-[2px]' : ''}`}
+      >
         {renderSidebarBody(false)}
       </aside>
 
       {/* Mobile Sidebar Drawer */}
-      {mobileMenuOpen && (
+      {mobileMenuOpen && !shellBlocked && (
         <div className="fixed inset-0 z-50 lg:hidden flex bg-black/50 backdrop-blur-sm">
           <div className="w-[85vw] max-w-72 h-full shadow-2xl">{renderSidebarBody(true)}</div>
           <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
@@ -524,27 +600,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Column */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {isOnboardingGateActive && !isGettingStartedRoute && (
-          <div className="fixed inset-0 z-50 bg-slate-50/95 backdrop-blur-sm flex items-center justify-center p-6">
-            <div className="max-w-md w-full rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-lg space-y-3">
-              <div className="w-11 h-11 rounded-2xl bg-slate-950 text-white mx-auto flex items-center justify-center">
-                <RefreshCw className="w-5 h-5 animate-spin" />
-              </div>
-              <h2 className="text-base font-bold text-slate-950">Opening Brand Onboarding Setup</h2>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Your brand owner profile requires initial configuration before entering the workspace.
-              </p>
-              <button
-                type="button"
-                onClick={() => router.replace('/dashboard/getting-started')}
-                className="w-full py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
-              >
-                Continue to Onboarding
-              </button>
-            </div>
-          </div>
-        )}
+      <div
+        aria-hidden={shellBlocked || undefined}
+        className={`flex-1 flex flex-col min-w-0 ${
+          shellBlocked ? 'pointer-events-none select-none opacity-40 blur-[2px] h-screen overflow-hidden' : ''
+        }`}
+      >
         {/* Top Header */}
         <header className="sticky top-0 z-30 h-14 sm:h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-3">
           {/* Left: Sidebar Toggle + Mobile Brand + Breadcrumbs */}
@@ -924,7 +985,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Main Workspace Content */}
         <main className="flex-1 px-3.5 py-4 pb-24 sm:p-6 lg:p-8 lg:pb-8 max-w-[1440px] w-full mx-auto space-y-5 sm:space-y-6">
-          {children}
+          {shellBlocked ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center space-y-2">
+              <p className="text-sm font-bold text-slate-900">Brand Workspace Locked</p>
+              <p className="text-xs text-slate-500">
+                Complete the Setup Required popup to unlock dashboard access.
+              </p>
+            </div>
+          ) : (
+            children
+          )}
         </main>
 
         {/* Mobile Quick Dock (< lg) */}
@@ -965,7 +1035,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Help Center Modal */}
-      {helpOpen && (
+      {helpOpen && !shellBlocked && (
         <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -984,6 +1054,76 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <p>
                 <strong>Role-Based Access:</strong> Test permissions live via the Top Header Role switcher (`Owner`, `Product Manager`, `Marketing Manager`, etc.).
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Initial Hydration Guard for Owner Onboarding */}
+      {isCheckingOnboardingGate && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/65 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="max-w-sm w-full rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-2xl space-y-3">
+            <div className="w-11 h-11 rounded-2xl bg-slate-950 text-white mx-auto flex items-center justify-center">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            </div>
+            <p className="text-sm font-bold text-slate-950">Verifying Brand Workspace Setup</p>
+            <p className="text-xs text-slate-500">Checking your brand onboarding status...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Blocking Setup Required Popup Overlay (Owner must complete before accessing Dashboard) */}
+      {isOnboardingGateActive && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="setup-required-dialog-title"
+          className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-md flex items-start sm:items-center justify-center p-2.5 sm:p-6 overflow-y-auto"
+        >
+          <div className="my-auto max-w-5xl w-full rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
+            <div className="sticky top-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 bg-white border-b border-slate-200">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 text-amber-800 flex items-center justify-center shrink-0">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
+                      Setup Required
+                    </span>
+                    <h2
+                      id="setup-required-dialog-title"
+                      className="text-sm sm:text-base font-extrabold text-slate-950 truncate"
+                    >
+                      Complete Brand Onboarding to Access Dashboard
+                    </h2>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
+                    Signed in as {authSession?.user?.email || verifiedUser?.email || profile.email} — finish setup below to unlock your workspace.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const { logoutBrand } = await import('../../lib/logout');
+                  await logoutBrand({ callbackUrl: '/login' });
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 text-slate-700 text-xs font-bold shrink-0 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 bg-[#F8FAFC]">
+              <GettingStartedWizard
+                embeddedInModal
+                verifiedTenantId={activeTenantId}
+                verifiedName={authSession?.user?.name ?? verifiedUser?.name}
+                verifiedEmail={authSession?.user?.email ?? verifiedUser?.email}
+              />
             </div>
           </div>
         </div>

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   ArrowLeft,
@@ -14,6 +13,7 @@ import {
   Image as ImageIcon,
   Layers,
   Loader2,
+  Lock,
   Package,
   Palette,
   ShieldCheck,
@@ -46,8 +46,21 @@ import {
 const SAMPLE_GARMENT_IMAGE =
   'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80';
 
-export function GettingStartedWizard() {
-  const router = useRouter();
+export interface GettingStartedWizardProps {
+  embeddedInModal?: boolean;
+  verifiedTenantId?: string;
+  verifiedName?: string | null;
+  verifiedEmail?: string | null;
+  onCompleted?: () => void;
+}
+
+export function GettingStartedWizard({
+  embeddedInModal = false,
+  verifiedTenantId,
+  verifiedName,
+  verifiedEmail,
+  onCompleted,
+}: GettingStartedWizardProps = {}) {
   const { data: session } = useSession();
 
   const profile = useWorkspaceStore((s) => s.profile);
@@ -57,26 +70,54 @@ export function GettingStartedWizard() {
   const addFabricRecord = useWorkspaceStore((s) => s.addFabricRecord);
   const tryOnConfig = useWorkspaceStore((s) => s.tryOnConfig);
   const updateTryOnConfig = useWorkspaceStore((s) => s.updateTryOnConfig);
-  const rawStep = useWorkspaceStore((s) => s.onboardingStep);
+  const onboardingStepByTenant = useWorkspaceStore((s) => s.onboardingStepByTenant);
+  const onboardingCompletedStepsByTenant = useWorkspaceStore(
+    (s) => s.onboardingCompletedStepsByTenant
+  );
   const setStep = useWorkspaceStore((s) => s.setOnboardingStep);
+  const markOnboardingStepCompleted = useWorkspaceStore((s) => s.markOnboardingStepCompleted);
   const completedIds = useWorkspaceStore((s) => s.onboardingCompletedIds);
   const toggleChecklist = useWorkspaceStore((s) => s.toggleOnboardingChecklist);
   const onboardedTenantIds = useWorkspaceStore((s) => s.onboardedTenantIds);
   const onboardingProfileDrafts = useWorkspaceStore((s) => s.onboardingProfileDrafts);
   const saveOnboardingProfileForTenant = useWorkspaceStore((s) => s.saveOnboardingProfileForTenant);
   const markOnboardingCompleted = useWorkspaceStore((s) => s.markOnboardingCompleted);
+  const setBackendOnboardingStatus = useWorkspaceStore((s) => s.setBackendOnboardingStatus);
+  const updateProfile = useWorkspaceStore((s) => s.updateProfile);
   const isLiveBackend = useWorkspaceStore((s) => s.isLiveBackend);
 
   const showToast = useUiStore((s) => s.showToast);
   const hideToast = useUiStore((s) => s.hideToast);
 
-  const step = Math.min(Math.max(rawStep || 1, 1), ONBOARDING_STEPS.length);
-  const activeTenantId = String(session?.user?.tenantId || profile.id || 'tenant_aura').trim();
+  const activeTenantId = String(
+    session?.user?.tenantId || verifiedTenantId || profile.id || 'tenant_aura'
+  ).trim();
+  const resolvedSessionEmail = session?.user?.email ?? verifiedEmail;
   const isAlreadyOnboarded = Boolean(activeTenantId && onboardedTenantIds.includes(activeTenantId));
+
+  const savedTenantDraft = onboardingProfileDrafts[activeTenantId];
+  const completedStepsForTenant = onboardingCompletedStepsByTenant[activeTenantId] || [];
+  const step1Done =
+    isAlreadyOnboarded ||
+    (completedStepsForTenant.includes(1) &&
+      Boolean(savedTenantDraft?.name?.trim() && savedTenantDraft?.seo?.title?.trim()));
+  const step2Done =
+    isAlreadyOnboarded ||
+    (step1Done &&
+      completedStepsForTenant.includes(2) &&
+      Boolean(savedTenantDraft?.email?.trim()));
+  const step3Done = isAlreadyOnboarded || (step2Done && completedStepsForTenant.includes(3));
+  const step4Done = isAlreadyOnboarded || (step3Done && completedStepsForTenant.includes(4));
+  const maxUnlockedStep = step4Done ? 5 : step3Done ? 4 : step2Done ? 3 : step1Done ? 2 : 1;
+
+  const rawTenantStep = onboardingStepByTenant[activeTenantId] || 1;
+  const step = Math.min(Math.max(rawTenantStep, 1), maxUnlockedStep);
 
   const [storeHydrated, setStoreHydrated] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveStage, setSaveStage] = useState<'idle' | 'saving' | 'verifying' | 'redirecting' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [sampleLoading, setSampleLoading] = useState(false);
   const [uploadingField, setUploadingField] = useState<'logo' | 'banner' | 'product' | null>(null);
 
@@ -84,9 +125,9 @@ export function GettingStartedWizard() {
     createInitialOnboardingForm({
       tenantId: activeTenantId,
       profile,
-      savedDraft: onboardingProfileDrafts[activeTenantId],
-      sessionName: session?.user?.name,
-      sessionEmail: session?.user?.email,
+      savedDraft: savedTenantDraft,
+      isOnboarded: isAlreadyOnboarded,
+      sessionEmail: resolvedSessionEmail,
     })
   );
 
@@ -97,7 +138,7 @@ export function GettingStartedWizard() {
   const [prodTryOnCat, setProdTryOnCat] = useState<'tops' | 'bottoms' | 'dresses' | 'outerwear'>('tops');
   const [prodPrice, setProdPrice] = useState('125');
   const [prodStock, setProdStock] = useState('25');
-  const [prodImageUrl, setProdImageUrl] = useState(SAMPLE_GARMENT_IMAGE);
+  const [prodImageUrl, setProdImageUrl] = useState('');
   const [prodDescription, setProdDescription] = useState('');
   const [publishStorefront, setPublishStorefront] = useState(true);
   const [enableTryOnItem, setEnableTryOnItem] = useState(true);
@@ -135,8 +176,8 @@ export function GettingStartedWizard() {
         tenantId: activeTenantId,
         profile,
         savedDraft,
-        sessionName: session?.user?.name,
-        sessionEmail: session?.user?.email,
+        isOnboarded: isAlreadyOnboarded,
+        sessionEmail: resolvedSessionEmail,
       })
     );
   }, [
@@ -144,8 +185,8 @@ export function GettingStartedWizard() {
     activeTenantId,
     profile,
     onboardingProfileDrafts,
-    session?.user?.name,
-    session?.user?.email,
+    isAlreadyOnboarded,
+    resolvedSessionEmail,
     isDirty,
   ]);
 
@@ -189,7 +230,11 @@ export function GettingStartedWizard() {
     };
   }, [form, products.length, tryOnConfig.enabled]);
 
-  const persistBrandForm = async (formToSave: OnboardingFormState, syncBackend: boolean) => {
+  const persistBrandForm = async (
+    formToSave: OnboardingFormState,
+    syncBackend: boolean,
+    options?: { markCompleted?: boolean }
+  ): Promise<{ backendSaved: boolean; error?: string }> => {
     const cleanName = formToSave.brandName.trim() || 'My Brand Studio';
     const cleanTitle =
       formToSave.storefrontTitle.trim() || `${cleanName} — Official Storefront & Virtual Try-On`;
@@ -216,8 +261,8 @@ export function GettingStartedWizard() {
       brandStory: formToSave.brandStory.trim() || cleanDesc,
       primaryColor: formToSave.primaryColor,
       accentColor: formToSave.accentColor,
-      logo: formToSave.logoUrl.trim() || SAMPLE_LOGO_PRESETS[0].url,
-      banner: formToSave.bannerUrl.trim() || SAMPLE_BANNER_PRESETS[0].url,
+      ...(formToSave.logoUrl.trim() ? { logo: formToSave.logoUrl.trim() } : {}),
+      ...(formToSave.bannerUrl.trim() ? { banner: formToSave.bannerUrl.trim() } : {}),
       socialLinks: {
         ...(profile.socialLinks || {}),
         instagram: formToSave.instagram.trim(),
@@ -276,7 +321,26 @@ export function GettingStartedWizard() {
       accentColor: formToSave.accentColor,
       announcement: formToSave.announcement.trim(),
       aboutText: formToSave.brandStory.trim() || formToSave.shortDescription.trim(),
+      storefrontTitle: cleanTitle,
+      slogan: formToSave.slogan.trim(),
+      shortDescription: formToSave.shortDescription.trim(),
+      categoryFocus: formToSave.categoryFocus,
+      ownerName: formToSave.ownerName.trim() || session?.user?.name || '',
+      legalName: formToSave.legalName.trim(),
+      businessType: formToSave.businessType,
+      phone: formToSave.phone.trim(),
+      city: formToSave.city.trim(),
+      country: formToSave.country.trim(),
+      address: formToSave.address.trim(),
+      currency: formToSave.currency || 'USD',
+      socialLinks: {
+        instagram: formToSave.instagram.trim(),
+        website: formToSave.website.trim(),
+      },
       ...(safeBanner ? { bannerImage: safeBanner } : {}),
+      ...(options?.markCompleted
+        ? { onboardingCompleted: true, onboardingCompletedAt: Date.now() }
+        : {}),
     };
 
     try {
@@ -288,12 +352,12 @@ export function GettingStartedWizard() {
         ...(safeBanner ? { bannerUrl: safeBanner } : {}),
         storefrontSettings: storefrontSettingsPayload,
       });
-      await brandWorkspaceApi
-        .updateStorefrontSettings(storefrontSettingsPayload)
-        .catch(() => null);
       return { backendSaved: true };
-    } catch {
-      return { backendSaved: false };
+    } catch (err) {
+      return {
+        backendSaved: false,
+        error: err instanceof Error ? err.message : 'Unable to save setup to backend.',
+      };
     }
   };
 
@@ -344,18 +408,19 @@ export function GettingStartedWizard() {
   const handleSaveStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.brandName.trim()) {
-      notify('Please enter your Brand Name.');
+      notify('Please enter your Brand Name before continuing.');
       return;
     }
     if (!form.storefrontTitle.trim()) {
-      notify('Please enter a Storefront Title.');
+      notify('Please enter a Storefront Title before continuing.');
       return;
     }
     setSaving(true);
     const { backendSaved } = await persistBrandForm(form, true);
     markChecklist('chk_profile');
+    markOnboardingStepCompleted(activeTenantId, 1);
     setSaving(false);
-    setStep(2);
+    setStep(2, activeTenantId);
     notify(
       backendSaved
         ? 'Brand name, storefront title, and story saved to workspace & backend.'
@@ -372,8 +437,9 @@ export function GettingStartedWizard() {
     setSaving(true);
     const { backendSaved } = await persistBrandForm(form, true);
     markChecklist('chk_business');
+    markOnboardingStepCompleted(activeTenantId, 2);
     setSaving(false);
-    setStep(3);
+    setStep(3, activeTenantId);
     notify(
       backendSaved
         ? 'Business and contact details saved to backend.'
@@ -386,8 +452,9 @@ export function GettingStartedWizard() {
     setSaving(true);
     const { backendSaved } = await persistBrandForm(form, true);
     markChecklist('chk_identity');
+    markOnboardingStepCompleted(activeTenantId, 3);
     setSaving(false);
-    setStep(4);
+    setStep(4, activeTenantId);
     notify(
       backendSaved
         ? 'Brand colors, logo, and banner synced to storefront.'
@@ -600,60 +667,142 @@ export function GettingStartedWizard() {
   const handleSaveCatalogAndContinue = () => {
     if (products.length > 0) markChecklist('chk_product');
     if (tryOnConfig.enabled) markChecklist('chk_tryon');
-    setStep(5);
+    markOnboardingStepCompleted(activeTenantId, 4);
+    setStep(5, activeTenantId);
   };
 
   const handleCompleteOnboarding = async () => {
-    if (!form.brandName.trim()) {
-      setStep(1);
-      notify('Please set your Brand Name before launching the dashboard.');
+    if (!form.brandName.trim() || !form.storefrontTitle.trim()) {
+      setStep(1, activeTenantId);
+      notify('Please complete your Brand Name and Storefront Title before saving setup.');
       return;
     }
+    if (!form.bizEmail.trim() || !form.bizEmail.includes('@')) {
+      setStep(2, activeTenantId);
+      notify('Please enter a valid business contact email before saving setup.');
+      return;
+    }
+
     setSaving(true);
-    await persistBrandForm(form, true);
-    markOnboardingCompleted(activeTenantId);
-    setSaving(false);
-    notify('Brand onboarding completed. Welcome to your Brand Dashboard!');
-    router.replace('/dashboard');
+    setSaveError(null);
+    setSaveStage('saving');
+
+    const saveRes = await persistBrandForm(form, true, { markCompleted: true });
+    if (!saveRes.backendSaved) {
+      const msg = saveRes.error || 'Could not save your onboarding setup to the backend.';
+      setSaveError(msg);
+      setSaveStage('error');
+      setSaving(false);
+      notify(msg);
+      return;
+    }
+
+    setSaveStage('verifying');
+    try {
+      const verifiedProfile = await brandWorkspaceApi.getProfile();
+      if (!verifiedProfile?.onboardingCompleted) {
+        const msg = 'Backend reload check did not confirm onboarding completion. Please retry Save.';
+        setSaveError(msg);
+        setSaveStage('error');
+        setSaving(false);
+        notify(msg);
+        return;
+      }
+
+      updateProfile({
+        ...verifiedProfile,
+        owner: verifiedProfile.owner || form.ownerName.trim() || session?.user?.name || '',
+      });
+      setBackendOnboardingStatus(verifiedProfile.id || activeTenantId, true);
+      markOnboardingCompleted(verifiedProfile.id || activeTenantId);
+
+      setSaveStage('redirecting');
+      notify('Brand setup saved and verified from backend. Redirecting to Brand Dashboard...');
+      onCompleted?.();
+
+      if (typeof window !== 'undefined') {
+        window.location.assign('/dashboard');
+      }
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? `Backend reload check failed: ${err.message}`
+          : 'Backend reload verification failed. Please retry Save.';
+      setSaveError(msg);
+      setSaveStage('error');
+      setSaving(false);
+      notify(msg);
+    }
   };
 
   const handleStepSwitch = (targetStep: number) => {
-    void persistBrandForm(form, false);
-    setStep(targetStep);
+    if (targetStep > maxUnlockedStep) {
+      notify(
+        step === 1
+          ? 'Please enter and save your Brand Name & Storefront Title first.'
+          : 'Complete the current step first before continuing.'
+      );
+      return;
+    }
+    if (step1Done) {
+      void persistBrandForm(form, false);
+    }
+    setStep(targetStep, activeTenantId);
   };
 
   return (
-    <div className="space-y-6 pb-8">
-      <PageHeader
-        eyebrow="Owner Configuration & Onboarding"
-        title={
-          isAlreadyOnboarded
-            ? `Brand Setup & Starter Wizard — ${form.brandName || profile.name}`
-            : 'Complete Your Brand Profile & Storefront Setup'
-        }
-        subtitle="Configure your brand name, storefront title, contact details, visual identity, and sample catalog items before entering the full workspace."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={isAlreadyOnboarded ? 'ACTIVE' : 'PENDING'} />
-            <button
-              type="button"
-              onClick={handleApplySampleBrand}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-900 text-xs font-bold transition-colors"
-            >
-              <Wand2 className="w-3.5 h-3.5 text-slate-700" />
-              Fill Sample Brand Details
-            </button>
-            {isAlreadyOnboarded && (
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
-              >
-                Open Dashboard
-              </Link>
-            )}
+    <div className={embeddedInModal ? 'space-y-5' : 'space-y-6 pb-8'}>
+      {embeddedInModal ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-xs sm:text-sm font-extrabold text-slate-950">
+              Complete Your Brand Profile &amp; Storefront Setup
+            </p>
+            <p className="text-[11px] sm:text-xs text-slate-600">
+              Add your brand name, storefront title, contact details, visuals, and sample products to unlock dashboard access.
+            </p>
           </div>
-        }
-      />
+          <button
+            type="button"
+            onClick={handleApplySampleBrand}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold shrink-0 transition-colors"
+          >
+            <Wand2 className="w-3.5 h-3.5 text-slate-700" />
+            Fill Sample Brand Details
+          </button>
+        </div>
+      ) : (
+        <PageHeader
+          eyebrow="Owner Configuration & Onboarding"
+          title={
+            isAlreadyOnboarded
+              ? `Brand Setup & Starter Wizard — ${form.brandName || profile.name}`
+              : 'Complete Your Brand Profile & Storefront Setup'
+          }
+          subtitle="Configure your brand name, storefront title, contact details, visual identity, and sample catalog items before entering the full workspace."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={isAlreadyOnboarded ? 'ACTIVE' : 'PENDING'} />
+              <button
+                type="button"
+                onClick={handleApplySampleBrand}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-900 text-xs font-bold transition-colors"
+              >
+                <Wand2 className="w-3.5 h-3.5 text-slate-700" />
+                Fill Sample Brand Details
+              </button>
+              {isAlreadyOnboarded && (
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
+                >
+                  Open Dashboard
+                </Link>
+              )}
+            </div>
+          }
+        />
+      )}
 
       {/* Setup Readiness Progress Strip */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
@@ -681,20 +830,24 @@ export function GettingStartedWizard() {
         {ONBOARDING_STEPS.map((label, idx) => {
           const stepNum = idx + 1;
           const active = step === stepNum;
+          const locked = stepNum > maxUnlockedStep;
           const done =
-            (stepNum === 1 && readiness.hasBrandTitle && completedIds.includes('chk_profile')) ||
-            (stepNum === 2 && readiness.hasBusinessContact && completedIds.includes('chk_business')) ||
-            (stepNum === 3 && readiness.hasIdentityMedia && completedIds.includes('chk_identity')) ||
-            (stepNum === 4 && readiness.hasStarterCatalog) ||
+            (stepNum === 1 && step1Done) ||
+            (stepNum === 2 && step2Done) ||
+            (stepNum === 3 && step3Done) ||
+            (stepNum === 4 && step4Done) ||
             (stepNum === 5 && isAlreadyOnboarded);
           return (
             <button
               key={label}
               type="button"
+              disabled={locked}
               onClick={() => handleStepSwitch(stepNum)}
               className={`px-3 py-2.5 rounded-xl text-left text-xs font-bold border transition-all flex items-center justify-between gap-1.5 ${
                 active
                   ? 'bg-slate-950 text-white border-slate-950 shadow-sm'
+                  : locked
+                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-70'
                   : done
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/70'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -702,6 +855,7 @@ export function GettingStartedWizard() {
             >
               <span className="truncate">{label}</span>
               {done && !active && <Check className="w-3.5 h-3.5 shrink-0 text-emerald-700" />}
+              {locked && !active && <Lock className="w-3 h-3 shrink-0 text-slate-400" />}
             </button>
           );
         })}
@@ -832,7 +986,7 @@ export function GettingStartedWizard() {
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition-colors"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Save & Continue to Business Info
+                Next: Business &amp; Contact
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -994,7 +1148,7 @@ export function GettingStartedWizard() {
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition-colors"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Save Business Info & Continue
+                Next: Identity &amp; Media
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1190,13 +1344,17 @@ export function GettingStartedWizard() {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
                 <div className="relative z-10 flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 border-white/80 bg-white shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={form.logoUrl || SAMPLE_LOGO_PRESETS[0].url}
-                      alt="Brand Logo Preview"
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 border-white/80 bg-white text-slate-950 flex items-center justify-center font-extrabold text-lg shrink-0">
+                    {form.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={form.logoUrl}
+                        alt="Brand Logo Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span>{(form.brandName.trim() || 'B').charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
                   <div className="min-w-0">
                     <span
@@ -1206,10 +1364,10 @@ export function GettingStartedWizard() {
                       {form.brandName || 'Your Brand'}
                     </span>
                     <h3 className="text-base sm:text-lg font-extrabold leading-tight truncate">
-                      {form.storefrontTitle || `${form.brandName || 'Brand'} Storefront`}
+                      {form.storefrontTitle || 'Storefront Title'}
                     </h3>
                     <p className="text-xs text-slate-200 truncate">
-                      {form.slogan || 'Real-time AI Virtual Try-On enabled'}
+                      {form.slogan || 'Add a slogan or tagline in Step 1'}
                     </p>
                   </div>
                 </div>
@@ -1231,7 +1389,7 @@ export function GettingStartedWizard() {
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition-colors"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Save Identity & Continue
+                Next: Starter Catalog &amp; Try-On
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1381,6 +1539,7 @@ export function GettingStartedWizard() {
                     type="url"
                     value={prodImageUrl}
                     onChange={(e) => setProdImageUrl(e.target.value)}
+                    placeholder="https://... or click Upload Image"
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
                   />
                 </div>
@@ -1484,7 +1643,7 @@ export function GettingStartedWizard() {
                 onClick={handleSaveCatalogAndContinue}
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
               >
-                Review & Complete Setup
+                Next: Review &amp; Save
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1492,11 +1651,11 @@ export function GettingStartedWizard() {
         </div>
       )}
 
-      {/* STEP 5: REVIEW & COMPLETE LAUNCH */}
+      {/* STEP 5: REVIEW & FINAL SAVE */}
       {step === 5 && (
         <SectionCard
-          title="5. Review Brand Onboarding Configuration & Launch Dashboard"
-          subtitle="Verify your Brand Profile, Storefront Title, Visual Identity, and Starter Catalog before entering your workspace."
+          title="5. Review Brand Setup & Save to Backend"
+          subtitle="All onboarding steps are complete. Click Save to persist your setup, re-verify from the backend, and redirect to your Brand Dashboard."
         >
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -1508,7 +1667,7 @@ export function GettingStartedWizard() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => handleStepSwitch(1)}
                     className="text-[11px] font-bold text-slate-700 underline"
                   >
                     Edit
@@ -1540,7 +1699,7 @@ export function GettingStartedWizard() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
+                    onClick={() => handleStepSwitch(2)}
                     className="text-[11px] font-bold text-slate-700 underline"
                   >
                     Edit
@@ -1586,7 +1745,7 @@ export function GettingStartedWizard() {
                   )}
                   <button
                     type="button"
-                    onClick={() => setStep(4)}
+                    onClick={() => handleStepSwitch(4)}
                     className="text-[11px] font-bold text-slate-700 underline"
                   >
                     Configure Catalog
@@ -1600,11 +1759,19 @@ export function GettingStartedWizard() {
               </p>
             </div>
 
+            {saveError && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-900">
+                <strong className="font-bold">Save / Verification Failed: </strong>
+                {saveError}
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => handleStepSwitch(4)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-800"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-xs font-bold text-slate-800"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Back
@@ -1621,7 +1788,13 @@ export function GettingStartedWizard() {
                 ) : (
                   <CheckCircle2 className="w-4 h-4" />
                 )}
-                Complete Onboarding & Launch Brand Dashboard
+                {saveStage === 'saving'
+                  ? 'Saving to Backend...'
+                  : saveStage === 'verifying'
+                  ? 'Reloading & Verifying Backend...'
+                  : saveStage === 'redirecting'
+                  ? 'Verified! Redirecting to Dashboard...'
+                  : 'Save & Launch Brand Dashboard'}
               </button>
             </div>
           </div>

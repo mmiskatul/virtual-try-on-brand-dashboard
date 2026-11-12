@@ -7,7 +7,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireBrandPageSession('/login');
-  return <DashboardShell>{children}</DashboardShell>;
+  const verified = await requireBrandPageSession('/login');
+  return <DashboardShell verifiedUser={verified}>{children}</DashboardShell>;
 }
 

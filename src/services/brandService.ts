@@ -103,17 +103,61 @@ export const brandWorkspaceApi = {
   getProfile: async (): Promise<Partial<BrandProfile> & { id: string }> => {
     const res = await apiFetch<{ tenant: any }>('/api/v1/brand/profile');
     const t = res.tenant;
+    const ss = t.storefrontSettings || {};
+    const slug = t.slug || 'brand';
+    const baseSettings = {
+      timezone: 'UTC',
+      dateFormat: 'YYYY-MM-DD',
+      language: 'English',
+      currency: ss.currency || 'USD',
+      taxRatePercent: 0,
+      taxInclusive: false,
+      freeShippingThreshold: 150,
+      defaultShippingFee: 12,
+      emailNotifications: true,
+      orderNotifications: true,
+      inventoryNotifications: true,
+      tryOnNotifications: true,
+      billingNotifications: true,
+      twoFactorEnabled: false,
+    };
     return {
       id: t.id,
       name: t.name,
-      slug: t.slug,
+      slug,
       email: t.contactEmail,
+      onboardingCompleted: Boolean(ss.onboardingCompleted),
+      onboardingCompletedAt: typeof ss.onboardingCompletedAt === 'number' ? ss.onboardingCompletedAt : undefined,
+      owner: ss.ownerName || undefined,
+      legalName: ss.legalName || undefined,
+      businessType: ss.businessType || undefined,
+      phone: ss.phone || undefined,
+      city: ss.city || undefined,
+      country: ss.country || undefined,
+      address: ss.address || undefined,
+      categoryFocus: ss.categoryFocus || undefined,
+      slogan: ss.slogan || undefined,
+      shortDescription: ss.shortDescription || undefined,
       description: t.description,
+      brandStory: ss.aboutText || t.description || undefined,
       logo: t.logoUrl || undefined,
-      banner: t.bannerUrl || t.storefrontSettings?.bannerImage || undefined,
-      announcement: t.storefrontSettings?.announcement,
-      primaryColor: t.storefrontSettings?.primaryColor,
-      accentColor: t.storefrontSettings?.accentColor,
+      banner: t.bannerUrl || ss.bannerImage || undefined,
+      announcement: ss.announcement,
+      primaryColor: ss.primaryColor,
+      accentColor: ss.accentColor,
+      ...(ss.socialLinks ? { socialLinks: ss.socialLinks } : {}),
+      ...(ss.currency ? { settings: baseSettings } : {}),
+      ...(ss.storefrontTitle || ss.shortDescription || t.description
+        ? {
+            seo: {
+              title: ss.storefrontTitle || '',
+              description: ss.shortDescription || t.description || '',
+              canonicalUrl: `https://vton.store/brands/${slug}`,
+              ogImage: t.bannerUrl || ss.bannerImage || '',
+              allowIndexing: true,
+            },
+          }
+        : {}),
       storeStatus: t.status === 'ACTIVE' ? 'LIVE' : 'MAINTENANCE',
     };
   },
