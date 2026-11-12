@@ -153,11 +153,11 @@ export function AnalyticsReportsView({
         {(tab === 'overview' || tab === 'sales') && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <KpiCard label="Gross Revenue" value={`$${grossSales.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
-              <KpiCard label="Net Sales" value={`$${netSales.toFixed(2)}`} icon={<BarChart3 className="w-4 h-4" />} />
-              <KpiCard label="Discounts Given" value={`$${totalDiscounts.toFixed(2)}`} icon={<ShoppingBag className="w-4 h-4" />} />
-              <KpiCard label="Refunds" value={`$${refundedTotal.toFixed(2)}`} icon={<Users className="w-4 h-4" />} />
-              <KpiCard label="Average Order Value" value={`$${aov.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
+              <KpiCard label="Gross Revenue" value={`৳${grossSales.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
+              <KpiCard label="Net Sales" value={`৳${netSales.toFixed(2)}`} icon={<BarChart3 className="w-4 h-4" />} />
+              <KpiCard label="Discounts Given" value={`৳${totalDiscounts.toFixed(2)}`} icon={<ShoppingBag className="w-4 h-4" />} />
+              <KpiCard label="Refunds" value={`৳${refundedTotal.toFixed(2)}`} icon={<Users className="w-4 h-4" />} />
+              <KpiCard label="Average Order Value" value={`৳${aov.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
             </div>
 
             <SectionCard
@@ -246,7 +246,7 @@ export function AnalyticsReportsView({
                       <tr key={p.id}>
                         <td className="py-3 pr-4 font-bold text-slate-900">{p.name}</td>
                         <td className="py-3 pr-4 text-slate-600">{p.category}</td>
-                        <td className="py-3 pr-4 font-semibold">${p.price.toFixed(2)}</td>
+                        <td className="py-3 pr-4 font-semibold">৳{p.price.toFixed(2)}</td>
                         <td className="py-3 pr-4 text-slate-600">{views.toLocaleString()}</td>
                         <td className="py-3 pr-4 font-extrabold text-slate-950">{sales}</td>
                         <td className="py-3 pr-4 text-emerald-700 font-bold">{cvr}%</td>
@@ -265,7 +265,7 @@ export function AnalyticsReportsView({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <KpiCard label="New Buyers" value={newCustomers} icon={<Users className="w-4 h-4" />} />
               <KpiCard label="Repeat / High-Value Buyers" value={returningCustomers} icon={<Users className="w-4 h-4" />} />
-              <KpiCard label="Average Customer Value" value={`$${avgClv.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
+              <KpiCard label="Average Customer Value" value={`৳${avgClv.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
             </div>
             <SectionCard title="Top Patrons by Lifetime Spend">
               <div className="space-y-2 text-xs">
@@ -280,7 +280,7 @@ export function AnalyticsReportsView({
                         </p>
                       </div>
                       <div className="text-right space-y-1">
-                        <p className="font-extrabold text-slate-950">${c.totalSpend.toFixed(2)}</p>
+                        <p className="font-extrabold text-slate-950">৳{c.totalSpend.toFixed(2)}</p>
                         <StatusBadge status={c.group} />
                       </div>
                     </div>
@@ -300,7 +300,7 @@ export function AnalyticsReportsView({
                 value={mktImpressions > 0 ? `${((mktClicks / mktImpressions) * 100).toFixed(1)}%` : '0.0%'}
                 icon={<TrendingUp className="w-4 h-4" />}
               />
-              <KpiCard label="Marketplace Revenue" value={`$${mktRevenue.toFixed(2)}`} icon={<ShoppingBag className="w-4 h-4" />} />
+              <KpiCard label="Marketplace Revenue" value={`৳${mktRevenue.toFixed(2)}`} icon={<ShoppingBag className="w-4 h-4" />} />
             </div>
             <SectionCard title="Post-by-Post Marketplace Performance">
               <div className="sm:hidden space-y-2.5 text-xs">
@@ -321,7 +321,7 @@ export function AnalyticsReportsView({
                       </div>
                       <div className="text-right">
                         <span className="text-slate-400 block">Revenue</span>
-                        <span className="font-extrabold text-slate-950 tabular-nums">${p.revenue.toFixed(2)}</span>
+                        <span className="font-extrabold text-slate-950 tabular-nums">৳{p.revenue.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -351,7 +351,7 @@ export function AnalyticsReportsView({
                         <td className="py-3 pr-4">{p.clicks.toLocaleString()}</td>
                         <td className="py-3 pr-4">{p.favorites}</td>
                         <td className="py-3 pr-4">{p.orders}</td>
-                        <td className="py-3 text-right font-bold">${p.revenue.toFixed(2)}</td>
+                        <td className="py-3 text-right font-bold">৳{p.revenue.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -367,7 +367,7 @@ export function AnalyticsReportsView({
               <KpiCard label="Completed Sessions" value={completedTryOns} icon={<Sparkles className="w-4 h-4 text-amber-600" />} />
               <KpiCard label="Failed / Rejected" value={failedTryOns} positive={failedTryOns === 0} icon={<BarChart3 className="w-4 h-4" />} />
               <KpiCard label="Cart Conversions" value={tryOnCartAdds} icon={<ShoppingBag className="w-4 h-4" />} />
-              <KpiCard label="Try-On Attributed Sales" value={`$${tryOnAttributedRevenue.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
+              <KpiCard label="Try-On Attributed Sales" value={`৳${tryOnAttributedRevenue.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
             </div>
             <SectionCard title="Daily Virtual Try-On Volume">
               <SvgBarChart data={DEMO_REVENUE_SERIES[period]} valueKey="tryOns" color="#d97706" />

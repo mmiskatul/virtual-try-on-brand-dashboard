@@ -126,7 +126,7 @@ export function StorefrontClient({ brand, products }: StorefrontClientProps) {
               <div className="p-5 space-y-2">
                 <div className="flex justify-between items-start">
                   <h3 className="font-bold text-sm text-gray-900">{product.name}</h3>
-                  <span className="font-extrabold text-sm text-black">${product.price}</span>
+                  <span className="font-extrabold text-sm text-black">৳{product.price}</span>
                 </div>
                 <p className="text-xs text-gray-500">{product.category}</p>
               </div>
@@ -159,7 +159,7 @@ export function StorefrontClient({ brand, products }: StorefrontClientProps) {
                   />
                   <div>
                     <p className="font-bold text-gray-900">{activeTryOnModal.name}</p>
-                    <p className="text-gray-500">${activeTryOnModal.price} • Category: {activeTryOnModal.category}</p>
+                    <p className="text-gray-500">৳{activeTryOnModal.price} • Category: {activeTryOnModal.category}</p>
                   </div>
                 </div>
 

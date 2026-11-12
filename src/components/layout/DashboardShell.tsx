@@ -223,38 +223,51 @@ export function DashboardShell({
 
   useEffect(() => {
     if (!storeHydrated || !mounted || !activeTenantId) return;
-    const syncKey = `${activeTenantId}:${profile.id || 'none'}:${lastSyncedAt || 'init'}`;
+    const syncKey = `${activeTenantId}:${profile.id || 'none'}:${isTenantOnboarded ? 'on' : 'off'}:${lastSyncedAt || 'init'}`;
     if (syncedDraftKeyRef.current === syncKey) return;
     syncedDraftKeyRef.current = syncKey;
 
     const savedDraft = onboardingProfileDrafts[activeTenantId];
     const liveMatchesTenant = profile.id === activeTenantId;
-    if (!savedDraft && !liveMatchesTenant) return;
+    const liveHasExplicitOnboarding =
+      liveMatchesTenant &&
+      (isTenantOnboarded ||
+        Boolean(
+          profile.seo?.title ||
+            profile.slogan ||
+            profile.shortDescription ||
+            profile.legalName ||
+            profile.businessType ||
+            profile.specialties?.length ||
+            profile.categoryFocus
+        ));
+    if (!savedDraft && !liveHasExplicitOnboarding) return;
 
     saveOnboardingProfileForTenant(activeTenantId, {
       ...(savedDraft || {}),
-      ...(liveMatchesTenant && profile.name ? { name: profile.name } : {}),
-      ...(liveMatchesTenant && profile.email ? { email: profile.email } : {}),
-      ...(liveMatchesTenant && profile.owner ? { owner: profile.owner } : {}),
-      ...(liveMatchesTenant && profile.legalName ? { legalName: profile.legalName } : {}),
-      ...(liveMatchesTenant && profile.businessType ? { businessType: profile.businessType } : {}),
-      ...(liveMatchesTenant && profile.phone ? { phone: profile.phone } : {}),
-      ...(liveMatchesTenant && profile.city ? { city: profile.city } : {}),
-      ...(liveMatchesTenant && profile.country ? { country: profile.country } : {}),
-      ...(liveMatchesTenant && profile.address ? { address: profile.address } : {}),
-      ...(liveMatchesTenant && profile.categoryFocus ? { categoryFocus: profile.categoryFocus } : {}),
-      ...(liveMatchesTenant && profile.slogan ? { slogan: profile.slogan } : {}),
-      ...(liveMatchesTenant && profile.shortDescription ? { shortDescription: profile.shortDescription } : {}),
-      ...(liveMatchesTenant && profile.description ? { description: profile.description } : {}),
-      ...(liveMatchesTenant && profile.brandStory ? { brandStory: profile.brandStory } : {}),
-      ...(liveMatchesTenant && profile.logo ? { logo: profile.logo } : {}),
-      ...(liveMatchesTenant && profile.banner ? { banner: profile.banner } : {}),
-      ...(liveMatchesTenant && profile.primaryColor ? { primaryColor: profile.primaryColor } : {}),
-      ...(liveMatchesTenant && profile.accentColor ? { accentColor: profile.accentColor } : {}),
-      ...(liveMatchesTenant && profile.announcement ? { announcement: profile.announcement } : {}),
-      ...(liveMatchesTenant && profile.seo?.title ? { seo: profile.seo } : {}),
-      ...(liveMatchesTenant && profile.socialLinks ? { socialLinks: profile.socialLinks } : {}),
-      ...(liveMatchesTenant && profile.settings ? { settings: profile.settings } : {}),
+      ...(liveHasExplicitOnboarding && profile.name ? { name: profile.name } : {}),
+      ...(liveHasExplicitOnboarding && profile.email ? { email: profile.email } : {}),
+      ...(liveHasExplicitOnboarding && profile.owner ? { owner: profile.owner } : {}),
+      ...(liveHasExplicitOnboarding && profile.legalName ? { legalName: profile.legalName } : {}),
+      ...(liveHasExplicitOnboarding && profile.businessType ? { businessType: profile.businessType } : {}),
+      ...(liveHasExplicitOnboarding && profile.phone ? { phone: profile.phone } : {}),
+      ...(liveHasExplicitOnboarding && profile.city ? { city: profile.city } : {}),
+      ...(liveHasExplicitOnboarding && profile.country ? { country: profile.country } : {}),
+      ...(liveHasExplicitOnboarding && profile.address ? { address: profile.address } : {}),
+      ...(liveHasExplicitOnboarding && profile.categoryFocus ? { categoryFocus: profile.categoryFocus } : {}),
+      ...(liveHasExplicitOnboarding && profile.specialties?.length ? { specialties: profile.specialties } : {}),
+      ...(liveHasExplicitOnboarding && profile.slogan ? { slogan: profile.slogan } : {}),
+      ...(liveHasExplicitOnboarding && profile.shortDescription ? { shortDescription: profile.shortDescription } : {}),
+      ...(liveHasExplicitOnboarding && profile.description ? { description: profile.description } : {}),
+      ...(liveHasExplicitOnboarding && profile.brandStory ? { brandStory: profile.brandStory } : {}),
+      ...(liveHasExplicitOnboarding && profile.logo ? { logo: profile.logo } : {}),
+      ...(liveHasExplicitOnboarding && profile.banner ? { banner: profile.banner } : {}),
+      ...(liveHasExplicitOnboarding && profile.primaryColor ? { primaryColor: profile.primaryColor } : {}),
+      ...(liveHasExplicitOnboarding && profile.accentColor ? { accentColor: profile.accentColor } : {}),
+      ...(liveHasExplicitOnboarding && profile.announcement ? { announcement: profile.announcement } : {}),
+      ...(liveHasExplicitOnboarding && profile.seo?.title ? { seo: profile.seo } : {}),
+      ...(liveHasExplicitOnboarding && profile.socialLinks ? { socialLinks: profile.socialLinks } : {}),
+      ...(liveHasExplicitOnboarding && profile.settings ? { settings: profile.settings } : {}),
     });
   }, [
     storeHydrated,
@@ -272,6 +285,7 @@ export function DashboardShell({
     profile.country,
     profile.address,
     profile.categoryFocus,
+    profile.specialties,
     profile.slogan,
     profile.shortDescription,
     profile.description,
@@ -284,6 +298,7 @@ export function DashboardShell({
     profile.seo,
     profile.socialLinks,
     profile.settings,
+    isTenantOnboarded,
     onboardingProfileDrafts,
     saveOnboardingProfileForTenant,
   ]);
@@ -1089,17 +1104,17 @@ export function DashboardShell({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
-                      Setup Required
+                      Setup Needed
                     </span>
                     <h2
                       id="setup-required-dialog-title"
                       className="text-sm sm:text-base font-extrabold text-slate-950 truncate"
                     >
-                      Complete Brand Onboarding to Access Dashboard
+                      Finish Your Shop Setup to Open Dashboard
                     </h2>
                   </div>
                   <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
-                    Signed in as {authSession?.user?.email || verifiedUser?.email || profile.email} — finish setup below to unlock your workspace.
+                    Signed in as {authSession?.user?.email || verifiedUser?.email || profile.email} — fill in the quick steps below to start using your shop dashboard.
                   </p>
                 </div>
               </div>

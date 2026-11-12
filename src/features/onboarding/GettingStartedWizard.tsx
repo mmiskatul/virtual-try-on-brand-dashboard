@@ -16,6 +16,7 @@ import {
   Lock,
   Package,
   Palette,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
   Store,
@@ -26,7 +27,7 @@ import { PageHeader, SectionCard, StatusBadge } from '../../components/shared/Ui
 import { brandWorkspaceApi } from '../../services/brandService';
 import { useUiStore } from '../../stores/useUiStore';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
-import { Fabric, Product } from '../../types';
+import { BrandProfile, Fabric, Product } from '../../types';
 import {
   BRAND_COLOR_PRESETS,
   BUSINESS_TYPE_OPTIONS,
@@ -40,11 +41,16 @@ import {
   buildSampleStarterCatalog,
   createInitialOnboardingForm,
   isHttpImageUrl,
+  normalizeBusinessType,
+  parseCategorySelection,
   toBrandSlug,
 } from './onboardingPresets';
 
 const SAMPLE_GARMENT_IMAGE =
   'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80';
+
+const FIELD_INPUT_CLASS =
+  'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors focus:outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10';
 
 export interface GettingStartedWizardProps {
   embeddedInModal?: boolean;
@@ -81,6 +87,7 @@ export function GettingStartedWizard({
   const onboardedTenantIds = useWorkspaceStore((s) => s.onboardedTenantIds);
   const onboardingProfileDrafts = useWorkspaceStore((s) => s.onboardingProfileDrafts);
   const saveOnboardingProfileForTenant = useWorkspaceStore((s) => s.saveOnboardingProfileForTenant);
+  const restoreOnboardingDraftSnapshot = useWorkspaceStore((s) => s.restoreOnboardingDraftSnapshot);
   const markOnboardingCompleted = useWorkspaceStore((s) => s.markOnboardingCompleted);
   const setBackendOnboardingStatus = useWorkspaceStore((s) => s.setBackendOnboardingStatus);
   const updateProfile = useWorkspaceStore((s) => s.updateProfile);
@@ -119,6 +126,7 @@ export function GettingStartedWizard({
   const [saveStage, setSaveStage] = useState<'idle' | 'saving' | 'verifying' | 'redirecting' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [sampleLoading, setSampleLoading] = useState(false);
+  const [canUndoExample, setCanUndoExample] = useState(false);
   const [uploadingField, setUploadingField] = useState<'logo' | 'banner' | 'product' | null>(null);
 
   const [form, setForm] = useState<OnboardingFormState>(() =>
@@ -134,8 +142,8 @@ export function GettingStartedWizard({
   // Step 4 custom starter product fields
   const [prodName, setProdName] = useState('');
   const [prodSku, setProdSku] = useState('');
-  const [prodCategory, setProdCategory] = useState('Tops');
-  const [prodTryOnCat, setProdTryOnCat] = useState<'tops' | 'bottoms' | 'dresses' | 'outerwear'>('tops');
+  const [prodCategory, setProdCategory] = useState('');
+  const [prodTryOnCat, setProdTryOnCat] = useState<'' | 'tops' | 'bottoms' | 'dresses' | 'outerwear'>('');
   const [prodPrice, setProdPrice] = useState('125');
   const [prodStock, setProdStock] = useState('25');
   const [prodImageUrl, setProdImageUrl] = useState('');
@@ -145,6 +153,11 @@ export function GettingStartedWizard({
 
   const initializedTenantRef = useRef<string | null>(null);
   const liveSyncedTenantRef = useRef<string | null>(null);
+  const previousSnapshotRef = useRef<{
+    form: OnboardingFormState;
+    draft: Partial<BrandProfile> | null;
+    isDirty: boolean;
+  } | null>(null);
 
   useEffect(() => {
     setStoreHydrated(useWorkspaceStore.persist.hasHydrated());
@@ -167,6 +180,10 @@ export function GettingStartedWizard({
     if (!tenantChanged && !(liveArrived && !isDirty)) return;
 
     initializedTenantRef.current = activeTenantId;
+    if (tenantChanged) {
+      previousSnapshotRef.current = null;
+      setCanUndoExample(false);
+    }
     if (profile.id === activeTenantId) {
       liveSyncedTenantRef.current = activeTenantId;
     }
@@ -206,29 +223,60 @@ export function GettingStartedWizard({
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const toggleCategory = (category: string) => {
+    setIsDirty(true);
+    setForm((prev) => {
+      const current = parseCategorySelection(prev.categories);
+      const next = current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category];
+      return {
+        ...prev,
+        categories: next,
+        categoryFocus: next.join(', '),
+      };
+    });
+  };
+
+  const setAllCategories = (next: string[]) => {
+    setIsDirty(true);
+    setForm((prev) => ({
+      ...prev,
+      categories: next,
+      categoryFocus: next.join(', '),
+    }));
+  };
+
   const computedSlug = useMemo(
     () => (profile.id === activeTenantId && profile.slug ? profile.slug : toBrandSlug(form.brandName)),
     [profile.id, profile.slug, activeTenantId, form.brandName]
   );
 
+  const selectedCategories = useMemo(
+    () => parseCategorySelection(form.categories),
+    [form.categories]
+  );
+
+  const normalizedBusinessType = useMemo(
+    () => normalizeBusinessType(form.businessType),
+    [form.businessType]
+  );
+
   // Count how many starter setup sections are filled cleanly
   const readiness = useMemo(() => {
-    const hasBrandTitle = Boolean(form.brandName.trim() && form.storefrontTitle.trim());
-    const hasBusinessContact = Boolean(form.bizEmail.trim() && (form.legalName.trim() || form.ownerName.trim()));
-    const hasIdentityMedia = Boolean(form.primaryColor && (form.logoUrl || form.bannerUrl));
-    const hasStarterCatalog = products.length > 0;
-    const hasTryOn = Boolean(tryOnConfig.enabled);
-    const totalDone = [hasBrandTitle, hasBusinessContact, hasIdentityMedia, hasStarterCatalog, hasTryOn].filter(Boolean).length;
+    const completedSections = [
+      step1Done,
+      step2Done,
+      step3Done,
+      step4Done,
+      isAlreadyOnboarded,
+    ];
+    const totalDone = completedSections.filter(Boolean).length;
     return {
-      hasBrandTitle,
-      hasBusinessContact,
-      hasIdentityMedia,
-      hasStarterCatalog,
-      hasTryOn,
       totalDone,
       pct: Math.round((totalDone / 5) * 100),
     };
-  }, [form, products.length, tryOnConfig.enabled]);
+  }, [step1Done, step2Done, step3Done, step4Done, isAlreadyOnboarded]);
 
   const persistBrandForm = async (
     formToSave: OnboardingFormState,
@@ -237,23 +285,28 @@ export function GettingStartedWizard({
   ): Promise<{ backendSaved: boolean; error?: string }> => {
     const cleanName = formToSave.brandName.trim() || 'My Brand Studio';
     const cleanTitle =
-      formToSave.storefrontTitle.trim() || `${cleanName} — Official Storefront & Virtual Try-On`;
+      formToSave.storefrontTitle.trim() || `${cleanName} — Online Shop`;
     const cleanSlug = profile.id === activeTenantId && profile.slug ? profile.slug : toBrandSlug(cleanName);
     const cleanDesc = formToSave.brandStory.trim() || formToSave.shortDescription.trim();
+    const cleanCategories = parseCategorySelection(formToSave.categories);
+    const cleanCategoryFocus =
+      cleanCategories.length > 0 ? cleanCategories.join(', ') : CATEGORY_FOCUS_OPTIONS[0];
+    const cleanBusinessType = normalizeBusinessType(formToSave.businessType);
 
     saveOnboardingProfileForTenant(activeTenantId, {
       id: activeTenantId,
       name: cleanName,
       slug: cleanSlug,
-      owner: formToSave.ownerName.trim() || session?.user?.name || profile.owner,
+      owner: formToSave.ownerName.trim() || (options?.markCompleted ? session?.user?.name || '' : ''),
       email: formToSave.bizEmail.trim() || session?.user?.email || profile.email,
       legalName: formToSave.legalName.trim(),
-      businessType: formToSave.businessType,
+      businessType: cleanBusinessType,
       phone: formToSave.phone.trim(),
       city: formToSave.city.trim(),
       country: formToSave.country.trim(),
       address: formToSave.address.trim(),
-      categoryFocus: formToSave.categoryFocus,
+      categoryFocus: cleanCategoryFocus,
+      specialties: cleanCategories,
       slogan: formToSave.slogan.trim(),
       announcement: formToSave.announcement.trim(),
       shortDescription: formToSave.shortDescription.trim(),
@@ -284,7 +337,7 @@ export function GettingStartedWizard({
           timezone: 'UTC',
           dateFormat: 'YYYY-MM-DD',
           language: 'English',
-          currency: 'USD',
+          currency: 'BDT',
           taxRatePercent: 0,
           taxInclusive: false,
           freeShippingThreshold: 150,
@@ -296,7 +349,7 @@ export function GettingStartedWizard({
           billingNotifications: true,
           twoFactorEnabled: false,
         }),
-        currency: formToSave.currency || 'USD',
+        currency: 'BDT',
       },
     });
 
@@ -324,15 +377,18 @@ export function GettingStartedWizard({
       storefrontTitle: cleanTitle,
       slogan: formToSave.slogan.trim(),
       shortDescription: formToSave.shortDescription.trim(),
-      categoryFocus: formToSave.categoryFocus,
-      ownerName: formToSave.ownerName.trim() || session?.user?.name || '',
+      categoryFocus: cleanCategoryFocus,
+      categories: cleanCategories,
+      ownerName:
+        formToSave.ownerName.trim() ||
+        (options?.markCompleted ? session?.user?.name || '' : ''),
       legalName: formToSave.legalName.trim(),
-      businessType: formToSave.businessType,
+      businessType: cleanBusinessType,
       phone: formToSave.phone.trim(),
       city: formToSave.city.trim(),
       country: formToSave.country.trim(),
       address: formToSave.address.trim(),
-      currency: formToSave.currency || 'USD',
+      currency: 'BDT',
       socialLinks: {
         instagram: formToSave.instagram.trim(),
         website: formToSave.website.trim(),
@@ -346,7 +402,7 @@ export function GettingStartedWizard({
     try {
       await brandWorkspaceApi.updateProfile({
         name: cleanName,
-        description: cleanDesc || cleanTitle,
+        ...(cleanDesc ? { description: cleanDesc } : {}),
         contactEmail: formToSave.bizEmail.trim() || undefined,
         ...(safeLogo ? { logoUrl: safeLogo } : {}),
         ...(safeBanner ? { bannerUrl: safeBanner } : {}),
@@ -362,57 +418,83 @@ export function GettingStartedWizard({
   };
 
   const handleApplySampleBrand = () => {
+    if (!canUndoExample) {
+      previousSnapshotRef.current = {
+        form: {
+          ...form,
+          categories: [...form.categories],
+        },
+        draft: savedTenantDraft
+          ? {
+              ...savedTenantDraft,
+              ...(savedTenantDraft.specialties
+                ? { specialties: [...savedTenantDraft.specialties] }
+                : {}),
+              ...(savedTenantDraft.seo ? { seo: { ...savedTenantDraft.seo } } : {}),
+              ...(savedTenantDraft.socialLinks
+                ? { socialLinks: { ...savedTenantDraft.socialLinks } }
+                : {}),
+              ...(savedTenantDraft.settings ? { settings: { ...savedTenantDraft.settings } } : {}),
+            }
+          : null,
+        isDirty,
+      };
+    }
+
     const sampled = buildSampleBrandFormValues(form);
     setForm(sampled);
     setIsDirty(true);
+    setCanUndoExample(true);
     saveOnboardingProfileForTenant(activeTenantId, {
       name: sampled.brandName,
-      owner: sampled.ownerName,
-      email: sampled.bizEmail,
-      legalName: sampled.legalName,
-      businessType: sampled.businessType,
       slogan: sampled.slogan,
       announcement: sampled.announcement,
       categoryFocus: sampled.categoryFocus,
+      specialties: sampled.categories,
       shortDescription: sampled.shortDescription,
       description: sampled.brandStory,
       brandStory: sampled.brandStory,
-      phone: sampled.phone,
-      city: sampled.city,
-      country: sampled.country,
-      address: sampled.address,
-      primaryColor: sampled.primaryColor,
-      accentColor: sampled.accentColor,
-      logo: sampled.logoUrl,
-      banner: sampled.bannerUrl,
       seo: {
         ...(profile.seo || {
           title: sampled.storefrontTitle,
           description: sampled.shortDescription,
           canonicalUrl: '',
-          ogImage: sampled.bannerUrl,
+          ogImage: '',
           allowIndexing: true,
         }),
         title: sampled.storefrontTitle,
         description: sampled.shortDescription,
       },
-      socialLinks: {
-        ...(profile.socialLinks || {}),
-        instagram: sampled.instagram,
-        website: sampled.website,
-      },
     });
-    notify('Sample brand name, title, story, contact, and media loaded. Review or customize any field.');
+    notify('Example shop info filled for Step 1! Click "Undo Example" anytime to restore your previous data.');
+  };
+
+  const handleUndoSampleBrand = () => {
+    const snap = previousSnapshotRef.current;
+    if (!snap) return;
+    setForm({
+      ...snap.form,
+      categories: [...snap.form.categories],
+    });
+    setIsDirty(snap.isDirty);
+    restoreOnboardingDraftSnapshot(activeTenantId, snap.draft);
+    previousSnapshotRef.current = null;
+    setCanUndoExample(false);
+    notify('Previous form data restored.');
   };
 
   const handleSaveStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.brandName.trim()) {
-      notify('Please enter your Brand Name before continuing.');
+      notify('Please type your Brand Name first.');
       return;
     }
     if (!form.storefrontTitle.trim()) {
-      notify('Please enter a Storefront Title before continuing.');
+      notify('Please type a Shop Page Title first.');
+      return;
+    }
+    if (selectedCategories.length === 0) {
+      notify('Please pick at least one category for your shop.');
       return;
     }
     setSaving(true);
@@ -423,15 +505,15 @@ export function GettingStartedWizard({
     setStep(2, activeTenantId);
     notify(
       backendSaved
-        ? 'Brand name, storefront title, and story saved to workspace & backend.'
-        : 'Brand details saved to your onboarding workspace.'
+        ? 'Brand name and shop details saved.'
+        : 'Brand details saved on this device.'
     );
   };
 
   const handleSaveStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.bizEmail.trim() || !form.bizEmail.includes('@')) {
-      notify('Please enter a valid business contact email.');
+      notify('Please enter a valid contact email.');
       return;
     }
     setSaving(true);
@@ -442,8 +524,8 @@ export function GettingStartedWizard({
     setStep(3, activeTenantId);
     notify(
       backendSaved
-        ? 'Business and contact details saved to backend.'
-        : 'Business and contact details saved to onboarding workspace.'
+        ? 'Contact details saved.'
+        : 'Contact details saved on this device.'
     );
   };
 
@@ -577,6 +659,14 @@ export function GettingStartedWizard({
       notify('Enter a garment product name first.');
       return;
     }
+    if (!prodCategory) {
+      notify('Please pick a product category first.');
+      return;
+    }
+    if (!prodTryOnCat) {
+      notify('Please pick a try-on body area first.');
+      return;
+    }
     setSaving(true);
     const cleanSku =
       prodSku.trim() ||
@@ -605,6 +695,8 @@ export function GettingStartedWizard({
     markChecklist('chk_product');
     setProdName('');
     setProdSku('');
+    setProdCategory('');
+    setProdTryOnCat('');
     setProdDescription('');
     setSaving(false);
     notify(`Added "${created.name}" (${created.sku}) to your catalog.`);
@@ -715,6 +807,8 @@ export function GettingStartedWizard({
       });
       setBackendOnboardingStatus(verifiedProfile.id || activeTenantId, true);
       markOnboardingCompleted(verifiedProfile.id || activeTenantId);
+      previousSnapshotRef.current = null;
+      setCanUndoExample(false);
 
       setSaveStage('redirecting');
       notify('Brand setup saved and verified from backend. Redirecting to Brand Dashboard...');
@@ -756,41 +850,67 @@ export function GettingStartedWizard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
           <div className="space-y-0.5 min-w-0">
             <p className="text-xs sm:text-sm font-extrabold text-slate-950">
-              Complete Your Brand Profile &amp; Storefront Setup
+              Complete Your Shop Info &amp; Basic Settings
             </p>
             <p className="text-[11px] sm:text-xs text-slate-600">
-              Add your brand name, storefront title, contact details, visuals, and sample products to unlock dashboard access.
+              Add your brand name, shop title, contact details, colors, and sample items to open your dashboard.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleApplySampleBrand}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold shrink-0 transition-colors"
-          >
-            <Wand2 className="w-3.5 h-3.5 text-slate-700" />
-            Fill Sample Brand Details
-          </button>
-        </div>
-      ) : (
-        <PageHeader
-          eyebrow="Owner Configuration & Onboarding"
-          title={
-            isAlreadyOnboarded
-              ? `Brand Setup & Starter Wizard — ${form.brandName || profile.name}`
-              : 'Complete Your Brand Profile & Storefront Setup'
-          }
-          subtitle="Configure your brand name, storefront title, contact details, visual identity, and sample catalog items before entering the full workspace."
-          actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge status={isAlreadyOnboarded ? 'ACTIVE' : 'PENDING'} />
+          {step === 1 && (
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {canUndoExample && (
+                <button
+                  type="button"
+                  onClick={handleUndoSampleBrand}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Undo Example
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleApplySampleBrand}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-900 text-xs font-bold transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold transition-colors"
               >
                 <Wand2 className="w-3.5 h-3.5 text-slate-700" />
-                Fill Sample Brand Details
+                Fill Example Info
               </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <PageHeader
+          eyebrow="Shop Setup"
+          title={
+            isAlreadyOnboarded
+              ? `Shop Setup Guide — ${form.brandName || profile.name}`
+              : 'Set Up Your Brand & Shop Details'
+          }
+          subtitle="Add your brand name, shop title, contact info, colors, and starter products."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={isAlreadyOnboarded ? 'ACTIVE' : 'PENDING'} />
+              {step === 1 && canUndoExample && (
+                <button
+                  type="button"
+                  onClick={handleUndoSampleBrand}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Undo Example
+                </button>
+              )}
+              {step === 1 && (
+                <button
+                  type="button"
+                  onClick={handleApplySampleBrand}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-900 text-xs font-bold transition-colors"
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-slate-700" />
+                  Fill Example Info
+                </button>
+              )}
               {isAlreadyOnboarded && (
                 <Link
                   href="/dashboard"
@@ -810,17 +930,17 @@ export function GettingStartedWizard({
           <div className="flex items-center gap-2 min-w-0">
             <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0" />
             <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-              Workspace Setup Readiness: {readiness.totalDone} of 5 areas configured ({readiness.pct}%)
+              Setup Progress: {readiness.totalDone} of 5 sections completed ({readiness.pct}%)
             </p>
           </div>
           <span className="text-[11px] font-semibold text-slate-500">
-            {isLiveBackend ? 'Syncing with Live Backend' : 'Local Workspace Draft Mode'}
+            {isLiveBackend ? 'Connected to Server' : 'Saved on This Device'}
           </span>
         </div>
         <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
           <div
             className="h-full rounded-full bg-slate-950 transition-all duration-300"
-            style={{ width: `${Math.max(12, readiness.pct)}%` }}
+            style={{ width: `${readiness.pct}%` }}
           />
         </div>
       </div>
@@ -864,101 +984,180 @@ export function GettingStartedWizard({
       {/* STEP 1: BRAND PROFILE & TITLE */}
       {step === 1 && (
         <SectionCard
-          title="1. Brand Name, Storefront Title & Positioning"
-          subtitle="Set how your brand appears across your dashboard header, customer boutique page, and marketplace listings."
+          title="1. Your Brand Name & Shop Info"
+          subtitle="Tell customers who you are. You can edit any of these later from Settings."
           right={
-            <button
-              type="button"
-              onClick={handleApplySampleBrand}
-              className="text-xs font-bold text-slate-700 hover:text-slate-950 underline underline-offset-4"
-            >
-              Populate Sample Fields
-            </button>
+            <div className="flex items-center gap-3">
+              {canUndoExample && (
+                <button
+                  type="button"
+                  onClick={handleUndoSampleBrand}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-amber-800 hover:text-amber-950 underline underline-offset-4"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Undo Example
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleApplySampleBrand}
+                className="text-xs font-bold text-slate-700 hover:text-slate-950 underline underline-offset-4"
+              >
+                Fill Example Info
+              </button>
+            </div>
           }
         >
           <form onSubmit={handleSaveStep1} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Brand Name *</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Brand Name *</span>
                 <input
                   type="text"
                   required
                   value={form.brandName}
                   onChange={(e) => updateField('brandName', e.target.value)}
-                  placeholder="e.g. Veloura Atelier"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Sunny Wear"
+                  className={FIELD_INPUT_CLASS}
                 />
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  The short name customers see on your shop and products.
+                </span>
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Storefront Title / Headline *</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-slate-800">Shop Page Title *</span>
+                  {form.brandName.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => updateField('storefrontTitle', `${form.brandName.trim()} Shop`)}
+                      className="text-[11px] font-bold text-slate-600 hover:text-slate-950 underline underline-offset-2"
+                    >
+                      Use Brand Name
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   required
                   value={form.storefrontTitle}
                   onChange={(e) => updateField('storefrontTitle', e.target.value)}
-                  placeholder="e.g. Veloura Atelier — Modern Ready-to-Wear & Try-On"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Sunny Wear Online Shop"
+                  className={FIELD_INPUT_CLASS}
                 />
-              </label>
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  Shown as the main heading at the top of your shop page.
+                </span>
+              </div>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Brand Slogan / Subtitle</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Short Tagline</span>
                 <input
                   type="text"
                   value={form.slogan}
                   onChange={(e) => updateField('slogan', e.target.value)}
-                  placeholder="e.g. Tailored silhouettes woven for real-time digital fit."
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Comfortable clothes made to fit well"
+                  className={FIELD_INPUT_CLASS}
                 />
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  A short catchphrase under your shop title (optional).
+                </span>
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Primary Category Focus</span>
-                <select
-                  value={form.categoryFocus}
-                  onChange={(e) => updateField('categoryFocus', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
-                >
-                  {CATEGORY_FOCUS_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block space-y-1 md:col-span-2">
-                <span className="font-bold text-slate-700">Top Announcement Strip</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Top Notice Bar</span>
                 <input
                   type="text"
                   value={form.announcement}
                   onChange={(e) => updateField('announcement', e.target.value)}
-                  placeholder="e.g. Autumn Drop Live — Preview fit in AI Virtual Try-On before ordering."
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Free shipping on orders over ৳1,500"
+                  className={FIELD_INPUT_CLASS}
                 />
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  Optional banner message at the very top of your shop page.
+                </span>
               </label>
 
-              <label className="block space-y-1 md:col-span-2">
-                <span className="font-bold text-slate-700">Short Storefront Pitch</span>
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800">Category *</span>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+                      {selectedCategories.length} selected
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAllCategories([...CATEGORY_FOCUS_OPTIONS])}
+                      className="text-[11px] font-bold text-slate-600 hover:text-slate-950 underline underline-offset-2"
+                    >
+                      Select All
+                    </button>
+                    {selectedCategories.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAllCategories([])}
+                        className="text-[11px] font-bold text-slate-500 hover:text-rose-600 underline underline-offset-2"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORY_FOCUS_OPTIONS.map((opt) => {
+                    const active = selectedCategories.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleCategory(opt)}
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${
+                          active
+                            ? 'bg-slate-950 text-white border-slate-950 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                        }`}
+                      >
+                        {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{opt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  Tap one or more categories to show what your shop sells.
+                </span>
+              </div>
+
+              <label className="block space-y-1.5 md:col-span-2">
+                <span className="font-bold text-slate-800 block">Short Summary</span>
                 <input
                   type="text"
                   value={form.shortDescription}
                   onChange={(e) => updateField('shortDescription', e.target.value)}
-                  placeholder="One-line overview displayed on brand cards and search previews."
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Everyday shirts, dresses, and jackets with Virtual Try-On."
+                  className={FIELD_INPUT_CLASS}
                 />
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  One short line shown on search results and shop cards.
+                </span>
               </label>
 
-              <label className="block space-y-1 md:col-span-2">
-                <span className="font-bold text-slate-700">Brand Story & Editorial Bio</span>
+              <label className="block space-y-1.5 md:col-span-2">
+                <span className="font-bold text-slate-800 block">About Your Brand</span>
                 <textarea
                   rows={3}
                   value={form.brandStory}
                   onChange={(e) => updateField('brandStory', e.target.value)}
-                  placeholder="Share your brand ethos, craft heritage, and fabric standards..."
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950 resize-y"
+                  placeholder="Tell customers about your clothes, style, and quality..."
+                  className={`${FIELD_INPUT_CLASS} resize-y`}
                 />
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  Shown in the About section of your shop page.
+                </span>
               </label>
             </div>
 
@@ -966,27 +1165,39 @@ export function GettingStartedWizard({
               <div className="flex items-center gap-2 text-slate-700">
                 <Globe className="w-4 h-4 text-slate-500 shrink-0" />
                 <span>
-                  Storefront URL: <strong className="font-mono text-slate-950">/brands/{computedSlug}</strong>
+                  Your Shop Link: <strong className="font-mono text-slate-950">/brands/{computedSlug}</strong>
                 </span>
               </div>
-              <span className="text-[11px] text-slate-500 font-mono">/try/{computedSlug}</span>
+              <span className="text-[11px] text-slate-500 font-mono">Try-On: /try/{computedSlug}</span>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleApplySampleBrand}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-800"
-              >
-                Auto-Fill Sample Details
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleApplySampleBrand}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-800"
+                >
+                  Fill Example Info
+                </button>
+                {canUndoExample && (
+                  <button
+                    type="button"
+                    onClick={handleUndoSampleBrand}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-xs font-bold text-amber-900"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Undo Example
+                  </button>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={saving}
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition-colors"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Next: Business &amp; Contact
+                Next: Contact Info
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -997,40 +1208,41 @@ export function GettingStartedWizard({
       {/* STEP 2: BUSINESS & CONTACT INFO */}
       {step === 2 && (
         <SectionCard
-          title="2. Owner, Legal Business & Contact Information"
-          subtitle="Provide business contact, location, and billing currency metadata for merchant operations and receipts."
+          title="2. Owner & Contact Info"
+          subtitle="Add your name, contact email, currency, and address so orders and receipts work properly."
         >
           <form onSubmit={handleSaveStep2} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Owner / Primary Contact Name</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Your Full Name</span>
                 <input
                   type="text"
                   value={form.ownerName}
                   onChange={(e) => updateField('ownerName', e.target.value)}
-                  placeholder="Your full name"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Sarah Ahmed"
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Registered / Legal Business Name</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Company / Legal Name</span>
                 <input
                   type="text"
                   value={form.legalName}
                   onChange={(e) => updateField('legalName', e.target.value)}
-                  placeholder="e.g. Veloura Atelier Ltd."
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Sunny Wear Ltd. (optional)"
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Business Type</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Shop Type</span>
                 <select
-                  value={form.businessType}
+                  value={normalizedBusinessType}
                   onChange={(e) => updateField('businessType', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                  className={FIELD_INPUT_CLASS}
                 >
+                  <option value="">Select shop type...</option>
                   {BUSINESS_TYPE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
@@ -1039,96 +1251,99 @@ export function GettingStartedWizard({
                 </select>
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Business Contact Email *</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Contact Email *</span>
                 <input
                   type="email"
                   required
                   value={form.bizEmail}
                   onChange={(e) => updateField('bizEmail', e.target.value)}
-                  placeholder="hello@yourbrand.com"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. hello@sunnywear.com"
+                  className={FIELD_INPUT_CLASS}
                 />
+                <span className="text-[11px] font-normal text-slate-500 block">
+                  Used for order alerts and customer messages.
+                </span>
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Phone Number</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Phone Number</span>
                 <input
                   type="text"
                   value={form.phone}
                   onChange={(e) => updateField('phone', e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. +88017XXXXXXXX"
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Store Currency</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Price Currency</span>
                 <select
-                  value={form.currency}
-                  onChange={(e) => updateField('currency', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                  value="BDT"
+                  onChange={() => updateField('currency', 'BDT')}
+                  className={FIELD_INPUT_CLASS}
                 >
                   {CURRENCY_OPTIONS.map((c) => (
                     <option key={c} value={c}>
-                      {c}
+                      {c} (৳ Taka)
                     </option>
                   ))}
                 </select>
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">City</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">City</span>
                 <input
                   type="text"
                   value={form.city}
                   onChange={(e) => updateField('city', e.target.value)}
                   placeholder="e.g. Dhaka / London / New York"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Country</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Country</span>
                 <input
                   type="text"
                   value={form.country}
                   onChange={(e) => updateField('country', e.target.value)}
-                  placeholder="e.g. Bangladesh / United States"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. Bangladesh "
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
 
-              <label className="block space-y-1 md:col-span-2">
-                <span className="font-bold text-slate-700">Studio / Flagship Address</span>
+              <label className="block space-y-1.5 md:col-span-2">
+                <span className="font-bold text-slate-800 block">Street Address</span>
                 <input
                   type="text"
                   value={form.address}
                   onChange={(e) => updateField('address', e.target.value)}
-                  placeholder="Street address, studio suite, postal code"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="Building, street name, and zip code (optional)"
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Instagram Handle</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Instagram</span>
                 <input
                   type="text"
                   value={form.instagram}
                   onChange={(e) => updateField('instagram', e.target.value)}
-                  placeholder="@yourbrand"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. @yourbrand"
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
 
-              <label className="block space-y-1">
-                <span className="font-bold text-slate-700">Website URL</span>
+              <label className="block space-y-1.5">
+                <span className="font-bold text-slate-800 block">Website Link</span>
                 <input
                   type="text"
                   value={form.website}
                   onChange={(e) => updateField('website', e.target.value)}
-                  placeholder="https://yourbrand.com"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                  placeholder="e.g. https://yourbrand.com"
+                  className={FIELD_INPUT_CLASS}
                 />
               </label>
             </div>
@@ -1148,7 +1363,7 @@ export function GettingStartedWizard({
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition-colors"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Next: Identity &amp; Media
+                Next: Colors &amp; Photos
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1159,15 +1374,15 @@ export function GettingStartedWizard({
       {/* STEP 3: VISUAL IDENTITY, LOGO & BANNER */}
       {step === 3 && (
         <SectionCard
-          title="3. Visual Identity, Palette, Logo & Storefront Banner"
-          subtitle="Pick curated colors and upload or apply sample brand imagery. Live header preview updates below."
+          title="3. Shop Colors, Logo & Cover Photo"
+          subtitle="Pick your colors and add a logo and banner photo. Check how your shop header will look below."
         >
           <form onSubmit={handleSaveStep3} className="space-y-5">
             {/* Color Palette Selection */}
             <div className="space-y-2.5">
-              <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Palette className="w-3.5 h-3.5" />
-                Curated Theme Presets & Custom Colors
+                Color Themes &amp; Custom Colors
               </p>
               <div className="flex flex-wrap gap-2">
                 {BRAND_COLOR_PRESETS.map((preset) => {
@@ -1199,7 +1414,7 @@ export function GettingStartedWizard({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700 block">Primary Brand Color</span>
+                  <span className="font-bold text-slate-800 block">Main Color</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -1211,13 +1426,13 @@ export function GettingStartedWizard({
                       type="text"
                       value={form.primaryColor}
                       onChange={(e) => updateField('primaryColor', e.target.value)}
-                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 font-mono"
+                      className={`${FIELD_INPUT_CLASS} flex-1 font-mono`}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700 block">Accent Highlight Color</span>
+                  <span className="font-bold text-slate-800 block">Button &amp; Badge Color</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -1229,7 +1444,7 @@ export function GettingStartedWizard({
                       type="text"
                       value={form.accentColor}
                       onChange={(e) => updateField('accentColor', e.target.value)}
-                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 font-mono"
+                      className={`${FIELD_INPUT_CLASS} flex-1 font-mono`}
                     />
                   </div>
                 </div>
@@ -1242,7 +1457,7 @@ export function GettingStartedWizard({
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold text-slate-800 flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5" />
-                    Brand Logo Image
+                    Logo Photo
                   </span>
                   <label className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold cursor-pointer">
                     <Upload className="w-3 h-3" />
@@ -1259,8 +1474,8 @@ export function GettingStartedWizard({
                   type="url"
                   value={form.logoUrl}
                   onChange={(e) => updateField('logoUrl', e.target.value)}
-                  placeholder="https://... or choose sample below"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                  placeholder="Paste photo link or pick an example below"
+                  className={FIELD_INPUT_CLASS}
                 />
                 <div className="flex flex-wrap gap-1.5">
                   {SAMPLE_LOGO_PRESETS.map((preset) => (
@@ -1274,7 +1489,7 @@ export function GettingStartedWizard({
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
                       }`}
                     >
-                      Sample: {preset.label}
+                      Use: {preset.label}
                     </button>
                   ))}
                 </div>
@@ -1284,7 +1499,7 @@ export function GettingStartedWizard({
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold text-slate-800 flex items-center gap-1.5">
                     <Store className="w-3.5 h-3.5" />
-                    Storefront Hero Banner
+                    Cover Banner Photo
                   </span>
                   <label className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold cursor-pointer">
                     <Upload className="w-3 h-3" />
@@ -1301,8 +1516,8 @@ export function GettingStartedWizard({
                   type="url"
                   value={form.bannerUrl}
                   onChange={(e) => updateField('bannerUrl', e.target.value)}
-                  placeholder="https://... or choose sample below"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                  placeholder="Paste photo link or pick an example below"
+                  className={FIELD_INPUT_CLASS}
                 />
                 <div className="flex flex-wrap gap-1.5">
                   {SAMPLE_BANNER_PRESETS.map((preset) => (
@@ -1316,7 +1531,7 @@ export function GettingStartedWizard({
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
                       }`}
                     >
-                      Sample: {preset.label}
+                      Use: {preset.label}
                     </button>
                   ))}
                 </div>
@@ -1364,10 +1579,10 @@ export function GettingStartedWizard({
                       {form.brandName || 'Your Brand'}
                     </span>
                     <h3 className="text-base sm:text-lg font-extrabold leading-tight truncate">
-                      {form.storefrontTitle || 'Storefront Title'}
+                      {form.storefrontTitle || 'Shop Page Title'}
                     </h3>
                     <p className="text-xs text-slate-200 truncate">
-                      {form.slogan || 'Add a slogan or tagline in Step 1'}
+                      {form.slogan || 'Add a short tagline in Step 1'}
                     </p>
                   </div>
                 </div>
@@ -1389,7 +1604,7 @@ export function GettingStartedWizard({
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition-colors"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Next: Starter Catalog &amp; Try-On
+                Next: Products &amp; Try-On
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1402,11 +1617,11 @@ export function GettingStartedWizard({
         <div className="space-y-5">
           {/* One-click Sample Starter Collection */}
           <SectionCard
-            title="4A. Instant Sample Starter Collection & Fabric Specs"
-            subtitle="Seed sample Try-On garments and fabric specifications with one click so your storefront and AI studio are testable immediately."
+            title="4A. Quick Sample Items (1 Click)"
+            subtitle="Add 2 sample clothes and 1 fabric note with one click so you can test your shop and Virtual Try-On right away."
             right={
               <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
-                {products.length} Products • {fabrics.length} Fabrics
+                {products.length} Items • {fabrics.length} Fabrics
               </span>
             }
           >
@@ -1414,11 +1629,11 @@ export function GettingStartedWizard({
               <div className="space-y-1">
                 <p className="font-bold text-slate-950 flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-slate-700" />
-                  Starter Pack: 2 Try-On Garments + 1 Silk Crepe Fabric
+                  Sample Pack: 2 Clothes + 1 Fabric Note
                 </p>
                 <p className="text-slate-600 leading-relaxed">
-                  Adds <strong>{form.brandName || 'Brand'} Signature Structured Blazer</strong>,{' '}
-                  <strong>Draped Silk-Blend Top</strong> (with S/M/L stock variants), and a fabric spec sheet directly into your workspace.
+                  Adds a <strong>{form.brandName || 'Brand'} Signature Blazer</strong>, a{' '}
+                  <strong>Silk Top</strong> (with S/M/L sizes), and a fabric note into your shop.
                 </p>
               </div>
               <button
@@ -1432,101 +1647,103 @@ export function GettingStartedWizard({
                 ) : (
                   <Sparkles className="w-4 h-4" />
                 )}
-                Add Sample Starter Kit
+                Add Sample Items
               </button>
             </div>
           </SectionCard>
 
           {/* Custom Product Quick Form + Try-On Configuration */}
           <SectionCard
-            title="4B. Add a Custom Starter Product & Virtual Try-On Defaults"
-            subtitle="Optionally add your own first garment and set AI Virtual Try-On studio quality defaults."
+            title="4B. Add Your Own First Product & Try-On Settings"
+            subtitle="Add your own item (optional) and choose your Virtual Try-On settings."
           >
             <form onSubmit={handleAddCustomProduct} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                <label className="block space-y-1">
-                  <span className="font-bold text-slate-700">Product Name *</span>
+                <label className="block space-y-1.5">
+                  <span className="font-bold text-slate-800 block">Item Name *</span>
                   <input
                     type="text"
                     value={prodName}
                     onChange={(e) => setProdName(e.target.value)}
-                    placeholder="e.g. Tailored Obsidian Trench"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                    placeholder="e.g. Classic Cotton Coat"
+                    className={FIELD_INPUT_CLASS}
                   />
                 </label>
 
-                <label className="block space-y-1">
-                  <span className="font-bold text-slate-700">SKU Code</span>
+                <label className="block space-y-1.5">
+                  <span className="font-bold text-slate-800 block">Item Code (SKU)</span>
                   <input
                     type="text"
                     value={prodSku}
                     onChange={(e) => setProdSku(e.target.value)}
-                    placeholder="Auto-generated if blank"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-mono focus:outline-none focus:border-slate-950"
+                    placeholder="Leave blank to auto-create"
+                    className={`${FIELD_INPUT_CLASS} font-mono`}
                   />
                 </label>
 
-                <label className="block space-y-1">
-                  <span className="font-bold text-slate-700">Price ({form.currency || 'USD'})</span>
+                <label className="block space-y-1.5">
+                  <span className="font-bold text-slate-800 block">Price (৳ BDT)</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={prodPrice}
                     onChange={(e) => setProdPrice(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                    className={FIELD_INPUT_CLASS}
                   />
                 </label>
 
-                <label className="block space-y-1">
-                  <span className="font-bold text-slate-700">Catalog Category</span>
+                <label className="block space-y-1.5">
+                  <span className="font-bold text-slate-800 block">Category</span>
                   <select
                     value={prodCategory}
                     onChange={(e) => setProdCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                    className={FIELD_INPUT_CLASS}
                   >
-                    <option value="Tops">Tops</option>
+                    <option value="">Select category...</option>
+                    <option value="Tops">Tops &amp; Shirts</option>
                     <option value="Dresses">Dresses</option>
-                    <option value="Outerwear">Outerwear</option>
-                    <option value="Bottoms">Bottoms</option>
+                    <option value="Outerwear">Jackets &amp; Coats</option>
+                    <option value="Bottoms">Pants &amp; Skirts</option>
                   </select>
                 </label>
 
-                <label className="block space-y-1">
-                  <span className="font-bold text-slate-700">AI Try-On Garment Class</span>
+                <label className="block space-y-1.5">
+                  <span className="font-bold text-slate-800 block">Try-On Body Area</span>
                   <select
                     value={prodTryOnCat}
                     onChange={(e) =>
                       setProdTryOnCat(
-                        e.target.value as 'tops' | 'bottoms' | 'dresses' | 'outerwear'
+                        e.target.value as '' | 'tops' | 'bottoms' | 'dresses' | 'outerwear'
                       )
                     }
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                    className={FIELD_INPUT_CLASS}
                   >
-                    <option value="tops">Tops / Shirts / Knits</option>
+                    <option value="">Select try-on area...</option>
+                    <option value="tops">Tops / Shirts</option>
                     <option value="dresses">Dresses / Full Outfit</option>
-                    <option value="outerwear">Outerwear / Blazers</option>
-                    <option value="bottoms">Bottoms / Trousers</option>
+                    <option value="outerwear">Jackets / Coats</option>
+                    <option value="bottoms">Pants / Skirts</option>
                   </select>
                 </label>
 
-                <label className="block space-y-1">
-                  <span className="font-bold text-slate-700">Initial Stock Units</span>
+                <label className="block space-y-1.5">
+                  <span className="font-bold text-slate-800 block">Stock Count</span>
                   <input
                     type="number"
                     min="1"
                     value={prodStock}
                     onChange={(e) => setProdStock(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                    className={FIELD_INPUT_CLASS}
                   />
                 </label>
 
                 <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-slate-700">Garment Front Image URL</span>
+                    <span className="font-bold text-slate-800">Product Photo Link</span>
                     <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-bold cursor-pointer">
                       <Upload className="w-3 h-3" />
-                      <span>{uploadingField === 'product' ? 'Uploading...' : 'Upload Image'}</span>
+                      <span>{uploadingField === 'product' ? 'Uploading...' : 'Upload Photo'}</span>
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
@@ -1539,19 +1756,19 @@ export function GettingStartedWizard({
                     type="url"
                     value={prodImageUrl}
                     onChange={(e) => setProdImageUrl(e.target.value)}
-                    placeholder="https://... or click Upload Image"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                    placeholder="Paste photo link or click Upload Photo"
+                    className={FIELD_INPUT_CLASS}
                   />
                 </div>
 
-                <label className="block space-y-1 sm:col-span-2 lg:col-span-3">
-                  <span className="font-bold text-slate-700">Garment Description</span>
+                <label className="block space-y-1.5 sm:col-span-2 lg:col-span-3">
+                  <span className="font-bold text-slate-800 block">Item Description</span>
                   <input
                     type="text"
                     value={prodDescription}
                     onChange={(e) => setProdDescription(e.target.value)}
-                    placeholder="Fabric composition, fit notes, and styling summary..."
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
+                    placeholder="Fabric feel, size notes, or care tips..."
+                    className={FIELD_INPUT_CLASS}
                   />
                 </label>
               </div>
@@ -1564,7 +1781,7 @@ export function GettingStartedWizard({
                       checked={publishStorefront}
                       onChange={(e) => setPublishStorefront(e.target.checked)}
                     />
-                    Publish on Storefront immediately
+                    Show on my shop page right away
                   </label>
                   <label className="inline-flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
                     <input
@@ -1572,7 +1789,7 @@ export function GettingStartedWizard({
                       checked={enableTryOnItem}
                       onChange={(e) => setEnableTryOnItem(e.target.checked)}
                     />
-                    Enable AI Virtual Try-On
+                    Allow Virtual Try-On for this item
                   </label>
                 </div>
 
@@ -1582,7 +1799,7 @@ export function GettingStartedWizard({
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-900 bg-white hover:bg-slate-950 hover:text-white text-slate-950 font-bold transition-colors"
                 >
                   <Package className="w-3.5 h-3.5" />
-                  Add Custom Product
+                  Add Product
                 </button>
               </div>
             </form>
@@ -1603,16 +1820,16 @@ export function GettingStartedWizard({
                 />
                 <span>
                   <strong className="block text-slate-900">
-                    Activate Customer Virtual Try-On Page (/try/{computedSlug})
+                    Turn On Customer Try-On Page (/try/{computedSlug})
                   </strong>
                   <span className="text-slate-500">
-                    Shoppers can upload a full/upper-body photo to try on your published garments.
+                    Customers can upload their photo to try on your clothes online.
                   </span>
                 </span>
               </label>
 
               <label className="block space-y-1 p-3 rounded-xl border border-slate-200 bg-slate-50">
-                <span className="font-bold text-slate-800 block">Default AI Inference Quality Mode</span>
+                <span className="font-bold text-slate-800 block">Try-On Image Quality</span>
                 <select
                   value={tryOnConfig.mode}
                   onChange={(e) =>
@@ -1620,10 +1837,10 @@ export function GettingStartedWizard({
                       mode: e.target.value as 'balanced' | 'high_fidelity' | 'fast_preview',
                     })
                   }
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none"
+                  className={FIELD_INPUT_CLASS}
                 >
-                  <option value="balanced">Balanced Speed & Fidelity (Recommended)</option>
-                  <option value="high_fidelity">High Fidelity Couture Texture</option>
+                  <option value="balanced">Balanced Speed &amp; Quality (Recommended)</option>
+                  <option value="high_fidelity">Best Detail</option>
                   <option value="fast_preview">Fast Preview</option>
                 </select>
               </label>
@@ -1654,8 +1871,8 @@ export function GettingStartedWizard({
       {/* STEP 5: REVIEW & FINAL SAVE */}
       {step === 5 && (
         <SectionCard
-          title="5. Review Brand Setup & Save to Backend"
-          subtitle="All onboarding steps are complete. Click Save to persist your setup, re-verify from the backend, and redirect to your Brand Dashboard."
+          title="5. Check Details & Save"
+          subtitle="Look over your shop details below. Click Save to store everything on the server and open your dashboard."
         >
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -1663,7 +1880,7 @@ export function GettingStartedWizard({
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 flex items-center gap-1.5">
                     <Store className="w-4 h-4" />
-                    Brand & Storefront Title
+                    Brand &amp; Shop Title
                   </span>
                   <button
                     type="button"
@@ -1678,7 +1895,7 @@ export function GettingStartedWizard({
                   <strong className="text-slate-950">{form.brandName || 'Not set'}</strong>
                 </p>
                 <p>
-                  <span className="text-slate-500">Storefront Title:</span>{' '}
+                  <span className="text-slate-500">Shop Page Title:</span>{' '}
                   <strong className="text-slate-950">{form.storefrontTitle || 'Not set'}</strong>
                 </p>
                 <p>
@@ -1686,8 +1903,10 @@ export function GettingStartedWizard({
                   <span className="text-slate-800">{form.slogan || '—'}</span>
                 </p>
                 <p>
-                  <span className="text-slate-500">Category:</span>{' '}
-                  <span className="text-slate-800">{form.categoryFocus}</span>
+                  <span className="text-slate-500">Categories:</span>{' '}
+                  <span className="text-slate-800">
+                    {selectedCategories.length > 0 ? selectedCategories.join(', ') : form.categoryFocus || '—'}
+                  </span>
                 </p>
               </div>
 
@@ -1695,7 +1914,7 @@ export function GettingStartedWizard({
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 flex items-center gap-1.5">
                     <Building2 className="w-4 h-4" />
-                    Business & Contact
+                    Contact Info
                   </span>
                   <button
                     type="button"
@@ -1706,11 +1925,11 @@ export function GettingStartedWizard({
                   </button>
                 </div>
                 <p>
-                  <span className="text-slate-500">Owner:</span>{' '}
-                  <strong className="text-slate-950">{form.ownerName || 'Brand Owner'}</strong>
+                  <span className="text-slate-500">Owner Name:</span>{' '}
+                  <strong className="text-slate-950">{form.ownerName || 'Shop Owner'}</strong>
                 </p>
                 <p>
-                  <span className="text-slate-500">Legal Entity:</span>{' '}
+                  <span className="text-slate-500">Company Name:</span>{' '}
                   <span className="text-slate-800">{form.legalName || '—'}</span>
                 </p>
                 <p>
@@ -1718,9 +1937,9 @@ export function GettingStartedWizard({
                   <strong className="text-slate-950">{form.bizEmail || 'Not set'}</strong>
                 </p>
                 <p>
-                  <span className="text-slate-500">Region & Currency:</span>{' '}
+                  <span className="text-slate-500">Location &amp; Currency:</span>{' '}
                   <span className="text-slate-800">
-                    {[form.city, form.country].filter(Boolean).join(', ') || 'Global'} ({form.currency})
+                    {[form.city, form.country].filter(Boolean).join(', ') || 'Global'} (BDT ৳)
                   </span>
                 </p>
               </div>
@@ -1730,7 +1949,7 @@ export function GettingStartedWizard({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-bold text-slate-900 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Catalog & Virtual Try-On Readiness
+                  Products &amp; Try-On Status
                 </p>
                 <div className="flex items-center gap-2">
                   {products.length === 0 && (
@@ -1740,7 +1959,7 @@ export function GettingStartedWizard({
                       onClick={handleAddSampleStarterKit}
                       className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-slate-900"
                     >
-                      {sampleLoading ? 'Adding Sample...' : '+ Quick Add Sample Kit'}
+                      {sampleLoading ? 'Adding Sample...' : '+ Quick Add Sample Items'}
                     </button>
                   )}
                   <button
@@ -1748,20 +1967,20 @@ export function GettingStartedWizard({
                     onClick={() => handleStepSwitch(4)}
                     className="text-[11px] font-bold text-slate-700 underline"
                   >
-                    Configure Catalog
+                    Edit Products
                   </button>
                 </div>
               </div>
               <p className="text-slate-600">
-                Workspace currently contains <strong>{products.length} product(s)</strong>,{' '}
-                <strong>{fabrics.length} fabric profile(s)</strong>, and Virtual Try-On studio is{' '}
-                <strong>{tryOnConfig.enabled ? 'Enabled' : 'Disabled'}</strong>.
+                Your shop currently has <strong>{products.length} item(s)</strong>,{' '}
+                <strong>{fabrics.length} fabric note(s)</strong>, and Virtual Try-On is{' '}
+                <strong>{tryOnConfig.enabled ? 'On' : 'Off'}</strong>.
               </p>
             </div>
 
             {saveError && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-900">
-                <strong className="font-bold">Save / Verification Failed: </strong>
+                <strong className="font-bold">Could Not Save: </strong>
                 {saveError}
               </div>
             )}
@@ -1789,12 +2008,12 @@ export function GettingStartedWizard({
                   <CheckCircle2 className="w-4 h-4" />
                 )}
                 {saveStage === 'saving'
-                  ? 'Saving to Backend...'
+                  ? 'Saving to Server...'
                   : saveStage === 'verifying'
-                  ? 'Reloading & Verifying Backend...'
+                  ? 'Checking Saved Data...'
                   : saveStage === 'redirecting'
-                  ? 'Verified! Redirecting to Dashboard...'
-                  : 'Save & Launch Brand Dashboard'}
+                  ? 'Done! Opening Dashboard...'
+                  : 'Save & Open Dashboard'}
               </button>
             </div>
           </div>

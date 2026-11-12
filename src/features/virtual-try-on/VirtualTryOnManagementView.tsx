@@ -364,7 +364,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-slate-900">{p.name}</p>
-                        <p className="text-[11px] text-slate-500">${p.price} • {p.tryOnCategory}</p>
+                        <p className="text-[11px] text-slate-500">৳{p.price} • {p.tryOnCategory}</p>
                       </div>
                     </button>
                   ))}
@@ -669,7 +669,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                       </div>
                       <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-100 break-words">
                         {s.attributedOrderId
-                          ? `Attributed: Order ${s.attributedOrderId} ($${s.attributedRevenue})`
+                          ? `Attributed: Order ${s.attributedOrderId} (৳${s.attributedRevenue})`
                           : s.errorReason || 'No purchase yet'}
                       </p>
                     </div>
@@ -696,7 +696,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                           <td className="p-3"><StatusBadge status={s.status} /></td>
                           <td className="p-3">{s.durationMs} ms</td>
                           <td className="p-3">{s.creditsUsed}</td>
-                          <td className="p-3 text-slate-600">{s.attributedOrderId ? `Order ${s.attributedOrderId} ($${s.attributedRevenue})` : s.errorReason || 'No purchase yet'}</td>
+                          <td className="p-3 text-slate-600">{s.attributedOrderId ? `Order ${s.attributedOrderId} (৳${s.attributedRevenue})` : s.errorReason || 'No purchase yet'}</td>
                           <td className="p-3 text-right text-slate-500">{s.createdAt}</td>
                         </tr>
                       ))}

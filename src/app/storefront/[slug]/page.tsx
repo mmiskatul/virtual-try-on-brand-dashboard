@@ -37,7 +37,7 @@ const STOREFRONTS: Record<string, {
     tagline: 'Quiet Luxury & Ethical Sustainable Silk',
     banner: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&auto=format&fit=crop&q=80',
     logo: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&auto=format&fit=crop&q=80',
-    announcement: 'Complimentary worldwide express delivery on orders over $150',
+    announcement: 'Complimentary worldwide express delivery on orders over ৳1,500',
     about: 'Born in Milan, Aura Atelier crafts timeless silhouette pieces using certified organic mulberry silks and heirloom Belgian linens.',
     accent: '#000000',
     products: [
@@ -204,7 +204,7 @@ export default function StorefrontPage({ params }: Props) {
               offers: {
                 '@type': 'Offer',
                 price: p.price,
-                priceCurrency: 'USD',
+                priceCurrency: 'BDT',
                 availability: 'https://schema.org/InStock',
               },
             },

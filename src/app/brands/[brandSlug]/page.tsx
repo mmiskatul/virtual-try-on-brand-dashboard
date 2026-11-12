@@ -171,7 +171,7 @@ export default function PublicBrandStorefrontPage() {
               <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
                 <div>
                   <h3 className="font-bold text-xs sm:text-sm text-slate-900 truncate">{p.name}</h3>
-                  <p className="text-xs font-extrabold text-slate-950 mt-0.5">${p.price}</p>
+                  <p className="text-xs font-extrabold text-slate-950 mt-0.5">৳{p.price}</p>
                 </div>
                 {p.isTryOnEligible && (
                   <Link

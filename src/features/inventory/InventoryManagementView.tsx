@@ -196,7 +196,7 @@ export function InventoryManagementView({
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KpiCard label="Total Units in Stock" value={totalUnits.toLocaleString()} icon={<Boxes className="w-4 h-4" />} />
-          <KpiCard label="Retail Stock Value" value={`$${stockValue.toLocaleString()}`} icon={<Building2 className="w-4 h-4" />} />
+          <KpiCard label="Retail Stock Value" value={`৳${stockValue.toLocaleString()}`} icon={<Building2 className="w-4 h-4" />} />
           <KpiCard
             label="Low Stock Alerts"
             value={lowStockItems.length}

@@ -88,7 +88,7 @@ export function ProductsModule({
                     </span>
                   </td>
                   <td className="py-3 px-4 font-mono text-gray-500">{p.sku}</td>
-                  <td className="py-3 px-4 font-bold text-gray-900">${p.price}</td>
+                  <td className="py-3 px-4 font-bold text-gray-900">৳{p.price}</td>
                   <td className="py-3 px-4">
                     <span className={`font-semibold ${p.stock < 5 ? 'text-amber-600' : 'text-gray-700'}`}>
                       {p.stock} units

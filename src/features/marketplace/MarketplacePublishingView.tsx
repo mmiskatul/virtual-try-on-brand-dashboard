@@ -160,7 +160,7 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
             <KpiCard label="Total Impressions" value={totalImpressions.toLocaleString()} icon={<Eye className="w-4 h-4" />} />
             <KpiCard label="Product Clicks" value={totalClicks.toLocaleString()} change={`${ctr}% CTR`} icon={<MousePointerClick className="w-4 h-4" />} />
             <KpiCard label="Attributed Orders" value={posts.reduce((s, p) => s + p.orders, 0)} icon={<ShoppingBag className="w-4 h-4" />} />
-            <KpiCard label="Marketplace Revenue" value={`$${totalRev.toLocaleString()}`} icon={<Globe className="w-4 h-4" />} />
+            <KpiCard label="Marketplace Revenue" value={`৳${totalRev.toLocaleString()}`} icon={<Globe className="w-4 h-4" />} />
           </div>
         )}
 

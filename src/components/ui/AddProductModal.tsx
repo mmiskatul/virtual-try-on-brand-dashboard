@@ -97,7 +97,7 @@ export function AddProductModal({ isOpen, onClose, onAdd }: AddProductModalProps
               )}
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Price (USD) *</label>
+              <label className="block text-gray-700 font-medium mb-1">Price (৳ BDT) *</label>
               <Input
                 type="number"
                 step="0.01"

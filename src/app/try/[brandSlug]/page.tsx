@@ -222,7 +222,7 @@ export default function DedicatedBrandPublicTryOnPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-slate-900">{item.name}</p>
                     <p className="text-[11px] text-slate-500">
-                      {appearance.showPrices ? `$${item.price} • ` : ''}{item.category}
+                      {appearance.showPrices ? `৳${item.price} • ` : ''}{item.category}
                     </p>
                   </div>
                 </button>

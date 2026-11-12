@@ -257,15 +257,15 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
             <SectionCard title="C. Pricing & Margin (Staff Only Cost)">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Selling Price ($) *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Selling Price (৳) *</label>
                   <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold" />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Compare-At ($)</label>
+                  <label className="block font-bold text-slate-700 mb-1">Compare-At (৳)</label>
                   <input type="number" value={compareAtPrice} onChange={(e) => setCompareAtPrice(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Private Cost ($)</label>
+                  <label className="block font-bold text-slate-700 mb-1">Private Cost (৳)</label>
                   <input type="number" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
                 </div>
                 <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">

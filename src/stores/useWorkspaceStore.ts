@@ -151,6 +151,7 @@ export interface WorkspaceState {
   reopenOnboarding: (tenantId: string) => void;
   setBackendOnboardingStatus: (tenantId: string, onboarded: boolean | null) => void;
   saveOnboardingProfileForTenant: (tenantId: string, partial: Partial<BrandProfile>) => void;
+  restoreOnboardingDraftSnapshot: (tenantId: string, snapshot: Partial<BrandProfile> | null) => void;
   addFabricRecord: (fabric: Fabric) => void;
   recordAudit: (action: string, entity: string, details: string) => void;
 }
@@ -578,7 +579,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   timezone: 'UTC',
                   dateFormat: 'YYYY-MM-DD',
                   language: 'English',
-                  currency: 'USD',
+                  currency: 'BDT',
                   taxRatePercent: 0,
                   taxInclusive: false,
                   freeShippingThreshold: 150,
@@ -636,6 +637,29 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           cleanTenantId,
           'Saved brand profile, title, and starter onboarding details'
         );
+      },
+
+      restoreOnboardingDraftSnapshot: (tenantId, snapshot) => {
+        const cleanTenantId = String(tenantId || '').trim() || get().profile.id || 'tenant_aura';
+        set((s) => {
+          const nextDrafts = { ...s.onboardingProfileDrafts };
+          if (!snapshot) {
+            delete nextDrafts[cleanTenantId];
+          } else {
+            nextDrafts[cleanTenantId] = snapshot;
+          }
+          return {
+            onboardingProfileDrafts: nextDrafts,
+            ...(snapshot
+              ? {
+                  profile: {
+                    ...s.profile,
+                    ...snapshot,
+                  },
+                }
+              : {}),
+          };
+        });
       },
 
       addFabricRecord: (fabric) =>

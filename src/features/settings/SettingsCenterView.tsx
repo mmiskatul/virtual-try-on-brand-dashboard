@@ -117,7 +117,7 @@ export function SettingsCenterView({
     timezone: 'Asia/Dhaka (UTC+6)',
     dateFormat: 'YYYY-MM-DD',
     language: 'English (en-US)',
-    currency: 'USD',
+    currency: 'BDT',
     taxRatePercent: 5,
     taxInclusive: false,
     freeShippingThreshold: 120,
@@ -474,14 +474,11 @@ export function SettingsCenterView({
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Store Currency</span>
                     <select
-                      value={settingsData.currency}
-                      onChange={(e) => patchSettings({ currency: e.target.value })}
+                      value="BDT"
+                      onChange={() => patchSettings({ currency: 'BDT' })}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white"
                     >
-                      <option value="USD">USD ($)</option>
-                      <option value="BDT">BDT (৳)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="GBP">GBP (£)</option>
+                      <option value="BDT">BDT (৳ Taka)</option>
                     </select>
                   </label>
                   <label className="block space-y-1">
@@ -511,7 +508,7 @@ export function SettingsCenterView({
               <SectionCard title="Storefront Shipping Rules" subtitle="Configure default delivery charges and free-shipping thresholds.">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Default Flat Shipping Fee ($)</span>
+                    <span className="font-semibold text-slate-700">Default Flat Shipping Fee (৳)</span>
                     <input
                       type="number"
                       min="0"
@@ -521,7 +518,7 @@ export function SettingsCenterView({
                     />
                   </label>
                   <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Free Shipping Minimum Order ($)</span>
+                    <span className="font-semibold text-slate-700">Free Shipping Minimum Order (৳)</span>
                     <input
                       type="number"
                       min="0"

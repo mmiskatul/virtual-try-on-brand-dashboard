@@ -1,32 +1,93 @@
 import { BrandProfile, Fabric, Product } from '../../types';
 
 export const ONBOARDING_STEPS = [
-  '1. Brand & Title',
-  '2. Business & Contact',
-  '3. Identity & Media',
-  '4. Starter Catalog & Try-On',
+  '1. Brand Name',
+  '2. Contact Info',
+  '3. Colors & Photos',
+  '4. Products & Try-On',
   '5. Review & Save',
 ] as const;
 
 export const CATEGORY_FOCUS_OPTIONS = [
-  'Womenswear & Couture',
-  'Menswear & Tailoring',
-  'Contemporary Apparel & Ready-to-Wear',
-  'Streetwear & Essentials',
-  'Modest & Heritage Wear',
-  'Athleisure & Resort',
-  'Bridal & Occasionwear',
+  "Women's Wear",
+  "Men's Wear",
+  'Casual Wear',
+  'Streetwear',
+  'Traditional Wear',
+  'Sportswear',
+  'Party Wear',
+  'Kids Wear',
 ];
+
+const LEGACY_CATEGORY_MAP: Record<string, string> = {
+  'Womenswear & Couture': "Women's Wear",
+  "Women's Clothing": "Women's Wear",
+  'Menswear & Tailoring': "Men's Wear",
+  "Men's Clothing": "Men's Wear",
+  'Contemporary Apparel & Ready-to-Wear': 'Casual Wear',
+  'Everyday & Casual Wear': 'Casual Wear',
+  'Streetwear & Essentials': 'Streetwear',
+  'Streetwear & Basics': 'Streetwear',
+  'Modest & Heritage Wear': 'Traditional Wear',
+  'Traditional & Modest Wear': 'Traditional Wear',
+  'Athleisure & Resort': 'Sportswear',
+  'Sport & Vacation Wear': 'Sportswear',
+  'Bridal & Occasionwear': 'Party Wear',
+  'Wedding & Party Wear': 'Party Wear',
+};
+
+export function normalizeCategoryFocus(value?: string): string {
+  const clean = String(value || '').trim();
+  if (!clean) return CATEGORY_FOCUS_OPTIONS[0];
+  if (LEGACY_CATEGORY_MAP[clean]) return LEGACY_CATEGORY_MAP[clean];
+  return CATEGORY_FOCUS_OPTIONS.includes(clean) ? clean : CATEGORY_FOCUS_OPTIONS[0];
+}
+
+export function parseCategorySelection(value?: string | string[] | null): string[] {
+  const rawList = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+    ? value.split(',')
+    : [];
+  const out: string[] = [];
+  for (const raw of rawList) {
+    const trimmed = String(raw || '').trim();
+    if (!trimmed) continue;
+    const normalized = normalizeCategoryFocus(trimmed);
+    if (!out.includes(normalized)) out.push(normalized);
+  }
+  return out;
+}
 
 export const BUSINESS_TYPE_OPTIONS = [
-  'Fashion House / D2C Brand',
-  'Boutique Atelier',
-  'Contemporary Apparel Label',
-  'Designer Studio',
-  'Manufacturer Direct',
+  'Online Shop',
+  'Boutique',
+  'Clothing Store',
+  'Designer',
+  'Factory Direct',
 ];
 
-export const CURRENCY_OPTIONS = ['USD', 'EUR', 'GBP', 'BDT', 'AED'] as const;
+const LEGACY_BUSINESS_TYPE_MAP: Record<string, string> = {
+  'Fashion House / D2C Brand': 'Online Shop',
+  'Online Clothing Brand': 'Online Shop',
+  'Boutique Atelier': 'Boutique',
+  'Boutique Shop': 'Boutique',
+  'Contemporary Apparel Label': 'Clothing Store',
+  'Casual Fashion Store': 'Clothing Store',
+  'Designer Studio': 'Designer',
+  'Independent Designer': 'Designer',
+  'Manufacturer Direct': 'Factory Direct',
+  'Direct Maker / Factory': 'Factory Direct',
+};
+
+export function normalizeBusinessType(value?: string): string {
+  const clean = String(value || '').trim();
+  if (!clean) return '';
+  if (LEGACY_BUSINESS_TYPE_MAP[clean]) return LEGACY_BUSINESS_TYPE_MAP[clean];
+  return BUSINESS_TYPE_OPTIONS.includes(clean) ? clean : '';
+}
+
+export const CURRENCY_OPTIONS = ['BDT'] as const;
 
 export const BRAND_COLOR_PRESETS = [
   { label: 'Midnight Ink', primaryColor: '#0F172A', accentColor: '#C2410C' },
@@ -85,6 +146,7 @@ export interface OnboardingFormState {
   slogan: string;
   announcement: string;
   categoryFocus: string;
+  categories: string[];
   shortDescription: string;
   brandStory: string;
   ownerName: string;
@@ -115,18 +177,76 @@ export function createInitialOnboardingForm(params: {
   const liveMatchesTenant = profile.id === tenantId;
   const allowLiveProfileFallback = isOnboarded && liveMatchesTenant;
 
+  const isCannedSampleContactBundle = (source?: Partial<BrandProfile>): boolean => {
+    if (!source) return false;
+    return (
+      source.phone === '+1 (555) 238-4910' ||
+      source.address === '240 Mercer Street, Studio 4B'
+    );
+  };
+
+  const draftHasSampleContact = !isOnboarded && isCannedSampleContactBundle(savedDraft);
+  const liveHasSampleContact = !isOnboarded && isCannedSampleContactBundle(profile);
+
   const pick = <K extends keyof BrandProfile>(
     key: K,
     fallback: NonNullable<BrandProfile[K]> | ''
   ): any => {
     if (savedDraft?.[key] !== undefined && savedDraft[key] !== '') {
+      if (
+        draftHasSampleContact &&
+        (key === 'legalName' ||
+          key === 'businessType' ||
+          key === 'phone' ||
+          key === 'city' ||
+          key === 'country' ||
+          key === 'address')
+      ) {
+        return fallback;
+      }
       return savedDraft[key];
     }
     if (allowLiveProfileFallback && profile[key]) {
+      if (
+        liveHasSampleContact &&
+        (key === 'legalName' ||
+          key === 'businessType' ||
+          key === 'phone' ||
+          key === 'city' ||
+          key === 'country' ||
+          key === 'address')
+      ) {
+        return fallback;
+      }
       return profile[key];
     }
     return fallback;
   };
+
+  const initialCategories = (() => {
+    const fromDraft = parseCategorySelection(savedDraft?.specialties || savedDraft?.categoryFocus);
+    if (fromDraft.length > 0) return fromDraft;
+    if (allowLiveProfileFallback) {
+      const fromLive = parseCategorySelection(profile.specialties || profile.categoryFocus);
+      if (fromLive.length > 0) return fromLive;
+    }
+    return [];
+  })();
+
+  const rawAnnouncement = pick('announcement', '');
+  const cleanAnnouncement =
+    !isOnboarded && (!savedDraft || draftHasSampleContact) && rawAnnouncement === 'Welcome to our brand new storefront!'
+      ? ''
+      : rawAnnouncement;
+
+  const rawBrandStory = pick('brandStory', '') || (allowLiveProfileFallback ? profile.description || '' : '');
+  const brandTitleForDefaultCheck = String(pick('name', '') || '').trim();
+  const cleanBrandStory =
+    !isOnboarded &&
+    rawBrandStory &&
+    (rawBrandStory === `Welcome to ${brandTitleForDefaultCheck}.` || rawBrandStory === 'Welcome to My Brand Studio.')
+      ? ''
+      : rawBrandStory;
 
   return {
     brandName: pick('name', ''),
@@ -134,13 +254,14 @@ export function createInitialOnboardingForm(params: {
       savedDraft?.seo?.title ||
       (allowLiveProfileFallback ? profile.seo?.title || '' : ''),
     slogan: pick('slogan', ''),
-    announcement: pick('announcement', ''),
-    categoryFocus: pick('categoryFocus', CATEGORY_FOCUS_OPTIONS[0]),
+    announcement: cleanAnnouncement,
+    categoryFocus: initialCategories.join(', '),
+    categories: initialCategories,
     shortDescription: pick('shortDescription', ''),
-    brandStory: pick('brandStory', '') || (allowLiveProfileFallback ? profile.description || '' : ''),
+    brandStory: cleanBrandStory,
     ownerName: pick('owner', ''),
     legalName: pick('legalName', ''),
-    businessType: pick('businessType', BUSINESS_TYPE_OPTIONS[0]),
+    businessType: normalizeBusinessType(pick('businessType', '')),
     bizEmail:
       savedDraft?.email ||
       (allowLiveProfileFallback ? profile.email : '') ||
@@ -150,16 +271,13 @@ export function createInitialOnboardingForm(params: {
     city: pick('city', ''),
     country: pick('country', ''),
     address: pick('address', ''),
-    currency:
-      savedDraft?.settings?.currency ||
-      (allowLiveProfileFallback ? profile.settings?.currency : undefined) ||
-      'USD',
+    currency: 'BDT',
     instagram:
-      savedDraft?.socialLinks?.instagram ||
-      (allowLiveProfileFallback ? profile.socialLinks?.instagram || '' : ''),
+      (draftHasSampleContact ? '' : savedDraft?.socialLinks?.instagram) ||
+      (allowLiveProfileFallback && !liveHasSampleContact ? profile.socialLinks?.instagram || '' : ''),
     website:
-      savedDraft?.socialLinks?.website ||
-      (allowLiveProfileFallback ? profile.socialLinks?.website || '' : ''),
+      (draftHasSampleContact ? '' : savedDraft?.socialLinks?.website) ||
+      (allowLiveProfileFallback && !liveHasSampleContact ? profile.socialLinks?.website || '' : ''),
     primaryColor:
       savedDraft?.primaryColor ||
       (allowLiveProfileFallback ? profile.primaryColor : '') ||
@@ -177,30 +295,26 @@ export function buildSampleBrandFormValues(
   current: OnboardingFormState
 ): OnboardingFormState {
   const cleanName = current.brandName.trim() || 'Veloura Atelier';
-  const slug = toBrandSlug(cleanName);
+  const sampleCategories =
+    current.categories.length > 0
+      ? current.categories
+      : [CATEGORY_FOCUS_OPTIONS[0], CATEGORY_FOCUS_OPTIONS[2]];
   return {
+    ...current,
     brandName: cleanName,
-    storefrontTitle: `${cleanName} — Modern Silhouettes & Virtual Try-On`,
-    slogan: 'Elevated everyday tailoring crafted for real-time digital fit.',
-    announcement: `Welcome to ${cleanName} — Instant Virtual Try-On is active across our signature pieces.`,
-    categoryFocus: current.categoryFocus || CATEGORY_FOCUS_OPTIONS[2],
-    shortDescription: `${cleanName} blends architectural cuts with breathable natural textiles, built for effortless fit preview before checkout.`,
-    brandStory: `${cleanName} is an independent design house focused on enduring wardrobe pieces. Every garment is pattern-tested for drape, comfort, and true-to-size virtual try-on visualization.`,
-    ownerName: current.ownerName.trim() || 'Brand Founder',
-    legalName: `${cleanName} Apparel Ltd.`,
-    businessType: current.businessType || BUSINESS_TYPE_OPTIONS[0],
-    bizEmail: current.bizEmail.trim() || `hello@${slug}.com`,
-    phone: current.phone.trim() || '+1 (555) 238-4910',
-    city: current.city.trim() || 'New York',
-    country: current.country.trim() || 'United States',
-    address: current.address.trim() || '240 Mercer Street, Studio 4B',
-    currency: current.currency || 'USD',
-    instagram: current.instagram.trim() || `@${slug}`,
-    website: current.website.trim() || `https://${slug}.vton.store`,
-    primaryColor: current.primaryColor || BRAND_COLOR_PRESETS[0].primaryColor,
-    accentColor: current.accentColor || BRAND_COLOR_PRESETS[0].accentColor,
-    logoUrl: current.logoUrl || SAMPLE_LOGO_PRESETS[0].url,
-    bannerUrl: current.bannerUrl || SAMPLE_BANNER_PRESETS[0].url,
+    storefrontTitle: current.storefrontTitle.trim() || `${cleanName} — Online Shop`,
+    slogan: current.slogan.trim() || 'Comfortable clothes made to look great every day.',
+    announcement:
+      current.announcement.trim() ||
+      `Welcome to ${cleanName} — Try on our clothes online before you buy.`,
+    categoryFocus: sampleCategories.join(', '),
+    categories: sampleCategories,
+    shortDescription:
+      current.shortDescription.trim() ||
+      `${cleanName} sells clean, comfortable everyday clothes with instant Virtual Try-On.`,
+    brandStory:
+      current.brandStory.trim() ||
+      `${cleanName} makes easy-to-wear clothes using soft, durable fabrics. Customers can preview how every item fits before placing an order.`,
   };
 }
 

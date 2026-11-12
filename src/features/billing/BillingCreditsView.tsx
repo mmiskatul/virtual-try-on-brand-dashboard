@@ -109,7 +109,7 @@ export function BillingCreditsView({
       `Plan: ${inv.plan}`,
       `Billing Period: ${inv.period}`,
       `Issued: ${inv.issuedAt}`,
-      `Amount Paid: $${inv.amount.toFixed(2)}`,
+      `Amount Paid: ৳${inv.amount.toFixed(2)}`,
       `Status: ${inv.status}`,
     ].join('\n');
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
@@ -251,7 +251,7 @@ export function BillingCreditsView({
                         {active && <StatusBadge status="ACTIVE" />}
                       </div>
                       <p className="text-2xl font-extrabold text-slate-950">
-                        ${pl.priceMonthly}
+                        ৳{pl.priceMonthly}
                         <span className="text-xs font-medium text-slate-500">/mo</span>
                       </p>
                       <p className="text-xs font-semibold text-slate-700">
@@ -293,7 +293,7 @@ export function BillingCreditsView({
                       <p className="text-[11px] text-slate-500">{inv.period} · {inv.plan}</p>
                     </div>
                     <div className="text-right space-y-1 shrink-0">
-                      <p className="font-extrabold text-slate-950 tabular-nums">${inv.amount.toFixed(2)}</p>
+                      <p className="font-extrabold text-slate-950 tabular-nums">৳{inv.amount.toFixed(2)}</p>
                       <StatusBadge status={inv.status} />
                     </div>
                   </div>
@@ -328,7 +328,7 @@ export function BillingCreditsView({
                       <td className="py-3 pr-4 font-mono font-bold text-slate-900">{inv.id}</td>
                       <td className="py-3 pr-4">{inv.period}</td>
                       <td className="py-3 pr-4">{inv.plan}</td>
-                      <td className="py-3 pr-4 font-bold">${inv.amount.toFixed(2)}</td>
+                      <td className="py-3 pr-4 font-bold">৳{inv.amount.toFixed(2)}</td>
                       <td className="py-3 pr-4">
                         <StatusBadge status={inv.status} />
                       </td>
@@ -373,7 +373,7 @@ export function BillingCreditsView({
         <ConfirmDialog
           open={Boolean(confirmPlan)}
           title={`Switch Workspace Plan to ${confirmPlan?.id}?`}
-          description={`Updates preview quota entitlement to ${confirmPlan?.quotaMax.toLocaleString()} monthly try-on credits ($${confirmPlan?.priceMonthly}/mo).`}
+          description={`Updates preview quota entitlement to ${confirmPlan?.quotaMax.toLocaleString()} monthly try-on credits (৳${confirmPlan?.priceMonthly}/mo).`}
           destructive={false}
           confirmLabel={`Switch to ${confirmPlan?.id}`}
           onConfirm={() => {

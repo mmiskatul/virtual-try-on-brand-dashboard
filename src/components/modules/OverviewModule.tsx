@@ -20,7 +20,7 @@ export function OverviewModule({ brand, products, orders, onNavigateTab }: Overv
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs font-medium text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-black text-gray-900 mt-2">$2,840.00</p>
+              <p className="text-2xl font-black text-gray-900 mt-2">৳2,840.00</p>
             </div>
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
               <DollarSign className="w-5 h-5" />
@@ -125,7 +125,7 @@ export function OverviewModule({ brand, products, orders, onNavigateTab }: Overv
                   <td className="py-3 px-4 font-mono text-black">{o.id}</td>
                   <td className="py-3 px-4 text-gray-900">{o.customerName}</td>
                   <td className="py-3 px-4">{o.itemCount} item(s)</td>
-                  <td className="py-3 px-4 font-bold text-gray-900">${o.total}</td>
+                  <td className="py-3 px-4 font-bold text-gray-900">৳{o.total}</td>
                   <td className="py-3 px-4 text-gray-500">{o.date}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${

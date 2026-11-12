@@ -338,7 +338,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                             <Link href={`/dashboard/products/${p.id}`} className="font-bold text-slate-900 hover:underline leading-snug line-clamp-2">
                               {p.name}
                             </Link>
-                            <span className="font-extrabold text-slate-950 shrink-0 tabular-nums">${p.price}</span>
+                            <span className="font-extrabold text-slate-950 shrink-0 tabular-nums">৳{p.price}</span>
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                             <span className="font-mono">{p.sku}</span>
@@ -445,7 +445,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                             </div>
                           </td>
                           <td className="py-3 px-3 font-mono text-slate-500">{p.sku}</td>
-                          <td className="py-3 px-3 font-bold text-slate-950">${p.price}</td>
+                          <td className="py-3 px-3 font-bold text-slate-950">৳{p.price}</td>
                           <td className="py-3 px-3">
                             <span className={`font-bold ${p.stock < (p.lowStockThreshold || 5) ? 'text-amber-600' : 'text-slate-700'}`}>
                               {p.stock} units
@@ -610,7 +610,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
                       <span className="font-mono break-all">{r.sku} • {r.category}</span>
-                      <span className="font-bold text-slate-900">${r.price} • Stock {r.stock}</span>
+                      <span className="font-bold text-slate-900">৳{r.price} • Stock {r.stock}</span>
                     </div>
                   </div>
                 ))}
@@ -626,7 +626,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                         <td className="p-2.5 font-bold">{r.name}</td>
                         <td className="p-2.5 font-mono">{r.sku}</td>
                         <td className="p-2.5">{r.category}</td>
-                        <td className="p-2.5">${r.price}</td>
+                        <td className="p-2.5">৳{r.price}</td>
                         <td className="p-2.5">{r.stock}</td>
                         <td className="p-2.5">{r.duplicateSku ? <span className="text-rose-600 font-bold">Duplicate SKU</span> : <span className="text-emerald-600 font-bold">Ready</span>}</td>
                       </tr>

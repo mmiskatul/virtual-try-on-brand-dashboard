@@ -199,7 +199,7 @@ export function OrdersCommerceView({
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-slate-900">${item.lineTotal.toFixed(2)}</p>
+                            <p className="font-bold text-slate-900">৳{item.lineTotal.toFixed(2)}</p>
                             <p className="text-slate-500">
                               {item.quantity} x ${item.unitPrice.toFixed(2)}
                             </p>
@@ -216,7 +216,7 @@ export function OrdersCommerceView({
                   <div className="pt-4 border-t border-slate-100 space-y-1.5 text-xs max-w-xs ml-auto">
                     <div className="flex justify-between text-slate-600">
                       <span>Subtotal</span>
-                      <span>${(order.subtotal ?? order.total).toFixed(2)}</span>
+                      <span>৳{(order.subtotal ?? order.total).toFixed(2)}</span>
                     </div>
                     {order.discount ? (
                       <div className="flex justify-between text-emerald-700">
@@ -226,11 +226,11 @@ export function OrdersCommerceView({
                     ) : null}
                     <div className="flex justify-between text-slate-600">
                       <span>Shipping ({order.shippingMethod || 'Standard'})</span>
-                      <span>${(order.shippingFee ?? 0).toFixed(2)}</span>
+                      <span>৳{(order.shippingFee ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-extrabold text-sm text-slate-950 pt-2 border-t border-slate-200">
                       <span>Total</span>
-                      <span>${order.total.toFixed(2)}</span>
+                      <span>৳{order.total.toFixed(2)}</span>
                     </div>
                   </div>
                 </SectionCard>
@@ -440,10 +440,10 @@ export function OrdersCommerceView({
 
         {/* Summary KPI Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard label="Net Merchandise Revenue" value={`$${paidRevenue.toLocaleString()}`} icon={<Package className="w-4 h-4" />} />
+          <KpiCard label="Net Merchandise Revenue" value={`৳${paidRevenue.toLocaleString()}`} icon={<Package className="w-4 h-4" />} />
           <KpiCard label="Total Orders" value={safeOrders.length} icon={<ShoppingCart className="w-4 h-4" />} />
           <KpiCard label="Pending / Processing" value={pendingCount} icon={<Truck className="w-4 h-4" />} />
-          <KpiCard label="Refunded Value" value={`$${refundedTotal.toFixed(2)}`} icon={<RotateCcw className="w-4 h-4" />} />
+          <KpiCard label="Refunded Value" value={`৳${refundedTotal.toFixed(2)}`} icon={<RotateCcw className="w-4 h-4" />} />
         </div>
 
         {tab === 'orders' && (
@@ -499,7 +499,7 @@ export function OrdersCommerceView({
                           <p className="font-semibold text-slate-900 mt-0.5 truncate">{o.customerName}</p>
                           <p className="text-[11px] text-slate-500 truncate">{o.customerEmail}</p>
                         </div>
-                        <span className="text-sm font-extrabold text-slate-950 tabular-nums shrink-0">${o.total.toFixed(2)}</span>
+                        <span className="text-sm font-extrabold text-slate-950 tabular-nums shrink-0">৳{o.total.toFixed(2)}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                         <span>{o.date}</span>
@@ -517,7 +517,7 @@ export function OrdersCommerceView({
                             if (val === 'CANCELLED' || val === 'REFUNDED') {
                               setConfirmAction({
                                 title: `${val === 'CANCELLED' ? 'Cancel' : 'Refund'} ${o.id}?`,
-                                description: `This action will mark order ${o.id} ($${o.total.toFixed(2)}) as ${val}.`,
+                                description: `This action will mark order ${o.id} (৳${o.total.toFixed(2)}) as ${val}.`,
                                 confirmLabel: `Confirm ${val}`,
                                 onRun: () => {
                                   handleStatusUpdate(o, val);
@@ -574,7 +574,7 @@ export function OrdersCommerceView({
                         </td>
                         <td className="py-3 pr-4 text-slate-600">{o.date}</td>
                         <td className="py-3 pr-4 text-slate-600">{o.itemCount}</td>
-                        <td className="py-3 pr-4 font-bold text-slate-900">${o.total.toFixed(2)}</td>
+                        <td className="py-3 pr-4 font-bold text-slate-900">৳{o.total.toFixed(2)}</td>
                         <td className="py-3 pr-4">
                           <StatusBadge status={o.paymentStatus || 'PAID'} />
                         </td>
@@ -591,7 +591,7 @@ export function OrdersCommerceView({
                                 if (val === 'CANCELLED' || val === 'REFUNDED') {
                                   setConfirmAction({
                                     title: `${val === 'CANCELLED' ? 'Cancel' : 'Refund'} ${o.id}?`,
-                                    description: `This action will mark order ${o.id} ($${o.total.toFixed(2)}) as ${val}.`,
+                                    description: `This action will mark order ${o.id} (৳${o.total.toFixed(2)}) as ${val}.`,
                                     confirmLabel: `Confirm ${val}`,
                                     onRun: () => {
                                       handleStatusUpdate(o, val);
@@ -656,7 +656,7 @@ export function OrdersCommerceView({
                           <p className="font-bold text-slate-900 truncate">{c.customerName}</p>
                           <p className="text-[11px] text-slate-500 truncate">{c.customerEmail}</p>
                         </div>
-                        <span className="font-extrabold text-slate-950 tabular-nums shrink-0">${c.value.toFixed(2)}</span>
+                        <span className="font-extrabold text-slate-950 tabular-nums shrink-0">৳{c.value.toFixed(2)}</span>
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
                         <span>{c.itemCount} unit(s) • {c.lastActiveAt}</span>
@@ -699,7 +699,7 @@ export function OrdersCommerceView({
                           <p className="text-[11px] text-slate-500">{c.customerEmail}</p>
                         </td>
                         <td className="py-3 pr-4">{c.itemCount} unit(s)</td>
-                        <td className="py-3 pr-4 font-bold text-slate-900">${c.value.toFixed(2)}</td>
+                        <td className="py-3 pr-4 font-bold text-slate-900">৳{c.value.toFixed(2)}</td>
                         <td className="py-3 pr-4 text-slate-500">{c.lastActiveAt}</td>
                         <td className="py-3 pr-4">
                           <StatusBadge status={c.recoverySent ? 'COMPLETED' : 'PENDING'} />
@@ -753,7 +753,7 @@ export function OrdersCommerceView({
                           <p className="text-slate-600 mt-0.5">{r.customerName}</p>
                         </div>
                         <div className="text-right space-y-1 shrink-0">
-                          <p className="font-bold text-slate-900 tabular-nums">${r.amount.toFixed(2)}</p>
+                          <p className="font-bold text-slate-900 tabular-nums">৳{r.amount.toFixed(2)}</p>
                           <StatusBadge status={r.status} />
                         </div>
                       </div>
@@ -771,7 +771,7 @@ export function OrdersCommerceView({
                             onClick={() =>
                               setConfirmAction({
                                 title: `Mark return ${r.id} as ${st}?`,
-                                description: `Customer ${r.customerName} ($${r.amount.toFixed(2)}) for ${r.productName}.`,
+                                description: `Customer ${r.customerName} (৳${r.amount.toFixed(2)}) for ${r.productName}.`,
                                 confirmLabel: st,
                                 onRun: () => {
                                   updateReturnStatus(r.id, st);
@@ -817,7 +817,7 @@ export function OrdersCommerceView({
                             <p className="font-semibold text-slate-900">{r.productName}</p>
                             <p className="text-[11px] text-slate-500">{r.reason}</p>
                           </td>
-                          <td className="py-3 pr-4 font-bold">${r.amount.toFixed(2)}</td>
+                          <td className="py-3 pr-4 font-bold">৳{r.amount.toFixed(2)}</td>
                           <td className="py-3 pr-4">
                             <StatusBadge status={r.status} />
                           </td>
@@ -832,7 +832,7 @@ export function OrdersCommerceView({
                                   onClick={() =>
                                     setConfirmAction({
                                       title: `Mark return ${r.id} as ${st}?`,
-                                      description: `Customer ${r.customerName} ($${r.amount.toFixed(2)}) for ${r.productName}.`,
+                                      description: `Customer ${r.customerName} (৳${r.amount.toFixed(2)}) for ${r.productName}.`,
                                       confirmLabel: st,
                                       onRun: () => {
                                         updateReturnStatus(r.id, st);

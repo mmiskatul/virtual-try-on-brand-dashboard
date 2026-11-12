@@ -23,7 +23,7 @@ export function OrdersModule({ orders, onUpdateStatus }: OrdersProps) {
                   <span className="text-xs text-gray-500">• {order.date}</span>
                 </div>
                 <p className="text-xs text-gray-900 mt-1">Customer: <span className="font-semibold">{order.customerName}</span> ({order.customerEmail})</p>
-                <p className="text-xs text-gray-500">Total: <span className="text-gray-900 font-bold">${order.total}</span> ({order.itemCount} item)</p>
+                <p className="text-xs text-gray-500">Total: <span className="text-gray-900 font-bold">৳{order.total}</span> ({order.itemCount} item)</p>
               </div>
 
               <div className="flex items-center gap-3">

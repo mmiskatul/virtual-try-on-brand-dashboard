@@ -132,7 +132,7 @@ export function CustomersManagementView({
                     </div>
                     <div>
                       <p className="text-slate-400">Lifetime Spend</p>
-                      <p className="text-base font-extrabold text-slate-950">${customer.totalSpend.toFixed(2)}</p>
+                      <p className="text-base font-extrabold text-slate-950">৳{customer.totalSpend.toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-400">
@@ -166,7 +166,7 @@ export function CustomersManagementView({
                           </p>
                         </div>
                         <div className="text-right space-y-1">
-                          <p className="font-bold text-slate-950">${o.total.toFixed(2)}</p>
+                          <p className="font-bold text-slate-950">৳{o.total.toFixed(2)}</p>
                           <StatusBadge status={o.status} />
                         </div>
                       </Link>
@@ -248,7 +248,7 @@ export function CustomersManagementView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard label="Total Customers" value={safeCustomers.length} icon={<Users className="w-4 h-4" />} />
           <KpiCard label="VIP & High Value" value={vipCount} icon={<UserCheck className="w-4 h-4" />} />
-          <KpiCard label="Avg Lifetime Spend" value={`$${avgSpend.toFixed(2)}`} icon={<ShieldCheck className="w-4 h-4" />} />
+          <KpiCard label="Avg Lifetime Spend" value={`৳${avgSpend.toFixed(2)}`} icon={<ShieldCheck className="w-4 h-4" />} />
           <KpiCard label="Average Store Rating" value={`${avgRating} / 5`} icon={<Star className="w-4 h-4 text-amber-500" />} />
         </div>
 
@@ -374,7 +374,7 @@ export function CustomersManagementView({
                           </td>
                           <td className="py-3 pr-4 text-slate-600">{c.city}</td>
                           <td className="py-3 pr-4 font-semibold">{c.orderCount}</td>
-                          <td className="py-3 pr-4 font-bold text-slate-900">${c.totalSpend.toFixed(2)}</td>
+                          <td className="py-3 pr-4 font-bold text-slate-900">৳{c.totalSpend.toFixed(2)}</td>
                           <td className="py-3 pr-4 text-slate-500">{c.lastActivityAt}</td>
                           <td className="py-3 text-right">
                             <Link href={`/dashboard/customers/${encodeURIComponent(c.id)}`}>

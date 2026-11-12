@@ -42,7 +42,7 @@ export function StorefrontModule({ brand, onSave }: StorefrontProps) {
             <label className="block text-gray-500 mb-1 font-medium">Storefront Announcement Banner *</label>
             <Input
               {...register('announcement')}
-              placeholder="e.g. Complimentary worldwide express shipping on orders over $250"
+              placeholder="e.g. Complimentary express shipping on orders over ৳2,500"
               className={errors.announcement ? 'border-rose-500 focus-visible:ring-rose-500' : ''}
             />
             {errors.announcement && (

@@ -223,7 +223,7 @@ export function DashboardOverviewView() {
 
       {/* B. 8 Business Performance KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} change="+14.2%" icon={<CreditCard className="w-4 h-4" />} hint="Net merchandise revenue from active orders." />
+        <KpiCard label="Total Revenue" value={`৳${totalRevenue.toLocaleString()}`} change="+14.2%" icon={<CreditCard className="w-4 h-4" />} hint="Net merchandise revenue from active orders." />
         <KpiCard label="Total Orders" value={safeOrders.length} change="+8.5%" icon={<ShoppingBag className="w-4 h-4" />} hint="Confirmed tenant seller orders." />
         <KpiCard label="Total Products" value={safeProducts.length} change={`${publishedCount} public`} icon={<Store className="w-4 h-4" />} hint="All SKUs in your private + storefront catalog." />
         <KpiCard label="Total Customers" value={safeCustomers.length} change="+11.0%" icon={<Users className="w-4 h-4" />} hint="Verified shoppers who purchased from your brand." />
@@ -258,7 +258,7 @@ export function DashboardOverviewView() {
         >
           <div className="flex flex-wrap gap-1.5 sm:gap-2 pb-1">
             {[
-              ['revenue', 'Revenue ($)'],
+              ['revenue', 'Revenue (৳)'],
               ['orders', 'Order Volume'],
               ['tryOns', 'Try-On Sessions'],
             ].map(([k, lbl]) => (
@@ -284,12 +284,12 @@ export function DashboardOverviewView() {
         <SectionCard title="Sales Overview" subtitle="Real-time order breakdown" className="lg:col-span-4">
           <div className="space-y-2.5 text-xs sm:text-[13px]">
             {[
-              ['Total Merchandise Revenue', `$${totalRevenue.toFixed(2)}`],
+              ['Total Merchandise Revenue', `৳${totalRevenue.toFixed(2)}`],
               ['Paid Orders', paidOrders],
               ['Pending / Processing', pendingOrders],
               ['Cancelled Orders', cancelledOrders],
               ['Refunded Orders', refundedOrders],
-              ['Average Order Value (AOV)', `$${aov.toFixed(2)}`],
+              ['Average Order Value (AOV)', `৳${aov.toFixed(2)}`],
             ].map(([label, val]) => (
               <div key={String(label)} className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
                 <span className="text-slate-600 font-medium leading-snug">{label}</span>
@@ -320,7 +320,7 @@ export function DashboardOverviewView() {
               ['Avg Speed', `${avgDurationSec}s`],
               ['Cart Conversions', cartConvertedTryOns],
               ['Attributed Orders', attributedOrders],
-              ['Attributed Rev', `$${attributedRevenue}`],
+              ['Attributed Rev', `৳${attributedRevenue}`],
               ['Credits Used', safeSessions.reduce((s, t) => s + t.creditsUsed, 0)],
             ].map(([k, v]) => (
               <div key={String(k)} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
@@ -414,7 +414,7 @@ export function DashboardOverviewView() {
                     </p>
                   </div>
                 </div>
-                <span className="font-extrabold text-slate-950 tabular-nums shrink-0">${p.price}</span>
+                <span className="font-extrabold text-slate-950 tabular-nums shrink-0">৳{p.price}</span>
               </Link>
             ))}
           </div>
@@ -507,7 +507,7 @@ export function DashboardOverviewView() {
                     <p className="font-semibold text-slate-900 truncate">{ord.customerName}</p>
                     <p className="text-[11px] text-slate-500">{ord.date}</p>
                   </div>
-                  <span className="text-sm font-extrabold text-slate-950 tabular-nums shrink-0">${ord.total}</span>
+                  <span className="text-sm font-extrabold text-slate-950 tabular-nums shrink-0">৳{ord.total}</span>
                 </div>
               </Link>
             ))}
@@ -534,7 +534,7 @@ export function DashboardOverviewView() {
                       </Link>
                     </td>
                     <td className="py-2.5 pr-3">{ord.customerName}</td>
-                    <td className="py-2.5 pr-3 font-bold tabular-nums">${ord.total}</td>
+                    <td className="py-2.5 pr-3 font-bold tabular-nums">৳{ord.total}</td>
                     <td className="py-2.5 pr-3"><StatusBadge status={ord.status} /></td>
                     <td className="py-2.5 text-right text-slate-500 whitespace-nowrap">{ord.date}</td>
                   </tr>

@@ -255,7 +255,7 @@ export function MarketingManagementView({
                           <div className="min-w-0">
                             <p className="font-mono font-extrabold text-slate-950 break-all">{d.code}</p>
                             <p className="font-bold text-slate-700 mt-0.5">
-                              {d.type === 'PERCENTAGE' ? `${d.value}% OFF` : `$${d.value} OFF`}
+                              {d.type === 'PERCENTAGE' ? `${d.value}% OFF` : `৳${d.value} OFF`}
                             </p>
                           </div>
                           <StatusBadge status={d.active ? 'ACTIVE' : 'PAUSED'} />
@@ -295,7 +295,7 @@ export function MarketingManagementView({
                           <tr key={d.id}>
                             <td className="py-3 pr-4 font-mono font-extrabold text-slate-950">{d.code}</td>
                             <td className="py-3 pr-4 font-bold text-slate-800">
-                              {d.type === 'PERCENTAGE' ? `${d.value}% OFF` : `$${d.value} OFF`}
+                              {d.type === 'PERCENTAGE' ? `${d.value}% OFF` : `৳${d.value} OFF`}
                             </td>
                             <td className="py-3 pr-4 text-slate-600">
                               {d.scope.replace('_', ' ')} • Min ${d.minOrderValue}
@@ -356,7 +356,7 @@ export function MarketingManagementView({
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white"
                     >
                       <option value="PERCENTAGE">Percentage (%)</option>
-                      <option value="FIXED">Fixed Amount ($)</option>
+                      <option value="FIXED">Fixed Amount (৳)</option>
                     </select>
                   </label>
                   <label className="block space-y-1">
@@ -373,7 +373,7 @@ export function MarketingManagementView({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Min Order ($)</span>
+                    <span className="font-semibold text-slate-700">Min Order (৳)</span>
                     <input
                       type="number"
                       min="0"

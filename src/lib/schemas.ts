@@ -8,8 +8,8 @@ export const productSchema = z.object({
   category: z.enum(['Tops', 'Bottoms', 'Dresses', 'Outerwear']),
   price: z
     .number()
-    .positive('Price must be greater than $0')
-    .max(100000, 'Price exceeds maximum allowable threshold ($100,000)'),
+    .positive('Price must be greater than ৳0')
+    .max(100000, 'Price exceeds maximum allowable threshold (৳100,000)'),
   sku: z
     .string()
     .min(3, 'SKU must be at least 3 characters')
