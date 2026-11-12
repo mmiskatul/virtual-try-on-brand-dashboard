@@ -258,66 +258,113 @@ export async function exchangeBrandOAuthCodeFromBackend(code: string): Promise<{
   }
 }
 
-export async function verifyBrandSessionWithBackend(
-  cookieHeader: string,
-  expectedUserId?: string,
-): Promise<{
+type VerifySessionResult = {
   ok: boolean;
   tenantId?: string;
   onboardingCompleted?: boolean;
   user?: { id?: string; role?: string };
-}> {
+};
+
+const SESSION_VERIFY_CACHE_TTL_MS = 10_000;
+const SESSION_VERIFY_CACHE_MAX_ENTRIES = 500;
+const sessionVerifyInFlight = new Map<string, Promise<VerifySessionResult>>();
+const sessionVerifyCache = new Map<string, { result: VerifySessionResult; expiresAt: number }>();
+
+export async function verifyBrandSessionWithBackend(
+  cookieHeader: string,
+  expectedUserId?: string,
+): Promise<VerifySessionResult> {
   if (!cookieHeader) {
     return { ok: false };
   }
 
-  try {
-    const res = await fetch(`${getBackendApiBaseUrl()}/api/v1/auth/session`, {
-      method: 'GET',
-      headers: {
-        Cookie: cookieHeader,
-        'X-Auth-Portal': 'brand',
-        'X-Auth-Transport': 'cookie',
-      },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(3000),
-    });
+  const cacheKey = `${cookieHeader}::${expectedUserId || ''}`;
+  const now = Date.now();
+  const cached = sessionVerifyCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.result;
+  }
+  if (cached) {
+    sessionVerifyCache.delete(cacheKey);
+  }
 
-    if (!res.ok) {
-      return { ok: false };
-    }
+  const inFlight = sessionVerifyInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
 
-    const data = await res.json().catch(() => null);
-    if (!data || data.authenticated !== true || !data.user || !isAllowedBrandRole(data.user.role)) {
-      return { ok: false };
-    }
+  const promise: Promise<VerifySessionResult> = (async () => {
+    try {
+      const res = await fetch(`${getBackendApiBaseUrl()}/api/v1/auth/session`, {
+        method: 'GET',
+        headers: {
+          Cookie: cookieHeader,
+          'X-Auth-Portal': 'brand',
+          'X-Auth-Transport': 'cookie',
+        },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(3000),
+      });
 
-    if (expectedUserId && data.user.id && data.user.id !== expectedUserId) {
-      return { ok: false };
-    }
+      if (!res.ok) {
+        return { ok: false };
+      }
 
-    const tenantId =
-      typeof data.user.tenantId === 'string'
-        ? data.user.tenantId
-        : typeof data.tenant?.id === 'string'
-          ? data.tenant.id
+      const data = await res.json().catch(() => null);
+      if (!data || data.authenticated !== true || !data.user || !isAllowedBrandRole(data.user.role)) {
+        return { ok: false };
+      }
+
+      if (expectedUserId && data.user.id && data.user.id !== expectedUserId) {
+        return { ok: false };
+      }
+
+      const tenantId =
+        typeof data.user.tenantId === 'string'
+          ? data.user.tenantId
+          : typeof data.tenant?.id === 'string'
+            ? data.tenant.id
+            : undefined;
+
+      const onboardingCompleted =
+        typeof data.tenant?.storefrontSettings?.onboardingCompleted === 'boolean'
+          ? data.tenant.storefrontSettings.onboardingCompleted
           : undefined;
 
-    const onboardingCompleted =
-      typeof data.tenant?.storefrontSettings?.onboardingCompleted === 'boolean'
-        ? data.tenant.storefrontSettings.onboardingCompleted
-        : undefined;
+      const result: VerifySessionResult = {
+        ok: true,
+        tenantId,
+        onboardingCompleted,
+        user: {
+          id: typeof data.user.id === 'string' ? data.user.id : undefined,
+          role: data.user.role,
+        },
+      };
 
-    return {
-      ok: true,
-      tenantId,
-      onboardingCompleted,
-      user: {
-        id: typeof data.user.id === 'string' ? data.user.id : undefined,
-        role: data.user.role,
-      },
-    };
-  } catch {
-    return { ok: false };
-  }
+      if (sessionVerifyCache.size >= SESSION_VERIFY_CACHE_MAX_ENTRIES) {
+        const pruneNow = Date.now();
+        sessionVerifyCache.forEach((v, k) => {
+          if (v.expiresAt <= pruneNow) sessionVerifyCache.delete(k);
+        });
+        if (sessionVerifyCache.size >= SESSION_VERIFY_CACHE_MAX_ENTRIES) {
+          const firstKey = sessionVerifyCache.keys().next().value;
+          if (firstKey) sessionVerifyCache.delete(firstKey);
+        }
+      }
+
+      sessionVerifyCache.set(cacheKey, {
+        result,
+        expiresAt: Date.now() + SESSION_VERIFY_CACHE_TTL_MS,
+      });
+
+      return result;
+    } catch {
+      return { ok: false };
+    } finally {
+      sessionVerifyInFlight.delete(cacheKey);
+    }
+  })();
+
+  sessionVerifyInFlight.set(cacheKey, promise);
+  return promise;
 }

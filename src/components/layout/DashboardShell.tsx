@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -46,7 +47,18 @@ import { useBrandSync } from '../../hooks/useBrandSync';
 import { useMounted } from '../../hooks/useMounted';
 import { ToastNotification } from '../ui/ToastNotification';
 import { SafeImage } from '../shared/UiPrimitives';
-import { GettingStartedWizard } from '../../features/onboarding/GettingStartedWizard';
+
+const GettingStartedWizard = dynamic(
+  () => import('../../features/onboarding/GettingStartedWizard').then((m) => m.GettingStartedWizard),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-8 text-center text-xs text-slate-500 animate-pulse">
+        Loading onboarding setup...
+      </div>
+    ),
+  }
+);
 
 export interface VerifiedBrandShellUser {
   userId: string;
@@ -119,6 +131,31 @@ export function DashboardShell({
   const [helpOpen, setHelpOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const prefetchedHrefsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!pendingHref) return;
+    const timer = setTimeout(() => setPendingHref(null), 5000);
+    return () => clearTimeout(timer);
+  }, [pendingHref]);
+
+  const prefetchRoute = useCallback(
+    (href: string) => {
+      if (!href || prefetchedHrefsRef.current.has(href)) return;
+      prefetchedHrefsRef.current.add(href);
+      try {
+        router.prefetch(href);
+      } catch {
+        // Non-blocking
+      }
+    },
+    [router]
+  );
 
   const accountWrapperRef = useRef<HTMLDivElement>(null);
   const notifWrapperRef = useRef<HTMLDivElement>(null);
@@ -512,7 +549,8 @@ export function DashboardShell({
                 {groupExpanded && (!sidebarCollapsed || isMobile) && (
                   <div className="pl-7 pr-1 space-y-0.5">
                     {visibleItems.map((item) => {
-                      const active = isNavMatch(item.href);
+                      const active = pendingHref ? isNavMatch(item.href) && pendingHref === item.href || pendingHref === item.href : isNavMatch(item.href);
+                      const isNavigatingToThis = Boolean(pendingHref && pendingHref === item.href && pathname !== item.href);
                       const lockedByOnboarding =
                         isOnboardingGateActive && !item.href.startsWith('/dashboard/getting-started');
                       const badgeVal = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
@@ -526,6 +564,7 @@ export function DashboardShell({
                               showToast('Complete Brand Onboarding first to access other workspace modules.');
                               setTimeout(hideToast, 3000);
                               if (isMobile) setMobileMenuOpen(false);
+                              setPendingHref('/dashboard/getting-started');
                               router.push('/dashboard/getting-started');
                             }}
                             className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-100/60 font-medium cursor-not-allowed text-left"
@@ -542,7 +581,12 @@ export function DashboardShell({
                         <Link
                           key={item.href}
                           href={item.href}
-                          onClick={() => isMobile && setMobileMenuOpen(false)}
+                          onMouseEnter={() => prefetchRoute(item.href)}
+                          onFocus={() => prefetchRoute(item.href)}
+                          onClick={() => {
+                            if (pathname !== item.href) setPendingHref(item.href);
+                            if (isMobile) setMobileMenuOpen(false);
+                          }}
                           className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                             active
                               ? 'bg-slate-950 text-white font-bold shadow-sm'
@@ -550,7 +594,9 @@ export function DashboardShell({
                           }`}
                         >
                           <span className="truncate">{item.label}</span>
-                          {badgeVal > 0 && (
+                          {isNavigatingToThis ? (
+                            <span className="w-2.5 h-2.5 rounded-full border-2 border-white/40 border-t-white animate-spin shrink-0" />
+                          ) : badgeVal > 0 ? (
                             <span
                               className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                                 active ? 'bg-white text-slate-950' : 'bg-slate-200 text-slate-800'
@@ -558,7 +604,7 @@ export function DashboardShell({
                             >
                               {badgeVal}
                             </span>
-                          )}
+                          ) : null}
                         </Link>
                       );
                     })}
@@ -1060,8 +1106,19 @@ export function DashboardShell({
           </div>
         )}
 
+        {/* Top Route Progress Bar (instant feedback on route transitions) */}
+        {pendingHref && pendingHref !== pathname && (
+          <div className="sticky top-14 sm:top-16 z-30 h-0.5 w-full bg-slate-100 overflow-hidden pointer-events-none">
+            <div className="h-full w-1/3 bg-slate-950 animate-[pulse_0.8s_ease-in-out_infinite] rounded-full" />
+          </div>
+        )}
+
         {/* Main Workspace Content */}
-        <main className="flex-1 px-3.5 py-4 pb-24 sm:p-6 lg:p-8 lg:pb-8 max-w-[1440px] w-full mx-auto space-y-5 sm:space-y-6">
+        <main
+          className={`flex-1 px-3.5 py-4 pb-24 sm:p-6 lg:p-8 lg:pb-8 max-w-[1440px] w-full mx-auto space-y-5 sm:space-y-6 transition-opacity duration-150 ${
+            pendingHref && pendingHref !== pathname ? 'opacity-70' : 'opacity-100'
+          }`}
+        >
           {shellBlocked ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center space-y-2">
               <p className="text-sm font-bold text-slate-900">Brand Workspace Locked</p>
@@ -1086,11 +1143,15 @@ export function DashboardShell({
             { label: 'Try-On', href: '/dashboard/virtual-try-on', icon: Sparkles, match: (p: string) => p.startsWith('/dashboard/virtual-try-on') },
           ].map((nav) => {
             const NavIcon = nav.icon;
-            const active = nav.match(pathname);
+            const active = pendingHref ? pendingHref === nav.href : nav.match(pathname);
             return (
               <Link
                 key={nav.href}
                 href={nav.href}
+                onMouseEnter={() => prefetchRoute(nav.href)}
+                onClick={() => {
+                  if (pathname !== nav.href) setPendingHref(nav.href);
+                }}
                 className={`flex flex-col items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl text-[10px] font-bold transition-colors min-w-[58px] ${
                   active ? 'text-slate-950 bg-slate-100' : 'text-slate-500 hover:text-slate-900'
                 }`}

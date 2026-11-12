@@ -286,13 +286,19 @@ export async function middleware(request: NextRequest) {
         : '';
   const hasNextAuthBrand = Boolean(token && nextAuthUserId && isAllowedBrandRole(token.role));
 
+  const isPrefetchRequest =
+    request.headers.has('next-router-prefetch') ||
+    request.headers.get('purpose') === 'prefetch' ||
+    request.headers.get('x-middleware-prefetch') === '1';
+
   const accessCookie = request.cookies.get(BRAND_ACCESS_COOKIE)?.value;
   const refreshCookie = request.cookies.get(BRAND_REFRESH_COOKIE)?.value;
   const sessionCookie = request.cookies.get(BRAND_SESSION_COOKIE)?.value;
   let hasValidAccess =
     hasNextAuthBrand && isValidBrandAccessCookie(accessCookie, nextAuthUserId, sessionCookie);
 
-  if (hasValidAccess && accessCookie) {
+  // Skip backend HTTP verification on Next.js link prefetches when JWT + session binding already validate locally.
+  if (hasValidAccess && accessCookie && !isPrefetchRequest) {
     const backendSession = await verifyBrandSessionWithBackend(
       buildBrandCookieHeader({ accessToken: accessCookie, sessionToken: sessionCookie }),
       nextAuthUserId,
@@ -302,11 +308,6 @@ export async function middleware(request: NextRequest) {
       clearStaleAuthCookies = true;
     }
   }
-
-  const isPrefetchRequest =
-    request.headers.has('next-router-prefetch') ||
-    request.headers.get('purpose') === 'prefetch' ||
-    request.headers.get('x-middleware-prefetch') === '1';
 
   let refreshedSetCookies: string[] = [];
   let refreshedOk = false;

@@ -13,7 +13,7 @@ export function useBrandSync(preferredTenantId?: string, hasServerVerifiedUser =
   const syncInFlightRef = useRef<Promise<boolean> | null>(null);
 
   const setLiveSync = useWorkspaceStore((s) => s.setLiveSync);
-  const updateProfile = useWorkspaceStore((s) => s.updateProfile);
+  const applySyncedProfile = useWorkspaceStore((s) => s.applySyncedProfile);
   const setProducts = useWorkspaceStore((s) => s.setProducts);
   const setOrders = useWorkspaceStore((s) => s.setOrders);
   const setFabrics = useWorkspaceStore((s) => s.setFabrics);
@@ -88,7 +88,7 @@ export function useBrandSync(preferredTenantId?: string, hasServerVerifiedUser =
             analyticsRes.status === 'fulfilled' ? analyticsRes.value : null;
           const completed = Boolean(p.onboardingCompleted);
 
-          updateProfile({
+          applySyncedProfile({
             ...p,
             owner: p.owner || session?.user?.name || '',
             quotaUsed: analytics?.tryOnUsage?.used ?? undefined,
@@ -153,7 +153,7 @@ export function useBrandSync(preferredTenantId?: string, hasServerVerifiedUser =
     setOrders,
     setProducts,
     status,
-    updateProfile,
+    applySyncedProfile,
   ]);
 
   useEffect(() => {

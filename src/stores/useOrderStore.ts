@@ -1,20 +1,19 @@
-import { create } from 'zustand';
 import { Order } from '../types';
-import { initialOrders } from '../lib/mock_data';
+import { store } from '../store';
+import { createSliceFacadeHook } from '../store/hooks';
+import { selectOrderState } from '../store/selectors';
+import { orderActions } from '../store/slices/legacyBrandSlices';
 
-interface OrderState {
-  items: Order[];
-  setOrders: (orders: Order[]) => void;
-  updateOrderStatus: (payload: { orderId: string; status: 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' }) => void;
-}
+const orderBoundActions = {
+  setOrders: (orders: Order[]) => {
+    store.dispatch(orderActions.setOrders(orders));
+  },
+  updateOrderStatus: (payload: {
+    orderId: string;
+    status: 'CONFIRMED' | 'SHIPPED' | 'DELIVERED';
+  }) => {
+    store.dispatch(orderActions.updateOrderStatus(payload));
+  },
+};
 
-export const useOrderStore = create<OrderState>((set) => ({
-  items: initialOrders,
-  setOrders: (items) => set({ items }),
-  updateOrderStatus: ({ orderId, status }) =>
-    set((state) => ({
-      items: state.items.map((o) =>
-        o.id === orderId ? { ...o, status } : o
-      )
-    }))
-}));
+export const useOrderStore = createSliceFacadeHook(selectOrderState, orderBoundActions);

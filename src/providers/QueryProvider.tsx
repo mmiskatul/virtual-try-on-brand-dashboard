@@ -3,7 +3,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, signOut, useSession } from 'next-auth/react';
+import { Provider } from 'react-redux';
 import { brandApi } from '../lib/api';
+import { store } from '../store';
+import { workspaceActions } from '../store/slices/workspaceSlice';
+import {
+  notifyWorkspaceHydrated,
+  readPersistedWorkspaceState,
+} from '../store/middleware/persistence';
+
+function ReduxWorkspaceHydrator() {
+  useEffect(() => {
+    const persisted = readPersistedWorkspaceState();
+    store.dispatch(workspaceActions.hydrateWorkspace(persisted));
+    notifyWorkspaceHydrated();
+  }, []);
+
+  return null;
+}
 
 function SessionTokenSync() {
   const { data: session, status } = useSession();
@@ -71,9 +88,12 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <SessionProvider>
-      <SessionTokenSync />
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </SessionProvider>
+    <Provider store={store}>
+      <ReduxWorkspaceHydrator />
+      <SessionProvider>
+        <SessionTokenSync />
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </SessionProvider>
+    </Provider>
   );
 }

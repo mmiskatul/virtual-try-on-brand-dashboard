@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -74,6 +75,7 @@ export function OrdersCommerceView({
   initialTab?: OrdersTab;
   orderId?: string;
 }) {
+  const router = useRouter();
   const mounted = useMounted();
   const isLiveBackend = useWorkspaceStore((s) => s.isLiveBackend);
   const activeRole = useWorkspaceStore((s) => s.activeRole);
@@ -178,7 +180,7 @@ export function OrdersCommerceView({
               title="Order not found in tenant workspace"
               description="This order ID does not belong to your active brand tenant or has not been synced yet."
               actionLabel="Return to Orders"
-              onAction={() => (window.location.href = '/dashboard/orders')}
+              onAction={() => router.push('/dashboard/orders')}
             />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

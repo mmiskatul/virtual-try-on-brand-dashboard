@@ -1026,7 +1026,7 @@ export function GettingStartedWizard({
     };
   }, []);
 
-  // Re-sync local form state cleanly once Zustand localStorage rehydrates and/or live profile resolves
+  // Re-sync local form state cleanly once Redux localStorage rehydrates and/or live profile resolves
   useEffect(() => {
     if (!storeHydrated) return;
     const savedDraft = onboardingProfileDrafts[activeTenantId];

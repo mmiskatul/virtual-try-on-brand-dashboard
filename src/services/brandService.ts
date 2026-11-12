@@ -4,8 +4,20 @@ import { BrandProfile, Fabric, InventoryMovement, Order, Product } from '../type
 
 const API_BASE = BRAND_API_URL;
 
+export interface ValidationIssue {
+  path: string;
+  message: string;
+  code?: string;
+}
+
 export class ServiceError extends Error {
-  constructor(public status: number, message: string, public code?: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public code?: string,
+    public issues?: ValidationIssue[],
+    public correlationId?: string
+  ) {
     super(message);
     this.name = 'ServiceError';
   }
@@ -28,7 +40,9 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       throw new ServiceError(
         res.status,
         errJson?.message || `Request failed (${res.status})`,
-        errJson?.error
+        errJson?.code || errJson?.error,
+        Array.isArray(errJson?.issues) ? errJson.issues : undefined,
+        errJson?.correlationId
       );
     }
     return res.json();
@@ -100,99 +114,186 @@ export function normalizeBackendOrder(raw: any): Order {
   };
 }
 
+export function mapTenantToBrandProfile(t: any): Partial<BrandProfile> & { id: string } {
+  const ss = t.storefrontSettings || {};
+  const slug = t.slug || 'brand';
+  const baseSettings = {
+    timezone: 'UTC',
+    dateFormat: 'YYYY-MM-DD',
+    language: 'English',
+    currency: 'BDT',
+    taxRatePercent: 0,
+    taxInclusive: false,
+    freeShippingThreshold: 150,
+    defaultShippingFee: 12,
+    emailNotifications: true,
+    orderNotifications: true,
+    inventoryNotifications: true,
+    tryOnNotifications: true,
+    billingNotifications: true,
+    twoFactorEnabled: false,
+  };
+  return {
+    id: t.id,
+    name: t.name,
+    slug,
+    email: t.contactEmail,
+    onboardingCompleted: Boolean(ss.onboardingCompleted),
+    onboardingCompletedAt:
+      typeof ss.onboardingCompletedAt === 'number' ? ss.onboardingCompletedAt : undefined,
+    owner: ss.ownerName || undefined,
+    legalName: ss.legalName || undefined,
+    businessType: ss.businessType || undefined,
+    phone: ss.phone || undefined,
+    city: ss.city || undefined,
+    country: ss.country || undefined,
+    address: ss.address || undefined,
+    categoryFocus: ss.categoryFocus || undefined,
+    ...(Array.isArray(ss.categories) && ss.categories.length > 0
+      ? { specialties: ss.categories }
+      : {}),
+    slogan: ss.slogan || undefined,
+    shortDescription: ss.shortDescription || undefined,
+    establishedYear: ss.establishedYear || undefined,
+    registrationNumber: ss.registrationNumber || undefined,
+    description: t.description,
+    brandStory: ss.aboutText || t.description || undefined,
+    logo: t.logoUrl || undefined,
+    lightLogo: ss.lightLogoUrl ?? undefined,
+    banner: t.bannerUrl || ss.bannerImage || undefined,
+    socialImage: ss.socialImageUrl ?? undefined,
+    announcement: ss.announcement,
+    primaryColor: ss.primaryColor,
+    secondaryColor: ss.secondaryColor || undefined,
+    accentColor: ss.accentColor,
+    backgroundColor: ss.backgroundColor || undefined,
+    textColor: ss.textColor || undefined,
+    headingFont: ss.headingFont || undefined,
+    bodyFont: ss.bodyFont || undefined,
+    buttonStyle: ss.buttonStyle || undefined,
+    ...(typeof ss.headerStyle === 'string'
+      ? { headerStyle: normalizeHeaderStyle(ss.headerStyle) }
+      : {}),
+    ...(ss.socialLinks ? { socialLinks: ss.socialLinks } : {}),
+    ...(ss.currency ? { settings: baseSettings } : {}),
+    ...(ss.storefrontTitle || ss.shortDescription || t.description
+      ? {
+          seo: {
+            title: ss.storefrontTitle || '',
+            description: ss.shortDescription || t.description || '',
+            canonicalUrl: `https://vton.store/brands/${slug}`,
+            ogImage: ss.socialImageUrl || t.bannerUrl || ss.bannerImage || '',
+            allowIndexing: true,
+          },
+        }
+      : {}),
+    verificationStatus:
+      t.status === 'ACTIVE'
+        ? 'VERIFIED'
+        : t.status === 'PENDING_VERIFICATION'
+        ? 'UNDER_REVIEW'
+        : 'UNVERIFIED',
+    storeStatus: t.status === 'ACTIVE' ? 'LIVE' : 'MAINTENANCE',
+  };
+}
+
 export const brandWorkspaceApi = {
   // Brand Profile & Analytics
   getProfile: async (): Promise<Partial<BrandProfile> & { id: string }> => {
     const res = await apiFetch<{ tenant: any }>('/api/v1/brand/profile');
-    const t = res.tenant;
-    const ss = t.storefrontSettings || {};
-    const slug = t.slug || 'brand';
-    const baseSettings = {
-      timezone: 'UTC',
-      dateFormat: 'YYYY-MM-DD',
-      language: 'English',
-      currency: 'BDT',
-      taxRatePercent: 0,
-      taxInclusive: false,
-      freeShippingThreshold: 150,
-      defaultShippingFee: 12,
-      emailNotifications: true,
-      orderNotifications: true,
-      inventoryNotifications: true,
-      tryOnNotifications: true,
-      billingNotifications: true,
-      twoFactorEnabled: false,
-    };
-    return {
-      id: t.id,
-      name: t.name,
-      slug,
-      email: t.contactEmail,
-      onboardingCompleted: Boolean(ss.onboardingCompleted),
-      onboardingCompletedAt: typeof ss.onboardingCompletedAt === 'number' ? ss.onboardingCompletedAt : undefined,
-      owner: ss.ownerName || undefined,
-      legalName: ss.legalName || undefined,
-      businessType: ss.businessType || undefined,
-      phone: ss.phone || undefined,
-      city: ss.city || undefined,
-      country: ss.country || undefined,
-      address: ss.address || undefined,
-      categoryFocus: ss.categoryFocus || undefined,
-      ...(Array.isArray(ss.categories) && ss.categories.length > 0 ? { specialties: ss.categories } : {}),
-      slogan: ss.slogan || undefined,
-      shortDescription: ss.shortDescription || undefined,
-      establishedYear: ss.establishedYear || undefined,
-      registrationNumber: ss.registrationNumber || undefined,
-      description: t.description,
-      brandStory: ss.aboutText || t.description || undefined,
-      logo: t.logoUrl || undefined,
-      lightLogo: ss.lightLogoUrl ?? undefined,
-      banner: t.bannerUrl || ss.bannerImage || undefined,
-      socialImage: ss.socialImageUrl ?? undefined,
-      announcement: ss.announcement,
-      primaryColor: ss.primaryColor,
-      secondaryColor: ss.secondaryColor || undefined,
-      accentColor: ss.accentColor,
-      backgroundColor: ss.backgroundColor || undefined,
-      textColor: ss.textColor || undefined,
-      headingFont: ss.headingFont || undefined,
-      bodyFont: ss.bodyFont || undefined,
-      buttonStyle: ss.buttonStyle || undefined,
-      ...(typeof ss.headerStyle === 'string' ? { headerStyle: normalizeHeaderStyle(ss.headerStyle) } : {}),
-      ...(ss.socialLinks ? { socialLinks: ss.socialLinks } : {}),
-      ...(ss.currency ? { settings: baseSettings } : {}),
-      ...(ss.storefrontTitle || ss.shortDescription || t.description
-        ? {
-            seo: {
-              title: ss.storefrontTitle || '',
-              description: ss.shortDescription || t.description || '',
-              canonicalUrl: `https://vton.store/brands/${slug}`,
-              ogImage: ss.socialImageUrl || t.bannerUrl || ss.bannerImage || '',
-              allowIndexing: true,
-            },
-          }
-        : {}),
-      verificationStatus:
-        t.status === 'ACTIVE'
-          ? 'VERIFIED'
-          : t.status === 'PENDING_VERIFICATION'
-          ? 'UNDER_REVIEW'
-          : 'UNVERIFIED',
-      storeStatus: t.status === 'ACTIVE' ? 'LIVE' : 'MAINTENANCE',
-    };
+    return mapTenantToBrandProfile(res.tenant);
   },
 
-  updateProfile: (payload: Partial<{ name: string; description: string; contactEmail: string; logoUrl: string; bannerUrl: string; storefrontSettings: any }>) =>
-    apiFetch<{ message: string; tenant: any }>('/api/v1/brand/profile', {
+  updateProfile: async (
+    payload: Partial<{
+      name: string;
+      description: string;
+      contactEmail: string;
+      logoUrl: string;
+      bannerUrl: string;
+      storefrontSettings: any;
+    }>
+  ) => {
+    const res = await apiFetch<{ message: string; tenant: any }>('/api/v1/brand/profile', {
       method: 'PUT',
       body: JSON.stringify(payload),
-    }),
+    });
+    return {
+      ...res,
+      profile: mapTenantToBrandProfile(res.tenant),
+    };
+  },
 
   updateStorefrontSettings: (settings: Record<string, any>) =>
     apiFetch<{ message: string; tenant: any }>('/api/v1/brand/storefront-settings', {
       method: 'PUT',
       body: JSON.stringify(settings),
     }),
+
+  getVerification: () =>
+    apiFetch<BrandVerificationSummary>('/api/v1/brand/verification'),
+
+  updateBrandDetails: async (payload: BrandDetailsPatchPayload) => {
+    const res = await apiFetch<{
+      message: string;
+      section: 'profile';
+      tenant: any;
+      verification?: BrandVerificationSummary;
+    }>('/api/v1/brand/profile/details', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return {
+      ...res,
+      profile: mapTenantToBrandProfile(res.tenant),
+    };
+  },
+
+  updateBrandIdentity: async (payload: BrandIdentityPatchPayload) => {
+    const res = await apiFetch<{
+      message: string;
+      section: 'identity';
+      tenant: any;
+    }>('/api/v1/brand/identity', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return {
+      ...res,
+      profile: mapTenantToBrandProfile(res.tenant),
+    };
+  },
+
+  updateBrandMediaSlot: async (slot: BrandMediaSlot, url: string) => {
+    const res = await apiFetch<{
+      message: string;
+      slot: BrandMediaSlot;
+      url: string;
+      tenant: any;
+    }>(`/api/v1/brand/media/${encodeURIComponent(slot)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ url }),
+    });
+    return {
+      ...res,
+      profile: mapTenantToBrandProfile(res.tenant),
+    };
+  },
+
+  deleteBrandMediaSlot: async (slot: BrandMediaSlot) => {
+    const res = await apiFetch<{
+      message: string;
+      slot: BrandMediaSlot;
+      url: string;
+      tenant: any;
+    }>(`/api/v1/brand/media/${encodeURIComponent(slot)}`, {
+      method: 'DELETE',
+    });
+    return {
+      ...res,
+      profile: mapTenantToBrandProfile(res.tenant),
+    };
+  },
 
   getAnalytics: () => apiFetch<any>('/api/v1/brand/analytics'),
 
@@ -333,7 +434,16 @@ export const brandWorkspaceApi = {
         body: form,
       });
       return { ok: true, url: res.url, provider: res.provider };
-    } catch {
+    } catch (err: any) {
+      if (err instanceof ServiceError && err.status !== 503) {
+        return { ok: false, error: err.message || `Upload rejected (${err.status}).` };
+      }
+      if (file.size > 1.5 * 1024 * 1024) {
+        return {
+          ok: false,
+          error: 'Backend upload service unreachable. Reconnect to upload images larger than 1.5 MB.',
+        };
+      }
       const dataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
@@ -645,5 +755,66 @@ export interface BrandOverviewChecklist {
     completed: boolean;
     autoCompleted: boolean;
   }>;
+}
+
+export type BrandMediaSlot = 'logo' | 'banner' | 'lightLogo' | 'socialImage';
+
+export interface BrandDetailsPatchPayload {
+  name?: string;
+  contactEmail?: string;
+  owner?: string;
+  legalName?: string;
+  businessType?: string;
+  registrationNumber?: string;
+  establishedYear?: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  address?: string;
+  categoryFocus?: string;
+  slogan?: string;
+  shortDescription?: string;
+  description?: string;
+  announcement?: string;
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    website?: string;
+  };
+}
+
+export interface BrandIdentityPatchPayload {
+  storefrontTitle?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  headingFont?: string;
+  bodyFont?: string;
+  buttonStyle?: 'pill' | 'rounded' | 'square';
+  headerStyle?: string;
+}
+
+export interface BrandVerificationCheck {
+  key: string;
+  label: string;
+  category: 'identity' | 'legal' | 'contact' | 'media';
+  completed: boolean;
+}
+
+export interface BrandVerificationSummary {
+  tenantId: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION';
+  storeActive: boolean;
+  verificationScore: number;
+  completedChecks: number;
+  totalChecks: number;
+  registrationNumber: string;
+  legalName: string;
+  contactEmail: string;
+  checks: BrandVerificationCheck[];
+  missingRequirements: string[];
+  updatedAt: number;
 }
 

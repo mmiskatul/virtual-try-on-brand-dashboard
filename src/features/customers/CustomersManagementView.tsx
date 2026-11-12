@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Download,
@@ -44,6 +45,7 @@ export function CustomersManagementView({
   initialTab?: CustomersTab;
   customerId?: string;
 }) {
+  const router = useRouter();
   const mounted = useMounted();
   const activeRole = useWorkspaceStore((s) => s.activeRole);
   const roleOverrides = useWorkspaceStore((s) => s.roleOverrides);
@@ -98,7 +100,7 @@ export function CustomersManagementView({
               title="Customer record not found"
               description="No customer profile matches this ID within your active tenant."
               actionLabel="Back to Customers"
-              onAction={() => (window.location.href = '/dashboard/customers')}
+              onAction={() => router.push('/dashboard/customers')}
             />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

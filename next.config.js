@@ -10,6 +10,7 @@ const nextConfig = {
   experimental: {
     taint: true,
     instrumentationHook: true,
+    optimizePackageImports: ['lucide-react', '@tanstack/react-query', 'zod', 'zustand'],
   },
   images: {
     remotePatterns: [

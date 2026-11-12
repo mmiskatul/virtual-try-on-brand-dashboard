@@ -1,24 +1,25 @@
-import { create } from 'zustand';
 import { TabType } from '../types';
+import { store } from '../store';
+import { createSliceFacadeHook } from '../store/hooks';
+import { selectUiState } from '../store/selectors';
+import { uiActions } from '../store/slices/uiSlice';
 
-interface UiState {
-  activeTab: TabType;
-  toastMessage: string | null;
-  isAddProductModalOpen: boolean;
-  setActiveTab: (tab: TabType) => void;
-  showToast: (message: string) => void;
-  hideToast: () => void;
-  openAddProductModal: () => void;
-  closeAddProductModal: () => void;
-}
+const uiBoundActions = {
+  setActiveTab: (tab: TabType) => {
+    store.dispatch(uiActions.setActiveTab(tab));
+  },
+  showToast: (message: string) => {
+    store.dispatch(uiActions.showToast(message));
+  },
+  hideToast: () => {
+    store.dispatch(uiActions.hideToast());
+  },
+  openAddProductModal: () => {
+    store.dispatch(uiActions.openAddProductModal());
+  },
+  closeAddProductModal: () => {
+    store.dispatch(uiActions.closeAddProductModal());
+  },
+};
 
-export const useUiStore = create<UiState>((set) => ({
-  activeTab: 'overview',
-  toastMessage: null,
-  isAddProductModalOpen: false,
-  setActiveTab: (activeTab) => set({ activeTab }),
-  showToast: (toastMessage) => set({ toastMessage }),
-  hideToast: () => set({ toastMessage: null }),
-  openAddProductModal: () => set({ isAddProductModalOpen: true }),
-  closeAddProductModal: () => set({ isAddProductModalOpen: false })
-}));
+export const useUiStore = createSliceFacadeHook(selectUiState, uiBoundActions);

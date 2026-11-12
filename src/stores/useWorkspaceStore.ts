@@ -1,5 +1,3 @@
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 import {
   AbandonedCart,
   ActivityLogEntry,
@@ -28,32 +26,14 @@ import {
   WarehouseLocation,
   WebhookSubscription,
 } from '../types';
+import { store } from '../store';
+import { createSliceFacadeHook } from '../store/hooks';
+import { selectWorkspaceState } from '../store/selectors';
+import { workspaceActions } from '../store/slices/workspaceSlice';
 import {
-  DEMO_ABANDONED_CARTS,
-  DEMO_ACTIVITY_LOGS,
-  DEMO_API_KEYS,
-  DEMO_BRAND_PROFILE,
-  DEMO_CAMPAIGNS,
-  DEMO_CUSTOMERS,
-  DEMO_DISCOUNTS,
-  DEMO_FABRICS,
-  DEMO_INVENTORY_LOGS,
-  DEMO_INVOICES,
-  DEMO_MARKETPLACE_POSTS,
-  DEMO_NAV_MENUS,
-  DEMO_ORDERS,
-  DEMO_PRODUCTS,
-  DEMO_RETURNS,
-  DEMO_REVIEWS,
-  DEMO_STOREFRONT_PAGES,
-  DEMO_STOREFRONT_SECTIONS,
-  DEMO_TEAM,
-  DEMO_TRYON_CONFIG,
-  DEMO_TRYON_SESSIONS,
-  DEMO_WAREHOUSES,
-  DEMO_WEBHOOKS,
-} from '../data/brandDemoSeed';
-import { DEFAULT_ROLE_PERMISSIONS } from '../config/permissions';
+  isWorkspaceHydrated,
+  subscribeWorkspaceHydration,
+} from '../store/middleware/persistence';
 
 export interface WorkspaceState {
   isLiveBackend: boolean;
@@ -101,6 +81,7 @@ export interface WorkspaceState {
   toggleSidebarCollapsed: () => void;
   toggleNavGroup: (id: string) => void;
   updateProfile: (partial: Partial<BrandProfile>) => void;
+  applySyncedProfile: (partial: Partial<BrandProfile>) => void;
   setProducts: (products: Product[]) => void;
   addProduct: (product: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
@@ -156,556 +137,173 @@ export interface WorkspaceState {
   recordAudit: (action: string, entity: string, details: string) => void;
 }
 
-export const useWorkspaceStore = create<WorkspaceState>()(
-  persist(
-    (set, get) => ({
-      isLiveBackend: false,
-      lastSyncedAt: null,
-      activeRole: 'OWNER',
-      sidebarCollapsed: false,
-      openGroups: ['overview', 'brand', 'products', 'marketplace', 'virtual-try-on', 'commerce'],
+const workspaceBoundActions = {
+  setLiveSync: (live: boolean) => {
+    store.dispatch(workspaceActions.setLiveSync(live));
+  },
+  setActiveRole: (role: StaffRole) => {
+    store.dispatch(workspaceActions.setActiveRole(role));
+  },
+  toggleSidebarCollapsed: () => {
+    store.dispatch(workspaceActions.toggleSidebarCollapsed());
+  },
+  toggleNavGroup: (id: string) => {
+    store.dispatch(workspaceActions.toggleNavGroup(id));
+  },
+  updateProfile: (partial: Partial<BrandProfile>) => {
+    store.dispatch(workspaceActions.updateProfile(partial));
+  },
+  applySyncedProfile: (partial: Partial<BrandProfile>) => {
+    store.dispatch(workspaceActions.applySyncedProfile(partial));
+  },
+  setProducts: (products: Product[]) => {
+    store.dispatch(workspaceActions.setProducts(products));
+  },
+  addProduct: (product: Product) => {
+    store.dispatch(workspaceActions.addProduct(product));
+  },
+  updateProduct: (id: string, updates: Partial<Product>) => {
+    store.dispatch(workspaceActions.updateProduct({ id, updates }));
+  },
+  deleteProduct: (id: string) => {
+    store.dispatch(workspaceActions.deleteProduct(id));
+  },
+  adjustStock: (id: string, delta: number, reason?: string, location?: string) => {
+    store.dispatch(workspaceActions.adjustStock({ id, delta, reason, location }));
+  },
+  setFabrics: (fabrics: Fabric[]) => {
+    store.dispatch(workspaceActions.setFabrics(fabrics));
+  },
+  addFabric: (fabric: Fabric) => {
+    store.dispatch(workspaceActions.addFabric(fabric));
+  },
+  addMarketplacePost: (post: MarketplacePost) => {
+    store.dispatch(workspaceActions.addMarketplacePost(post));
+  },
+  updateMarketplacePost: (id: string, updates: Partial<MarketplacePost>) => {
+    store.dispatch(workspaceActions.updateMarketplacePost({ id, updates }));
+  },
+  deleteMarketplacePost: (id: string) => {
+    store.dispatch(workspaceActions.deleteMarketplacePost(id));
+  },
+  setOrders: (orders: Order[]) => {
+    store.dispatch(workspaceActions.setOrders(orders));
+  },
+  updateOrder: (id: string, updates: Partial<Order>) => {
+    store.dispatch(workspaceActions.updateOrder({ id, updates }));
+  },
+  updateReturnStatus: (id: string, status: ReturnRequest['status']) => {
+    store.dispatch(workspaceActions.updateReturnStatus({ id, status }));
+  },
+  markAbandonedRecovered: (id: string) => {
+    store.dispatch(workspaceActions.markAbandonedRecovered(id));
+  },
+  addWarehouse: (w: WarehouseLocation) => {
+    store.dispatch(workspaceActions.addWarehouse(w));
+  },
+  replyToReview: (id: string, reply: string) => {
+    store.dispatch(workspaceActions.replyToReview({ id, reply }));
+  },
+  toggleReportReview: (id: string) => {
+    store.dispatch(workspaceActions.toggleReportReview(id));
+  },
+  addCampaign: (c: MarketingCampaign) => {
+    store.dispatch(workspaceActions.addCampaign(c));
+  },
+  addDiscount: (d: DiscountCode) => {
+    store.dispatch(workspaceActions.addDiscount(d));
+  },
+  toggleDiscountActive: (id: string) => {
+    store.dispatch(workspaceActions.toggleDiscountActive(id));
+  },
+  setStorefrontSections: (sections: StorefrontSectionConfig[]) => {
+    store.dispatch(workspaceActions.setStorefrontSections(sections));
+  },
+  publishStorefrontChanges: () => {
+    store.dispatch(workspaceActions.publishStorefrontChanges());
+  },
+  saveStorefrontPage: (page: StorefrontPageRecord) => {
+    store.dispatch(workspaceActions.saveStorefrontPage(page));
+  },
+  setNavMenus: (items: NavMenuItem[]) => {
+    store.dispatch(workspaceActions.setNavMenus(items));
+  },
+  updateTryOnConfig: (partial: Partial<TryOnConfiguration>) => {
+    store.dispatch(workspaceActions.updateTryOnConfig(partial));
+  },
+  addTryOnSession: (session: TryOnGenerationSession) => {
+    store.dispatch(workspaceActions.addTryOnSession(session));
+  },
+  inviteTeamMember: (member: Omit<TeamMember, 'id' | 'lastActiveAt'>) => {
+    store.dispatch(workspaceActions.inviteTeamMember(member));
+  },
+  updateTeamMemberRole: (id: string, role: StaffRole) => {
+    store.dispatch(workspaceActions.updateTeamMemberRole({ id, role }));
+  },
+  toggleRolePermission: (role: StaffRole, mod: ResourceModule, permAction: PermissionAction) => {
+    store.dispatch(workspaceActions.toggleRolePermission({ role, mod, permAction }));
+  },
+  createApiKey: (name: string) => {
+    const rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+    const rawSecret = `vtry_live_${rand}`;
+    const credential: ApiCredential = {
+      id: `key_${Date.now()}`,
+      name,
+      publicPrefix: `${rawSecret.slice(0, 14)}••••••${rawSecret.slice(-4)}`,
+      createdAt: new Date().toISOString().slice(0, 10),
+      lastUsedAt: 'Never',
+      rateLimitPerMin: 120,
+      status: 'ACTIVE',
+    };
+    store.dispatch(workspaceActions.addApiKeyRecord(credential));
+    return { credential, rawSecret };
+  },
+  revokeApiKey: (id: string) => {
+    store.dispatch(workspaceActions.revokeApiKey(id));
+  },
+  addWebhook: (w: Omit<WebhookSubscription, 'id' | 'lastDeliveryStatus' | 'lastDeliveryAt'>) => {
+    store.dispatch(workspaceActions.addWebhook(w));
+  },
+  removeWebhook: (id: string) => {
+    store.dispatch(workspaceActions.removeWebhook(id));
+  },
+  setOnboardingStep: (step: number, tenantId?: string) => {
+    store.dispatch(workspaceActions.setOnboardingStep({ step, tenantId }));
+  },
+  markOnboardingStepCompleted: (tenantId: string, stepNumber: number) => {
+    store.dispatch(workspaceActions.markOnboardingStepCompleted({ tenantId, stepNumber }));
+  },
+  toggleOnboardingChecklist: (id: string) => {
+    store.dispatch(workspaceActions.toggleOnboardingChecklist(id));
+  },
+  markOnboardingCompleted: (tenantId: string) => {
+    store.dispatch(workspaceActions.markOnboardingCompleted(tenantId));
+  },
+  reopenOnboarding: (tenantId: string) => {
+    store.dispatch(workspaceActions.reopenOnboarding(tenantId));
+  },
+  setBackendOnboardingStatus: (tenantId: string, onboarded: boolean | null) => {
+    store.dispatch(workspaceActions.setBackendOnboardingStatus({ tenantId, onboarded }));
+  },
+  saveOnboardingProfileForTenant: (tenantId: string, partial: Partial<BrandProfile>) => {
+    store.dispatch(workspaceActions.saveOnboardingProfileForTenant({ tenantId, partial }));
+  },
+  restoreOnboardingDraftSnapshot: (tenantId: string, snapshot: Partial<BrandProfile> | null) => {
+    store.dispatch(workspaceActions.restoreOnboardingDraftSnapshot({ tenantId, snapshot }));
+  },
+  addFabricRecord: (fabric: Fabric) => {
+    store.dispatch(workspaceActions.addFabricRecord(fabric));
+  },
+  recordAudit: (action: string, entity: string, details: string) => {
+    store.dispatch(workspaceActions.recordAudit({ action, entity, details }));
+  },
+};
 
-      profile: DEMO_BRAND_PROFILE,
-      products: DEMO_PRODUCTS,
-      fabrics: DEMO_FABRICS,
-      marketplacePosts: DEMO_MARKETPLACE_POSTS,
-      orders: DEMO_ORDERS,
-      returns: DEMO_RETURNS,
-      abandonedCarts: DEMO_ABANDONED_CARTS,
-      warehouses: DEMO_WAREHOUSES,
-      inventoryLogs: DEMO_INVENTORY_LOGS,
-      customers: DEMO_CUSTOMERS,
-      reviews: DEMO_REVIEWS,
-      campaigns: DEMO_CAMPAIGNS,
-      discounts: DEMO_DISCOUNTS,
-      storefrontSections: DEMO_STOREFRONT_SECTIONS,
-      storefrontHasUnsavedDraft: false,
-      storefrontLastPublishedAt: '2026-11-09 14:00',
-      storefrontPages: DEMO_STOREFRONT_PAGES,
-      navMenus: DEMO_NAV_MENUS,
-      tryOnConfig: DEMO_TRYON_CONFIG,
-      tryOnSessions: DEMO_TRYON_SESSIONS,
-      teamMembers: DEMO_TEAM,
-      roleOverrides: {},
-      activityLogs: DEMO_ACTIVITY_LOGS,
-      invoices: DEMO_INVOICES,
-      apiKeys: DEMO_API_KEYS,
-      webhooks: DEMO_WEBHOOKS,
-      onboardingStep: 1,
-      onboardingStepByTenant: {},
-      onboardingCompletedStepsByTenant: {},
-      onboardingCompletedIds: [],
-      onboardedTenantIds: [],
-      onboardingProfileDrafts: {},
-      backendOnboardingStatusByTenant: {},
+const baseWorkspaceHook = createSliceFacadeHook(selectWorkspaceState, workspaceBoundActions);
 
-      setLiveSync: (live) =>
-        set({ isLiveBackend: live, lastSyncedAt: new Date().toLocaleTimeString() }),
-
-      setActiveRole: (activeRole) => set({ activeRole }),
-
-      toggleSidebarCollapsed: () =>
-        set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
-
-      toggleNavGroup: (id) =>
-        set((s) => ({
-          openGroups: s.openGroups.includes(id)
-            ? s.openGroups.filter((g) => g !== id)
-            : [...s.openGroups, id],
-        })),
-
-      updateProfile: (partial) => {
-        set((s) => ({ profile: { ...s.profile, ...partial } }));
-        get().recordAudit('PROFILE_UPDATED', 'Brand Workspace', `Updated ${Object.keys(partial).join(', ')}`);
-      },
-
-      setProducts: (products) => set({ products }),
-
-      addProduct: (product) => {
-        set((s) => ({ products: [product, ...s.products] }));
-        get().recordAudit('PRODUCT_CREATED', product.name, `Created SKU ${product.sku}`);
-      },
-
-      updateProduct: (id, updates) => {
-        const target = get().products.find((p) => p.id === id);
-        set((s) => ({
-          products: s.products.map((p) =>
-            p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString().slice(0, 10) } : p
-          ),
-        }));
-        if (target) {
-          get().recordAudit('PRODUCT_UPDATED', target.name, `Modified ${Object.keys(updates).join(', ')}`);
-        }
-      },
-
-      deleteProduct: (id) => {
-        const target = get().products.find((p) => p.id === id);
-        set((s) => ({ products: s.products.filter((p) => p.id !== id) }));
-        if (target) {
-          get().recordAudit('PRODUCT_DELETED', target.name, `Removed ${target.sku} from tenant catalog`);
-        }
-      },
-
-      adjustStock: (id, delta, reason = 'Manual inventory adjustment', location = 'Dhaka Main Studio') => {
-        const target = get().products.find((p) => p.id === id);
-        if (!target) return;
-        const nextStock = Math.max(0, target.stock + delta);
-        set((s) => ({
-          products: s.products.map((p) => (p.id === id ? { ...p, stock: nextStock } : p)),
-          inventoryLogs: [
-            {
-              id: `inv_${Date.now()}`,
-              productId: target.id,
-              productName: target.name,
-              variantSku: target.sku,
-              location,
-              change: delta,
-              newStock: nextStock,
-              reason,
-              actor: get().profile.owner,
-              timestamp: new Date().toLocaleString(),
-            },
-            ...s.inventoryLogs,
-          ],
-        }));
-        get().recordAudit('INVENTORY_ADJUSTED', target.name, `${delta > 0 ? '+' : ''}${delta} units (${reason})`);
-      },
-
-      setFabrics: (fabrics) => set({ fabrics }),
-      addFabric: (fabric) => set((s) => ({ fabrics: [fabric, ...s.fabrics] })),
-
-      addMarketplacePost: (post) => {
-        set((s) => ({ marketplacePosts: [post, ...s.marketplacePosts] }));
-        get().recordAudit('MARKETPLACE_POST_CREATED', post.title, `Status: ${post.status}`);
-      },
-
-      updateMarketplacePost: (id, updates) => {
-        set((s) => ({
-          marketplacePosts: s.marketplacePosts.map((m) => (m.id === id ? { ...m, ...updates } : m)),
-        }));
-        get().recordAudit('MARKETPLACE_POST_UPDATED', id, `Updated ${Object.keys(updates).join(', ')}`);
-      },
-
-      deleteMarketplacePost: (id) =>
-        set((s) => ({ marketplacePosts: s.marketplacePosts.filter((m) => m.id !== id) })),
-
-      setOrders: (orders) => set({ orders }),
-      updateOrder: (id, updates) => {
-        set((s) => ({
-          orders: s.orders.map((o) => (o.id === id ? { ...o, ...updates } : o)),
-        }));
-        get().recordAudit('ORDER_UPDATED', id, `Status/fields updated`);
-      },
-
-      updateReturnStatus: (id, status) =>
-        set((s) => ({
-          returns: s.returns.map((r) => (r.id === id ? { ...r, status } : r)),
-        })),
-
-      markAbandonedRecovered: (id) =>
-        set((s) => ({
-          abandonedCarts: s.abandonedCarts.map((c) => (c.id === id ? { ...c, recoverySent: true } : c)),
-        })),
-
-      addWarehouse: (w) => set((s) => ({ warehouses: [...s.warehouses, w] })),
-
-      replyToReview: (id, reply) =>
-        set((s) => ({
-          reviews: s.reviews.map((r) => (r.id === id ? { ...r, reply } : r)),
-        })),
-
-      toggleReportReview: (id) =>
-        set((s) => ({
-          reviews: s.reviews.map((r) => (r.id === id ? { ...r, reported: !r.reported } : r)),
-        })),
-
-      addCampaign: (c) => set((s) => ({ campaigns: [c, ...s.campaigns] })),
-      addDiscount: (d) => set((s) => ({ discounts: [d, ...s.discounts] })),
-      toggleDiscountActive: (id) =>
-        set((s) => ({
-          discounts: s.discounts.map((d) => (d.id === id ? { ...d, active: !d.active } : d)),
-        })),
-
-      setStorefrontSections: (storefrontSections) =>
-        set({ storefrontSections, storefrontHasUnsavedDraft: true }),
-
-      publishStorefrontChanges: () => {
-        set({
-          storefrontHasUnsavedDraft: false,
-          storefrontLastPublishedAt: new Date().toLocaleString(),
-        });
-        get().recordAudit('STOREFRONT_PUBLISHED', 'Public Boutique', 'Published storefront layout edits');
-      },
-
-      saveStorefrontPage: (page) =>
-        set((s) => {
-          const exists = s.storefrontPages.some((p) => p.id === page.id);
-          return {
-            storefrontPages: exists
-              ? s.storefrontPages.map((p) => (p.id === page.id ? page : p))
-              : [...s.storefrontPages, page],
-            storefrontHasUnsavedDraft: true,
-          };
-        }),
-
-      setNavMenus: (navMenus) => set({ navMenus, storefrontHasUnsavedDraft: true }),
-
-      updateTryOnConfig: (partial) => {
-        set((s) => ({ tryOnConfig: { ...s.tryOnConfig, ...partial } }));
-        get().recordAudit('TRYON_CONFIG_UPDATED', 'Virtual Try-On', 'Saved customer experience settings');
-      },
-
-      addTryOnSession: (session) =>
-        set((s) => ({
-          tryOnSessions: [session, ...s.tryOnSessions],
-          profile: {
-            ...s.profile,
-            quotaUsed:
-              session.status === 'COMPLETED' ? s.profile.quotaUsed + session.creditsUsed : s.profile.quotaUsed,
-          },
-        })),
-
-      inviteTeamMember: (member) => {
-        set((s) => ({
-          teamMembers: [
-            ...s.teamMembers,
-            { ...member, id: `tm_${Date.now()}`, lastActiveAt: 'Pending Invite' },
-          ],
-        }));
-        get().recordAudit('TEAM_INVITED', member.email, `Invited with role ${member.role}`);
-      },
-
-      updateTeamMemberRole: (id, role) => {
-        set((s) => ({
-          teamMembers: s.teamMembers.map((m) => (m.id === id ? { ...m, role } : m)),
-        }));
-        get().recordAudit('ROLE_CHANGED', id, `Updated role to ${role}`);
-      },
-
-      toggleRolePermission: (role, mod, action) =>
-        set((s) => {
-          const base = s.roleOverrides[role]?.[mod] || DEFAULT_ROLE_PERMISSIONS[role]?.[mod] || [];
-          const next = base.includes(action) ? base.filter((a) => a !== action) : [...base, action];
-          return {
-            roleOverrides: {
-              ...s.roleOverrides,
-              [role]: {
-                ...(s.roleOverrides[role] || {}),
-                [mod]: next,
-              },
-            },
-          };
-        }),
-
-      createApiKey: (name) => {
-        const rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-        const rawSecret = `vtry_live_${rand}`;
-        const credential: ApiCredential = {
-          id: `key_${Date.now()}`,
-          name,
-          publicPrefix: `${rawSecret.slice(0, 14)}••••••${rawSecret.slice(-4)}`,
-          createdAt: new Date().toISOString().slice(0, 10),
-          lastUsedAt: 'Never',
-          rateLimitPerMin: 120,
-          status: 'ACTIVE',
-        };
-        set((s) => ({ apiKeys: [credential, ...s.apiKeys] }));
-        get().recordAudit('API_KEY_CREATED', name, 'Issued new merchant credential (prefix stored)');
-        return { credential, rawSecret };
-      },
-
-      revokeApiKey: (id) => {
-        set((s) => ({
-          apiKeys: s.apiKeys.map((k) => (k.id === id ? { ...k, status: 'REVOKED' } : k)),
-        }));
-        get().recordAudit('API_KEY_REVOKED', id, 'Revoked merchant API credential');
-      },
-
-      addWebhook: (w) =>
-        set((s) => ({
-          webhooks: [
-            {
-              ...w,
-              id: `wh_${Date.now()}`,
-              lastDeliveryStatus: 'PENDING',
-              lastDeliveryAt: 'Not delivered yet',
-            },
-            ...s.webhooks,
-          ],
-        })),
-
-      removeWebhook: (id) =>
-        set((s) => ({ webhooks: s.webhooks.filter((w) => w.id !== id) })),
-
-      setOnboardingStep: (onboardingStep, tenantId) =>
-        set((s) => {
-          const cleanTenantId = String(tenantId || s.profile.id || '').trim();
-          return {
-            onboardingStep,
-            ...(cleanTenantId
-              ? {
-                  onboardingStepByTenant: {
-                    ...s.onboardingStepByTenant,
-                    [cleanTenantId]: onboardingStep,
-                  },
-                }
-              : {}),
-          };
-        }),
-
-      markOnboardingStepCompleted: (tenantId, stepNumber) =>
-        set((s) => {
-          const cleanTenantId = String(tenantId || s.profile.id || 'tenant_aura').trim();
-          const prev = s.onboardingCompletedStepsByTenant[cleanTenantId] || [];
-          if (prev.includes(stepNumber)) return {};
-          return {
-            onboardingCompletedStepsByTenant: {
-              ...s.onboardingCompletedStepsByTenant,
-              [cleanTenantId]: [...prev, stepNumber].sort((a, b) => a - b),
-            },
-          };
-        }),
-
-      toggleOnboardingChecklist: (id) =>
-        set((s) => ({
-          onboardingCompletedIds: s.onboardingCompletedIds.includes(id)
-            ? s.onboardingCompletedIds.filter((x) => x !== id)
-            : [...s.onboardingCompletedIds, id],
-        })),
-
-      markOnboardingCompleted: (tenantId) => {
-        const cleanTenantId = String(tenantId || '').trim() || get().profile.id || 'tenant_aura';
-        set((s) => ({
-          onboardedTenantIds: s.onboardedTenantIds.includes(cleanTenantId)
-            ? s.onboardedTenantIds
-            : [...s.onboardedTenantIds, cleanTenantId],
-          onboardingCompletedStepsByTenant: {
-            ...s.onboardingCompletedStepsByTenant,
-            [cleanTenantId]: [1, 2, 3, 4],
-          },
-          onboardingStepByTenant: {
-            ...s.onboardingStepByTenant,
-            [cleanTenantId]: 4,
-          },
-          onboardingCompletedIds: Array.from(
-            new Set([
-              ...s.onboardingCompletedIds,
-              'chk_profile',
-              'chk_business',
-              'chk_identity',
-              'chk_launch',
-            ])
-          ),
-          onboardingStep: 4,
-        }));
-        get().recordAudit(
-          'ONBOARDING_COMPLETED',
-          cleanTenantId,
-          'Completed brand owner onboarding profile and workspace setup'
-        );
-      },
-
-      reopenOnboarding: (tenantId) => {
-        const cleanTenantId = String(tenantId || '').trim();
-        set((s) => ({
-          onboardedTenantIds: cleanTenantId
-            ? s.onboardedTenantIds.filter((id) => id !== cleanTenantId)
-            : s.onboardedTenantIds,
-          ...(cleanTenantId
-            ? {
-                backendOnboardingStatusByTenant: {
-                  ...s.backendOnboardingStatusByTenant,
-                  [cleanTenantId]: false,
-                },
-              }
-            : {}),
-          onboardingStep: 1,
-          ...(cleanTenantId
-            ? {
-                onboardingStepByTenant: {
-                  ...s.onboardingStepByTenant,
-                  [cleanTenantId]: 1,
-                },
-              }
-            : {}),
-        }));
-      },
-
-      setBackendOnboardingStatus: (tenantId, onboarded) => {
-        const cleanTenantId = String(tenantId || '').trim();
-        if (!cleanTenantId) return;
-        set((s) => {
-          let nextOnboarded = s.onboardedTenantIds;
-          if (onboarded === true) {
-            nextOnboarded = Array.from(new Set([...s.onboardedTenantIds, cleanTenantId]));
-          } else if (onboarded === false) {
-            nextOnboarded = s.onboardedTenantIds.filter((id) => id !== cleanTenantId);
-          }
-          return {
-            onboardedTenantIds: nextOnboarded,
-            backendOnboardingStatusByTenant: {
-              ...s.backendOnboardingStatusByTenant,
-              [cleanTenantId]: onboarded,
-            },
-          };
-        });
-      },
-
-      saveOnboardingProfileForTenant: (tenantId, partial) => {
-        const cleanTenantId = String(tenantId || '').trim() || get().profile.id || 'tenant_aura';
-        set((s) => {
-          const prevDraft = s.onboardingProfileDrafts[cleanTenantId] || {};
-          const mergedSeo = partial.seo
-            ? {
-                ...(s.profile.seo || {
-                  title: '',
-                  description: '',
-                  canonicalUrl: '',
-                  ogImage: '',
-                  allowIndexing: true,
-                }),
-                ...(prevDraft.seo || {}),
-                ...partial.seo,
-              }
-            : prevDraft.seo;
-          const mergedSocial = partial.socialLinks
-            ? { ...(s.profile.socialLinks || {}), ...(prevDraft.socialLinks || {}), ...partial.socialLinks }
-            : prevDraft.socialLinks;
-          const mergedSettings = partial.settings
-            ? {
-                ...(s.profile.settings || {
-                  timezone: 'UTC',
-                  dateFormat: 'YYYY-MM-DD',
-                  language: 'English',
-                  currency: 'BDT',
-                  taxRatePercent: 0,
-                  taxInclusive: false,
-                  freeShippingThreshold: 150,
-                  defaultShippingFee: 12,
-                  emailNotifications: true,
-                  orderNotifications: true,
-                  inventoryNotifications: true,
-                  tryOnNotifications: true,
-                  billingNotifications: true,
-                  twoFactorEnabled: false,
-                }),
-                ...(prevDraft.settings || {}),
-                ...partial.settings,
-              }
-            : prevDraft.settings;
-
-          const nextDraft: Partial<BrandProfile> = {
-            ...prevDraft,
-            ...partial,
-            ...(mergedSeo ? { seo: mergedSeo } : {}),
-            ...(mergedSocial ? { socialLinks: mergedSocial } : {}),
-            ...(mergedSettings ? { settings: mergedSettings } : {}),
-          };
-
-          const updatedSections = partial.seo?.title || partial.slogan
-            ? s.storefrontSections.map((sec) =>
-                sec.type === 'hero'
-                  ? {
-                      ...sec,
-                      title: partial.seo?.title || partial.name || sec.title,
-                      subtitle: partial.slogan || partial.shortDescription || sec.subtitle,
-                      bannerImage: partial.banner || sec.bannerImage,
-                    }
-                  : sec
-              )
-            : s.storefrontSections;
-
-          return {
-            profile: {
-              ...s.profile,
-              ...partial,
-              ...(mergedSeo ? { seo: mergedSeo } : {}),
-              ...(mergedSocial ? { socialLinks: mergedSocial } : {}),
-              ...(mergedSettings ? { settings: mergedSettings } : {}),
-            },
-            storefrontSections: updatedSections,
-            onboardingProfileDrafts: {
-              ...s.onboardingProfileDrafts,
-              [cleanTenantId]: nextDraft,
-            },
-          };
-        });
-        get().recordAudit(
-          'BRAND_ONBOARDING_SAVED',
-          cleanTenantId,
-          'Saved brand profile, title, and starter onboarding details'
-        );
-      },
-
-      restoreOnboardingDraftSnapshot: (tenantId, snapshot) => {
-        const cleanTenantId = String(tenantId || '').trim() || get().profile.id || 'tenant_aura';
-        set((s) => {
-          const nextDrafts = { ...s.onboardingProfileDrafts };
-          if (!snapshot) {
-            delete nextDrafts[cleanTenantId];
-          } else {
-            nextDrafts[cleanTenantId] = snapshot;
-          }
-          return {
-            onboardingProfileDrafts: nextDrafts,
-            ...(snapshot
-              ? {
-                  profile: {
-                    ...s.profile,
-                    ...snapshot,
-                  },
-                }
-              : {}),
-          };
-        });
-      },
-
-      addFabricRecord: (fabric) =>
-        set((s) => ({
-          fabrics: [
-            fabric,
-            ...s.fabrics.filter(
-              (f) => f.id !== fabric.id && f.name.toLowerCase() !== fabric.name.toLowerCase()
-            ),
-          ],
-        })),
-
-      recordAudit: (action, entity, details) =>
-        set((s) => ({
-          activityLogs: [
-            {
-              id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
-              actor: s.profile.owner,
-              role: s.activeRole,
-              action,
-              entity,
-              details,
-              timestamp: new Date().toLocaleString(),
-            },
-            ...s.activityLogs,
-          ].slice(0, 100),
-        })),
-    }),
-    {
-      name: 'vton_brand_workspace_v2',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        activeRole: state.activeRole,
-        sidebarCollapsed: state.sidebarCollapsed,
-        openGroups: state.openGroups,
-        onboardingStep: state.onboardingStep,
-        onboardingStepByTenant: state.onboardingStepByTenant,
-        onboardingCompletedStepsByTenant: state.onboardingCompletedStepsByTenant,
-        onboardingCompletedIds: state.onboardingCompletedIds,
-        onboardedTenantIds: state.onboardedTenantIds,
-        onboardingProfileDrafts: state.onboardingProfileDrafts,
-        storefrontSections: state.storefrontSections,
-        storefrontPages: state.storefrontPages,
-        navMenus: state.navMenus,
-        tryOnConfig: state.tryOnConfig,
-        roleOverrides: state.roleOverrides,
-      }),
-    }
-  )
-);
-
+export const useWorkspaceStore = Object.assign(baseWorkspaceHook, {
+  persist: {
+    hasHydrated: isWorkspaceHydrated,
+    onFinishHydration: subscribeWorkspaceHydration,
+  },
+});

@@ -1,15 +1,16 @@
-import { create } from 'zustand';
 import { Fabric } from '../types';
-import { initialFabrics } from '../lib/mock_data';
+import { store } from '../store';
+import { createSliceFacadeHook } from '../store/hooks';
+import { selectFabricState } from '../store/selectors';
+import { fabricActions } from '../store/slices/legacyBrandSlices';
 
-interface FabricState {
-  items: Fabric[];
-  setFabrics: (fabrics: Fabric[]) => void;
-  addFabric: (fabric: Fabric) => void;
-}
+const fabricBoundActions = {
+  setFabrics: (fabrics: Fabric[]) => {
+    store.dispatch(fabricActions.setFabrics(fabrics));
+  },
+  addFabric: (fabric: Fabric) => {
+    store.dispatch(fabricActions.addFabric(fabric));
+  },
+};
 
-export const useFabricStore = create<FabricState>((set) => ({
-  items: initialFabrics,
-  setFabrics: (items) => set({ items }),
-  addFabric: (fabric) => set((state) => ({ items: [...state.items, fabric] }))
-}));
+export const useFabricStore = createSliceFacadeHook(selectFabricState, fabricBoundActions);
