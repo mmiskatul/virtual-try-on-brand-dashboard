@@ -141,13 +141,23 @@ export const brandWorkspaceApi = {
       ...(Array.isArray(ss.categories) && ss.categories.length > 0 ? { specialties: ss.categories } : {}),
       slogan: ss.slogan || undefined,
       shortDescription: ss.shortDescription || undefined,
+      establishedYear: ss.establishedYear || undefined,
+      registrationNumber: ss.registrationNumber || undefined,
       description: t.description,
       brandStory: ss.aboutText || t.description || undefined,
       logo: t.logoUrl || undefined,
+      lightLogo: ss.lightLogoUrl ?? undefined,
       banner: t.bannerUrl || ss.bannerImage || undefined,
+      socialImage: ss.socialImageUrl ?? undefined,
       announcement: ss.announcement,
       primaryColor: ss.primaryColor,
+      secondaryColor: ss.secondaryColor || undefined,
       accentColor: ss.accentColor,
+      backgroundColor: ss.backgroundColor || undefined,
+      textColor: ss.textColor || undefined,
+      headingFont: ss.headingFont || undefined,
+      bodyFont: ss.bodyFont || undefined,
+      buttonStyle: ss.buttonStyle || undefined,
       ...(typeof ss.headerStyle === 'string' ? { headerStyle: normalizeHeaderStyle(ss.headerStyle) } : {}),
       ...(ss.socialLinks ? { socialLinks: ss.socialLinks } : {}),
       ...(ss.currency ? { settings: baseSettings } : {}),
@@ -157,11 +167,17 @@ export const brandWorkspaceApi = {
               title: ss.storefrontTitle || '',
               description: ss.shortDescription || t.description || '',
               canonicalUrl: `https://vton.store/brands/${slug}`,
-              ogImage: t.bannerUrl || ss.bannerImage || '',
+              ogImage: ss.socialImageUrl || t.bannerUrl || ss.bannerImage || '',
               allowIndexing: true,
             },
           }
         : {}),
+      verificationStatus:
+        t.status === 'ACTIVE'
+          ? 'VERIFIED'
+          : t.status === 'PENDING_VERIFICATION'
+          ? 'UNDER_REVIEW'
+          : 'UNVERIFIED',
       storeStatus: t.status === 'ACTIVE' ? 'LIVE' : 'MAINTENANCE',
     };
   },
