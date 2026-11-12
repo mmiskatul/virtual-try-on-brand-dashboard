@@ -257,8 +257,8 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
           <SectionCard>
             {/* Filters & Bulk Actions */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px]">
-                <div className="relative flex-1 max-w-xs">
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                <div className="relative w-full sm:flex-1 sm:max-w-xs">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     value={search}
@@ -267,17 +267,17 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                     className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none"
                   />
                 </div>
-                <select value={catFilter} onChange={(e) => { setCatFilter(e.target.value); setPage(1); }} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white">
+                <select value={catFilter} onChange={(e) => { setCatFilter(e.target.value); setPage(1); }} className="flex-1 sm:flex-none min-w-0 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white">
                   {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white">
+                <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="flex-1 sm:flex-none min-w-0 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white">
                   <option value="All">All Visibility</option>
                   <option value="MARKETPLACE">Published to Marketplace</option>
                   <option value="STOREFRONT_ONLY">Brand Storefront Only</option>
                   <option value="DRAFT">Draft / Hidden</option>
                   <option value="TRYON">Try-On Eligible</option>
                 </select>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="w-full sm:w-auto px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white">
                   <option value="newest">Recently Updated</option>
                   <option value="price-asc">Price: Low-High</option>
                   <option value="price-desc">Price: High-Low</option>
@@ -318,116 +318,206 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                 onAction={() => { setSearch(''); setCatFilter('All'); setStatusFilter('All'); }}
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50">
-                    <tr>
-                      <th className="py-3 px-3"><input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? paged.map((p) => p.id) : [])} /></th>
-                      <th className="py-3 px-3">Product</th>
-                      <th className="py-3 px-3">SKU</th>
-                      <th className="py-3 px-3">Price</th>
-                      <th className="py-3 px-3">Stock</th>
-                      <th className="py-3 px-3 text-center">Storefront</th>
-                      <th className="py-3 px-3 text-center">Marketplace</th>
-                      <th className="py-3 px-3 text-center">Try-On</th>
-                      <th className="py-3 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {paged.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/70">
-                        <td className="py-3 px-3">
-                          <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} />
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-3">
-                            <div className="relative w-10 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                              <SafeImage src={p.image} alt={p.name} fill className="object-cover" />
-                            </div>
-                            <div className="min-w-0">
-                              <Link href={`/dashboard/products/${p.id}`} className="font-bold text-slate-900 hover:underline block truncate max-w-[200px]">
-                                {p.name}
-                              </Link>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="text-[10px] text-slate-500">{p.category}</span>
-                                <StatusBadge status={p.catalogStatus || 'ACTIVE'} />
-                              </div>
-                            </div>
+              <>
+                {/* Mobile Card Stack */}
+                <div className="sm:hidden space-y-2.5 text-xs">
+                  {paged.map((p) => (
+                    <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2.5">
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(p.id)}
+                          onChange={() => toggleSelect(p.id)}
+                          className="mt-1 shrink-0"
+                        />
+                        <div className="relative w-12 h-14 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                          <SafeImage src={p.image} alt={p.name} fill className="object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <Link href={`/dashboard/products/${p.id}`} className="font-bold text-slate-900 hover:underline leading-snug line-clamp-2">
+                              {p.name}
+                            </Link>
+                            <span className="font-extrabold text-slate-950 shrink-0 tabular-nums">${p.price}</span>
                           </div>
-                        </td>
-                        <td className="py-3 px-3 font-mono text-slate-500">{p.sku}</td>
-                        <td className="py-3 px-3 font-bold text-slate-950">${p.price}</td>
-                        <td className="py-3 px-3">
-                          <span className={`font-bold ${p.stock < (p.lowStockThreshold || 5) ? 'text-amber-600' : 'text-slate-700'}`}>
-                            {p.stock} units
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                            <span className="font-mono">{p.sku}</span>
+                            <span>•</span>
+                            <span>{p.category}</span>
+                            <span>•</span>
+                            <span className={`font-bold ${p.stock < (p.lowStockThreshold || 5) ? 'text-amber-600' : 'text-slate-700'}`}>
+                              {p.stock} left
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-slate-100">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => toggleVisibility(p, 'brandStorefrontPublished')}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                            className={`px-2 py-1 rounded-full text-[10px] font-bold border ${
                               p.brandStorefrontPublished
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : 'bg-slate-100 text-slate-500 border-slate-200'
                             }`}
                           >
-                            {p.brandStorefrontPublished ? 'Visible' : 'Hidden'}
+                            Store: {p.brandStorefrontPublished ? 'On' : 'Off'}
                           </button>
-                        </td>
-                        <td className="py-3 px-3 text-center">
                           <button
                             type="button"
                             onClick={() => toggleVisibility(p, 'marketplacePublished')}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                            className={`px-2 py-1 rounded-full text-[10px] font-bold border ${
                               p.marketplacePublished
                                 ? 'bg-slate-950 text-white border-slate-950'
                                 : 'bg-white text-slate-600 border-slate-300'
                             }`}
                           >
-                            {p.marketplacePublished ? 'Published' : 'Unpublished'}
+                            Mkt: {p.marketplacePublished ? 'On' : 'Off'}
                           </button>
-                        </td>
-                        <td className="py-3 px-3 text-center">
                           <button
                             type="button"
                             onClick={() => toggleVisibility(p, 'isTryOnEligible')}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${
                               p.isTryOnEligible
                                 ? 'bg-amber-50 text-amber-800 border-amber-200'
                                 : 'bg-slate-100 text-slate-500 border-slate-200'
                             }`}
                           >
-                            <Sparkles className="w-3 h-3" />
-                            {p.isTryOnEligible ? 'Enabled' : 'Off'}
+                            <Sparkles className="w-2.5 h-2.5" />
+                            AI
                           </button>
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <div className="inline-flex items-center gap-1.5">
-                            <Link href={`/dashboard/products/${p.id}`} className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 font-semibold">
-                              Edit
-                            </Link>
-                            {canDelete && (
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteId(p.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600"
-                                aria-label="Delete product"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Link href={`/dashboard/products/${p.id}`} className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 font-semibold">
+                            Edit
+                          </Link>
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(p.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600"
+                              aria-label="Delete product"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50">
+                      <tr>
+                        <th className="py-3 px-3"><input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? paged.map((p) => p.id) : [])} /></th>
+                        <th className="py-3 px-3">Product</th>
+                        <th className="py-3 px-3">SKU</th>
+                        <th className="py-3 px-3">Price</th>
+                        <th className="py-3 px-3">Stock</th>
+                        <th className="py-3 px-3 text-center">Storefront</th>
+                        <th className="py-3 px-3 text-center">Marketplace</th>
+                        <th className="py-3 px-3 text-center">Try-On</th>
+                        <th className="py-3 px-3 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {paged.map((p) => (
+                        <tr key={p.id} className="hover:bg-slate-50/70">
+                          <td className="py-3 px-3">
+                            <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} />
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-10 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                                <SafeImage src={p.image} alt={p.name} fill className="object-cover" />
+                              </div>
+                              <div className="min-w-0">
+                                <Link href={`/dashboard/products/${p.id}`} className="font-bold text-slate-900 hover:underline block truncate max-w-[200px]">
+                                  {p.name}
+                                </Link>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span className="text-[10px] text-slate-500">{p.category}</span>
+                                  <StatusBadge status={p.catalogStatus || 'ACTIVE'} />
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 font-mono text-slate-500">{p.sku}</td>
+                          <td className="py-3 px-3 font-bold text-slate-950">${p.price}</td>
+                          <td className="py-3 px-3">
+                            <span className={`font-bold ${p.stock < (p.lowStockThreshold || 5) ? 'text-amber-600' : 'text-slate-700'}`}>
+                              {p.stock} units
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleVisibility(p, 'brandStorefrontPublished')}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                p.brandStorefrontPublished
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                              }`}
+                            >
+                              {p.brandStorefrontPublished ? 'Visible' : 'Hidden'}
+                            </button>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleVisibility(p, 'marketplacePublished')}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                p.marketplacePublished
+                                  ? 'bg-slate-950 text-white border-slate-950'
+                                  : 'bg-white text-slate-600 border-slate-300'
+                              }`}
+                            >
+                              {p.marketplacePublished ? 'Published' : 'Unpublished'}
+                            </button>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleVisibility(p, 'isTryOnEligible')}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                p.isTryOnEligible
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                              }`}
+                            >
+                              <Sparkles className="w-3 h-3" />
+                              {p.isTryOnEligible ? 'Enabled' : 'Off'}
+                            </button>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              <Link href={`/dashboard/products/${p.id}`} className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 font-semibold">
+                                Edit
+                              </Link>
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(p.id)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600"
+                                  aria-label="Delete product"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 text-xs">
                 <span className="text-slate-500">Page {page} of {totalPages} ({filtered.length} total)</span>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
@@ -483,9 +573,9 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                 </div>
               ))}
             </div>
-            <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-100 text-xs">
-              <input value={fabName} onChange={(e) => setFabName(e.target.value)} placeholder="Fabric name (e.g. Organic Poplin)" className="px-3 py-2 rounded-xl border border-slate-200" />
-              <input value={fabComp} onChange={(e) => setFabComp(e.target.value)} placeholder="Composition" className="px-3 py-2 rounded-xl border border-slate-200" />
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-slate-100 text-xs">
+              <input value={fabName} onChange={(e) => setFabName(e.target.value)} placeholder="Fabric name (e.g. Organic Poplin)" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
+              <input value={fabComp} onChange={(e) => setFabComp(e.target.value)} placeholder="Composition" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
               <Button
                 size="sm"
                 onClick={async () => {
@@ -507,7 +597,25 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
           <SectionCard title="Bulk CSV Product Import" subtitle="Preview parsed columns and duplicate SKU checks before adding to tenant catalog">
             <div className="space-y-4 text-xs">
               <textarea rows={4} value={csvRaw} onChange={(e) => setCsvRaw(e.target.value)} className="w-full p-3 rounded-xl border border-slate-200 font-mono text-[11px]" />
-              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <div className="sm:hidden space-y-2 text-xs">
+                {parsedCsvRows.map((r, idx) => (
+                  <div key={idx} className="rounded-xl border border-slate-200 bg-white p-3 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-slate-900">{r.name}</p>
+                      {r.duplicateSku ? (
+                        <span className="text-rose-600 font-bold text-[11px] shrink-0">Duplicate SKU</span>
+                      ) : (
+                        <span className="text-emerald-600 font-bold text-[11px] shrink-0">Ready</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                      <span className="font-mono break-all">{r.sku} • {r.category}</span>
+                      <span className="font-bold text-slate-900">${r.price} • Stock {r.stock}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-xl">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 text-[10px] uppercase text-slate-500">
                     <tr><th className="p-2.5">Name</th><th className="p-2.5">SKU</th><th className="p-2.5">Category</th><th className="p-2.5">Price</th><th className="p-2.5">Stock</th><th className="p-2.5">Validation</th></tr>
@@ -526,7 +634,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Button size="sm" onClick={handleConfirmCsvImport} className="gap-1.5">
                   <Upload className="w-3.5 h-3.5" /> Import Valid Rows
                 </Button>

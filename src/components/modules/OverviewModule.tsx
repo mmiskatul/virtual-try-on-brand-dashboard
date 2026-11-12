@@ -15,7 +15,7 @@ export function OverviewModule({ brand, products, orders, onNavigateTab }: Overv
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         <div className="glass-panel p-5 rounded-2xl relative overflow-hidden">
           <div className="flex justify-between items-start">
             <div>
@@ -80,27 +80,27 @@ export function OverviewModule({ brand, products, orders, onNavigateTab }: Overv
       </div>
 
       {/* Low Stock Warning Alert */}
-      <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600">
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 shrink-0">
             <AlertTriangle className="w-5 h-5" />
           </div>
-          <div>
-            <h4 className="text-sm font-semibold text-amber-800">Low Stock Alert: Aura Tailored Pleat Trousers (3 remaining)</h4>
-            <p className="text-xs text-amber-700/80">Inventory levels have fallen below safety threshold (5 units). Restock recommended to prevent overselling.</p>
+          <div className="min-w-0">
+            <h4 className="text-xs sm:text-sm font-semibold text-amber-800 break-words">Low Stock Alert: Aura Tailored Pleat Trousers (3 remaining)</h4>
+            <p className="text-xs text-amber-700/80 leading-relaxed">Inventory levels have fallen below safety threshold (5 units). Restock recommended to prevent overselling.</p>
           </div>
         </div>
         <button
           onClick={() => onNavigateTab('inventory')}
-          className="px-3.5 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs hover:bg-amber-400 transition-colors"
+          className="self-start sm:self-auto shrink-0 px-3.5 py-2 sm:py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs hover:bg-amber-400 transition-colors"
         >
           Manage Stock
         </button>
       </div>
 
       {/* Recent Orders Overview */}
-      <div className="glass-panel rounded-2xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="glass-panel rounded-2xl p-4 sm:p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-bold text-base text-gray-900">Recent Seller Orders</h3>
           <button onClick={() => onNavigateTab('orders')} className="text-xs font-semibold text-black hover:text-gray-700">
             View All Orders →

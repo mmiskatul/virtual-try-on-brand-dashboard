@@ -19,6 +19,7 @@ import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { brandWorkspaceApi } from '../../services';
 import {
+  EmptyState,
   KpiCard,
   PageHeader,
   PermissionGate,
@@ -238,7 +239,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
 
         {tab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <KpiCard label="Eligible Garments" value={eligibleProducts.length} change={`of ${products.length} total`} icon={<Sparkles className="w-4 h-4 text-amber-600" />} />
               <KpiCard label="Total Sessions" value={sessions.length} change={`${completedCount} completed`} icon={<CheckCircle2 className="w-4 h-4 text-emerald-600" />} />
               <KpiCard label="Success Rate" value={successRate} change={`${failedCount} failed`} icon={<RefreshCw className="w-4 h-4" />} />
@@ -390,7 +391,57 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
               </div>
             }
           >
-            <div className="overflow-x-auto text-xs">
+            <div className="sm:hidden space-y-2.5 text-xs">
+              {products.map((p) => (
+                <div key={p.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{p.name}</p>
+                      <div className="mt-1">
+                        <StatusBadge status={p.imageQualityStatus || 'VERIFIED'} />
+                      </div>
+                    </div>
+                    <StatusBadge status={p.isTryOnEligible ? 'ACTIVE' : 'HIDDEN'} />
+                  </div>
+                  <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                    <label className="space-y-1">
+                      <span className="text-[11px] font-semibold text-slate-500">AI Category</span>
+                      <select
+                        value={p.tryOnCategory}
+                        onChange={(e) => updateProduct(p.id, { tryOnCategory: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs"
+                      >
+                        <option value="tops">tops</option>
+                        <option value="bottoms">bottoms</option>
+                        <option value="dresses">dresses</option>
+                        <option value="outerwear">outerwear</option>
+                      </select>
+                    </label>
+                    <div className="flex flex-col justify-end gap-1.5">
+                      <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
+                        <span>Brand Try-On</span>
+                        <input
+                          type="checkbox"
+                          checked={p.isTryOnEligible}
+                          onChange={(e) => updateProduct(p.id, { isTryOnEligible: e.target.checked })}
+                          className="rounded accent-slate-950"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
+                        <span>Marketplace</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(p.includeInMarketplaceTryOn)}
+                          onChange={(e) => updateProduct(p.id, { includeInMarketplaceTryOn: e.target.checked })}
+                          className="rounded accent-slate-950"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden sm:block overflow-x-auto text-xs">
               <table className="w-full text-left">
                 <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
                   <tr>
@@ -451,13 +502,13 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                 <div><label className="block font-bold mb-1">Public Page Title</label><input value={appearance.pageTitle} onChange={(e) => setAppearance({ ...appearance, pageTitle: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                 <div><label className="block font-bold mb-1">Page Subtitle</label><textarea rows={2} value={appearance.pageDescription} onChange={(e) => setAppearance({ ...appearance, pageDescription: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                 <div><label className="block font-bold mb-1">Upload Instructions</label><input value={appearance.uploadInstructions} onChange={(e) => setAppearance({ ...appearance, uploadInstructions: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className="block font-bold mb-1">Try-On Button Text</label><input value={appearance.primaryBtnText} onChange={(e) => setAppearance({ ...appearance, primaryBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                   <div><label className="block font-bold mb-1">Generate Button Text</label><input value={appearance.generateBtnText} onChange={(e) => setAppearance({ ...appearance, generateBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                   <div><label className="block font-bold mb-1">Accent Color</label><input type="color" value={appearance.accentColor} onChange={(e) => setAppearance({ ...appearance, accentColor: e.target.value })} className="w-16 h-8 rounded border border-slate-200" /></div>
                   <div><label className="block font-bold mb-1">Grid Style</label><select value={appearance.gridStyle} onChange={(e) => setAppearance({ ...appearance, gridStyle: e.target.value as any })} className="w-full px-3 py-2 rounded-xl border border-slate-200"><option value="3-col">3 Columns</option><option value="4-col">4 Columns</option><option value="editorial">Editorial</option></select></div>
                 </div>
-                <div className="flex gap-4 pt-1">
+                <div className="flex flex-wrap gap-3 sm:gap-4 pt-1">
                   <label className="flex items-center gap-2"><input type="checkbox" checked={appearance.showPrices} onChange={(e) => setAppearance({ ...appearance, showPrices: e.target.checked })} /> Display Prices</label>
                   <label className="flex items-center gap-2"><input type="checkbox" checked={appearance.showRatings} onChange={(e) => setAppearance({ ...appearance, showRatings: e.target.checked })} /> Display Ratings</label>
                 </div>
@@ -468,12 +519,12 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
             </SectionCard>
 
             <SectionCard title="Live Customer Preview" className="lg:col-span-5">
-              <div className="rounded-2xl border border-slate-200 p-5 space-y-4" style={{ backgroundColor: appearance.backgroundColor }}>
+              <div className="rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4" style={{ backgroundColor: appearance.backgroundColor }}>
                 <div className="flex items-center gap-2.5">
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-300">
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-300 shrink-0">
                     <SafeImage src={profile.logo} alt={profile.name} fill className="object-cover" />
                   </div>
-                  <span className="font-bold text-sm text-slate-950">{profile.name}</span>
+                  <span className="font-bold text-sm text-slate-950 truncate">{profile.name}</span>
                 </div>
                 <div>
                   <h4 className="font-bold text-base text-slate-950">{appearance.pageTitle}</h4>
@@ -482,7 +533,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                 <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 text-[11px] text-slate-500">
                   {appearance.uploadInstructions}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className="px-4 py-2 rounded-full text-white text-xs font-bold" style={{ backgroundColor: appearance.accentColor }}>
                     {appearance.generateBtnText}
                   </span>
@@ -567,8 +618,8 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                     </span>
                   ))}
                 </div>
-                <div className="flex gap-2">
-                  <input value={allowlistDomain} onChange={(e) => setAllowlistDomain(e.target.value)} placeholder="store.yourdomain.com" className="px-3 py-2 rounded-xl border border-slate-200 flex-1 max-w-xs" />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input value={allowlistDomain} onChange={(e) => setAllowlistDomain(e.target.value)} placeholder="store.yourdomain.com" className="px-3 py-2 rounded-xl border border-slate-200 w-full sm:flex-1 sm:max-w-xs" />
                   <Button
                     size="sm"
                     onClick={() => {
@@ -588,40 +639,78 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
 
         {tab === 'history' && (
           <SectionCard title="AI Generation Session History" subtitle="Customer photos and generated results remain strictly hidden unless explicit customer consent & business purpose apply.">
-            <div className="overflow-x-auto text-xs">
-              <table className="w-full text-left">
-                <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="p-3">Session ID</th>
-                    <th className="p-3">Garment</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Duration</th>
-                    <th className="p-3">Credits</th>
-                    <th className="p-3">Attribution</th>
-                    <th className="p-3 text-right">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+            {sessions.length === 0 ? (
+              <EmptyState title="No try-on sessions yet" description="Sessions generated from the studio or public widget will appear here." />
+            ) : (
+              <>
+                <div className="sm:hidden space-y-2.5 text-xs">
                   {sessions.map((s) => (
-                    <tr key={s.id}>
-                      <td className="p-3 font-mono font-bold">{s.id}</td>
-                      <td className="p-3 font-semibold">{s.productName}</td>
-                      <td className="p-3"><StatusBadge status={s.status} /></td>
-                      <td className="p-3">{s.durationMs} ms</td>
-                      <td className="p-3">{s.creditsUsed}</td>
-                      <td className="p-3 text-slate-600">{s.attributedOrderId ? `Order ${s.attributedOrderId} ($${s.attributedRevenue})` : s.errorReason || 'No purchase yet'}</td>
-                      <td className="p-3 text-right text-slate-500">{s.createdAt}</td>
-                    </tr>
+                    <div key={s.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-mono text-[11px] font-bold text-slate-500 break-all">{s.id}</p>
+                          <p className="font-bold text-slate-900 line-clamp-2">{s.productName}</p>
+                        </div>
+                        <StatusBadge status={s.status} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                        <div>
+                          <span className="text-slate-400 block">Duration</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{s.durationMs} ms</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block">Credits</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{s.creditsUsed}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-slate-400 block">Logged</span>
+                          <span className="font-semibold text-slate-600">{s.createdAt}</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-100 break-words">
+                        {s.attributedOrderId
+                          ? `Attributed: Order ${s.attributedOrderId} ($${s.attributedRevenue})`
+                          : s.errorReason || 'No purchase yet'}
+                      </p>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+                <div className="hidden sm:block overflow-x-auto text-xs">
+                  <table className="w-full text-left">
+                    <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
+                      <tr>
+                        <th className="p-3">Session ID</th>
+                        <th className="p-3">Garment</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Duration</th>
+                        <th className="p-3">Credits</th>
+                        <th className="p-3">Attribution</th>
+                        <th className="p-3 text-right">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {sessions.map((s) => (
+                        <tr key={s.id}>
+                          <td className="p-3 font-mono font-bold">{s.id}</td>
+                          <td className="p-3 font-semibold">{s.productName}</td>
+                          <td className="p-3"><StatusBadge status={s.status} /></td>
+                          <td className="p-3">{s.durationMs} ms</td>
+                          <td className="p-3">{s.creditsUsed}</td>
+                          <td className="p-3 text-slate-600">{s.attributedOrderId ? `Order ${s.attributedOrderId} ($${s.attributedRevenue})` : s.errorReason || 'No purchase yet'}</td>
+                          <td className="p-3 text-right text-slate-500">{s.createdAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </SectionCard>
         )}
 
         {tab === 'analytics' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <KpiCard label="Sessions Recorded" value={sessions.length} />
               <KpiCard label="Success Rate" value={successRate} />
               <KpiCard label="Avg Duration" value={`${avgDurationSec}s`} />

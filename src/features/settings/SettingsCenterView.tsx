@@ -289,23 +289,23 @@ export function SettingsCenterView({
             {tab === 'store' && (
               <SectionCard title="Storefront & Marketplace Visibility" subtitle="Toggle storefront maintenance mode or pause global marketplace discovery.">
                 <div className="space-y-4 text-xs">
-                  <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
-                    <div>
-                      <p className="font-bold text-slate-900">Dedicated Brand Storefront (/brands/{profile.slug})</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 break-words">Dedicated Brand Storefront (/brands/{profile.slug})</p>
                       <p className="text-slate-500">Live allows shoppers to browse your brand storefront and check out.</p>
                     </div>
                     <select
                       value={form.storeStatus || 'LIVE'}
                       onChange={(e) => setForm({ ...form, storeStatus: e.target.value as 'LIVE' | 'MAINTENANCE' })}
-                      className="rounded-xl border border-slate-200 px-3 py-1.5 font-bold bg-white"
+                      className="self-start sm:self-auto rounded-xl border border-slate-200 px-3 py-1.5 font-bold bg-white shrink-0"
                     >
                       <option value="LIVE">LIVE</option>
                       <option value="MAINTENANCE">MAINTENANCE</option>
                     </select>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
-                    <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200">
+                    <div className="min-w-0">
                       <p className="font-bold text-slate-900">Global Marketplace Participation</p>
                       <p className="text-slate-500">Temporarily pause all published posts without deleting product listings.</p>
                     </div>
@@ -314,7 +314,7 @@ export function SettingsCenterView({
                       onChange={(e) =>
                         setForm({ ...form, marketplaceStatus: e.target.value as 'CONNECTED' | 'PAUSED' })
                       }
-                      className="rounded-xl border border-slate-200 px-3 py-1.5 font-bold bg-white"
+                      className="self-start sm:self-auto rounded-xl border border-slate-200 px-3 py-1.5 font-bold bg-white shrink-0"
                     >
                       <option value="CONNECTED">CONNECTED</option>
                       <option value="PAUSED">PAUSED</option>
@@ -545,12 +545,13 @@ export function SettingsCenterView({
                       ['billingNotifications', 'Monthly Plan Invoices & Renewal Notices'],
                     ] as const
                   ).map(([key, label]) => (
-                    <label key={key} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200">
-                      <span className="font-semibold text-slate-800">{label}</span>
+                    <label key={key} className="flex items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer">
+                      <span className="font-semibold text-slate-800 leading-relaxed">{label}</span>
                       <input
                         type="checkbox"
                         checked={Boolean(settingsData[key])}
                         onChange={(e) => patchSettings({ [key]: e.target.checked })}
+                        className="mt-0.5 sm:mt-0 shrink-0"
                       />
                     </label>
                   ))}
@@ -593,8 +594,8 @@ export function SettingsCenterView({
             {tab === 'security' && (
               <SectionCard title="Account Security & Session Protection" subtitle="Tenant isolation, JWT cookie verification, and MFA configuration.">
                 <div className="space-y-3 text-xs">
-                  <label className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
-                    <div>
+                  <label className="flex items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 cursor-pointer">
+                    <div className="min-w-0">
                       <p className="font-bold text-slate-900">Require Two-Factor Verification (Policy Toggle)</p>
                       <p className="text-slate-500">Enforce authenticator OTP during merchant login when identity provider supports MFA.</p>
                     </div>
@@ -602,6 +603,7 @@ export function SettingsCenterView({
                       type="checkbox"
                       checked={settingsData.twoFactorEnabled}
                       onChange={(e) => patchSettings({ twoFactorEnabled: e.target.checked })}
+                      className="mt-1 sm:mt-0 shrink-0"
                     />
                   </label>
                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600">

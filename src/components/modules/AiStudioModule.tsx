@@ -10,7 +10,7 @@ export function AiStudioModule({ brand }: AiStudioProps) {
   return (
     <div className="space-y-6">
       <div className="glass-panel p-6 rounded-2xl space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-black" /> Virtual Try-On Engine Status
@@ -23,7 +23,7 @@ export function AiStudioModule({ brand }: AiStudioProps) {
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-gray-200">
           <div className="p-4 rounded-xl bg-white border border-gray-200">
             <p className="text-xs text-gray-500">Total Try-On Invocations</p>
             <p className="text-xl font-black text-gray-900 mt-1">{brand.quotaUsed}</p>

@@ -164,7 +164,38 @@ export function TeamManagementView({ initialTab = 'overview' }: { initialTab?: T
               title="Tenant Staff Directory"
               subtitle="Only authorized team accounts scoped to this brand workspace."
             >
-              <div className="overflow-x-auto">
+              <div className="sm:hidden space-y-2.5 text-xs">
+                {safeMembers.map((m) => (
+                  <div key={m.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 break-words">{m.name}</p>
+                        <p className="text-[11px] text-slate-500 break-all">{m.email}</p>
+                      </div>
+                      <StatusBadge status={m.status} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                      <select
+                        disabled={!canManageTeam || m.role === 'OWNER'}
+                        value={m.role}
+                        onChange={(e) => {
+                          updateTeamMemberRole(m.id, e.target.value as StaffRole);
+                          showToast(`Updated ${m.name}'s role to ${e.target.value}.`);
+                        }}
+                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold bg-white flex-1 min-w-[140px]"
+                      >
+                        {(Object.keys(ROLE_LABELS) as StaffRole[]).map((rk) => (
+                          <option key={rk} value={rk}>
+                            {ROLE_LABELS[rk].label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[11px] text-slate-400">Active {m.lastActiveAt}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
@@ -286,7 +317,7 @@ export function TeamManagementView({ initialTab = 'overview' }: { initialTab?: T
               </div>
             }
           >
-            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-between text-xs mb-3">
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 flex flex-wrap items-center justify-between gap-2 text-xs mb-3">
               <div>
                 <p className="font-bold text-slate-900">{ROLE_LABELS[selectedRoleMatrix].label}</p>
                 <p className="text-slate-500">{ROLE_LABELS[selectedRoleMatrix].summary}</p>
@@ -298,7 +329,51 @@ export function TeamManagementView({ initialTab = 'overview' }: { initialTab?: T
               )}
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="sm:hidden space-y-2.5 text-xs">
+              {ALL_MODULES.map((mod) => {
+                const effective =
+                  roleOverrides[selectedRoleMatrix]?.[mod] ||
+                  DEFAULT_ROLE_PERMISSIONS[selectedRoleMatrix]?.[mod] ||
+                  [];
+                return (
+                  <div key={mod} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2">
+                    <p className="font-bold uppercase text-[11px] text-slate-900">{mod}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ALL_ACTIONS.map((act) => {
+                        const checked = selectedRoleMatrix === 'OWNER' || effective.includes(act);
+                        return (
+                          <label
+                            key={act}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold ${
+                              checked
+                                ? 'bg-slate-950 text-white border-slate-950'
+                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={!canManageTeam || selectedRoleMatrix === 'OWNER'}
+                              onChange={() => {
+                                toggleRolePermission(selectedRoleMatrix, mod, act);
+                                recordAudit(
+                                  'RBAC_MATRIX_UPDATED',
+                                  `${selectedRoleMatrix}:${mod}`,
+                                  `Toggled ${act}`
+                                );
+                              }}
+                              className="sr-only"
+                            />
+                            {act.replace('_', ' ')}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
@@ -354,8 +429,8 @@ export function TeamManagementView({ initialTab = 'overview' }: { initialTab?: T
             title="Workspace Security & Activity Audit Log"
             subtitle="Records staff mutations across catalog, orders, marketplace, try-on, and settings."
             right={
-              <div className="flex items-center gap-2">
-                <div className="relative w-52">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none sm:w-52">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     value={logSearch}

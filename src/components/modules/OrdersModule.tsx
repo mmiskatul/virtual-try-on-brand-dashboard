@@ -16,7 +16,7 @@ export function OrdersModule({ orders, onUpdateStatus }: OrdersProps) {
 
         <div className="space-y-3">
           {orders.map(order => (
-            <div key={order.id} className="p-4 rounded-xl bg-white border border-gray-200 flex items-center justify-between">
+            <div key={order.id} className="p-3.5 sm:p-4 rounded-xl bg-white border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-bold text-black">{order.id}</span>

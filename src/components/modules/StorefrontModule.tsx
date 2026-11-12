@@ -62,7 +62,7 @@ export function StorefrontModule({ brand, onSave }: StorefrontProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-gray-500 mb-1 font-medium">Primary Accent Color *</label>
               <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export function StorefrontModule({ brand, onSave }: StorefrontProps) {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-200 flex justify-between items-center">
+          <div className="pt-4 border-t border-gray-200 flex flex-wrap justify-between items-center gap-3">
             <Button
               type="submit"
               disabled={isSubmitting || !isDirty}

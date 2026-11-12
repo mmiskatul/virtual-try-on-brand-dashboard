@@ -80,7 +80,7 @@ export function AddProductModal({ isOpen, onClose, onAdd }: AddProductModalProps
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-gray-700 font-medium mb-1">Category *</label>
               <select
@@ -110,7 +110,7 @@ export function AddProductModal({ isOpen, onClose, onAdd }: AddProductModalProps
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-gray-700 font-medium mb-1">SKU *</label>
               <Input

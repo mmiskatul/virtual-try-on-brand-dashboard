@@ -190,7 +190,7 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
 
             <SectionCard title="Platform Verification Status" className="lg:col-span-4">
               <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-bold text-slate-800">Current Badge</span>
                   <StatusBadge status={profile.verificationStatus || 'VERIFIED'} />
                 </div>

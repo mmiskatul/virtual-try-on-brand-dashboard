@@ -125,7 +125,7 @@ export function CustomersManagementView({
                       <MapPin className="w-3.5 h-3.5 text-slate-400" /> {customer.city}
                     </p>
                   </div>
-                  <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-3">
+                  <div className="pt-2 border-t border-slate-100 grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
                     <div>
                       <p className="text-slate-400">Total Orders</p>
                       <p className="text-base font-extrabold text-slate-950">{customer.orderCount}</p>
@@ -157,7 +157,7 @@ export function CustomersManagementView({
                       <Link
                         key={o.id}
                         href={`/dashboard/orders/${encodeURIComponent(o.id)}`}
-                        className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50"
+                        className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50"
                       >
                         <div>
                           <p className="font-bold text-slate-900">{o.id}</p>
@@ -315,45 +315,80 @@ export function CustomersManagementView({
             {filteredCustomers.length === 0 ? (
               <EmptyState title="No customers found" description="Try clearing the search query or segment filter." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                      <th className="py-2.5 pr-4">Customer</th>
-                      <th className="py-2.5 pr-4">Group</th>
-                      <th className="py-2.5 pr-4">City</th>
-                      <th className="py-2.5 pr-4">Orders</th>
-                      <th className="py-2.5 pr-4">Lifetime Spend</th>
-                      <th className="py-2.5 pr-4">Last Activity</th>
-                      <th className="py-2.5 text-right">Profile</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredCustomers.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-50/70">
-                        <td className="py-3 pr-4">
-                          <p className="font-bold text-slate-900">{c.name}</p>
-                          <p className="text-[11px] text-slate-500">{c.email}</p>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <StatusBadge status={c.group} />
-                        </td>
-                        <td className="py-3 pr-4 text-slate-600">{c.city}</td>
-                        <td className="py-3 pr-4 font-semibold">{c.orderCount}</td>
-                        <td className="py-3 pr-4 font-bold text-slate-900">${c.totalSpend.toFixed(2)}</td>
-                        <td className="py-3 pr-4 text-slate-500">{c.lastActivityAt}</td>
-                        <td className="py-3 text-right">
-                          <Link href={`/dashboard/customers/${encodeURIComponent(c.id)}`}>
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                              View Profile
-                            </Button>
-                          </Link>
-                        </td>
+              <>
+                <div className="sm:hidden space-y-2.5">
+                  {filteredCustomers.map((c) => (
+                    <div key={c.id} className="rounded-xl border border-slate-200 p-3.5 bg-white space-y-2.5 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate">{c.name}</p>
+                          <p className="text-[11px] text-slate-500 break-all">{c.email}</p>
+                        </div>
+                        <StatusBadge status={c.group} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                        <div>
+                          <span className="text-slate-400 block">City</span>
+                          <span className="font-semibold text-slate-700">{c.city}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-slate-400 block">Orders / Spend</span>
+                          <span className="font-bold text-slate-900 tabular-nums">
+                            {c.orderCount} · ${c.totalSpend.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <span className="text-[11px] text-slate-400">Active {c.lastActivityAt}</span>
+                        <Link href={`/dashboard/customers/${encodeURIComponent(c.id)}`}>
+                          <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                            View Profile
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                        <th className="py-2.5 pr-4">Customer</th>
+                        <th className="py-2.5 pr-4">Group</th>
+                        <th className="py-2.5 pr-4">City</th>
+                        <th className="py-2.5 pr-4">Orders</th>
+                        <th className="py-2.5 pr-4">Lifetime Spend</th>
+                        <th className="py-2.5 pr-4">Last Activity</th>
+                        <th className="py-2.5 text-right">Profile</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredCustomers.map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50/70">
+                          <td className="py-3 pr-4">
+                            <p className="font-bold text-slate-900">{c.name}</p>
+                            <p className="text-[11px] text-slate-500">{c.email}</p>
+                          </td>
+                          <td className="py-3 pr-4">
+                            <StatusBadge status={c.group} />
+                          </td>
+                          <td className="py-3 pr-4 text-slate-600">{c.city}</td>
+                          <td className="py-3 pr-4 font-semibold">{c.orderCount}</td>
+                          <td className="py-3 pr-4 font-bold text-slate-900">${c.totalSpend.toFixed(2)}</td>
+                          <td className="py-3 pr-4 text-slate-500">{c.lastActivityAt}</td>
+                          <td className="py-3 text-right">
+                            <Link href={`/dashboard/customers/${encodeURIComponent(c.id)}`}>
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                                View Profile
+                              </Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </SectionCard>
         )}
@@ -370,9 +405,9 @@ export function CustomersManagementView({
                   subtitle={grp.desc}
                   right={<StatusBadge status={grp.key} />}
                 >
-                  <div className="flex items-end justify-between">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <p className="text-2xl font-extrabold text-slate-950">{members.length} shoppers</p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-slate-950">{members.length} shoppers</p>
                       <p className="text-xs text-slate-500">Combined spend: ${total.toFixed(2)}</p>
                     </div>
                     <Button
@@ -397,7 +432,7 @@ export function CustomersManagementView({
             title="Verified Customer Reviews & Ratings"
             subtitle="Reply publicly as the brand owner or flag inappropriate submissions for moderation."
             right={
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                 {(['ALL', 'UNREPLIED', 'REPORTED'] as const).map((f) => (
                   <button
                     key={f}
@@ -423,7 +458,7 @@ export function CustomersManagementView({
                   <div key={r.id} className="rounded-xl border border-slate-200 p-4 space-y-3 text-xs">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="font-bold text-slate-900">{r.customerName}</span>
                           {r.verifiedPurchase && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
@@ -463,7 +498,7 @@ export function CustomersManagementView({
                         <p className="text-slate-600">{r.reply}</p>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <input
                           type="text"
                           disabled={!canEdit}
@@ -472,7 +507,7 @@ export function CustomersManagementView({
                             setReplyDrafts((prev) => ({ ...prev, [r.id]: e.target.value }))
                           }
                           placeholder="Write a helpful public response..."
-                          className="flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs"
+                          className="w-full sm:flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs"
                         />
                         <Button
                           size="sm"
@@ -483,7 +518,7 @@ export function CustomersManagementView({
                             recordAudit('REVIEW_REPLIED', r.productName, `Replied to ${r.customerName}`);
                             showToast('Published brand reply.');
                           }}
-                          className="gap-1.5"
+                          className="gap-1.5 w-full sm:w-auto justify-center"
                         >
                           <MessageSquareReply className="w-3.5 h-3.5" /> Reply
                         </Button>

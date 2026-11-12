@@ -110,32 +110,33 @@ export default function DedicatedBrandPublicTryOnPage() {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: appearance.backgroundColor }}>
       {/* Customer Header Strictly Isolated to This Brand */}
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="relative w-9 h-9 rounded-full overflow-hidden border border-slate-200">
+      <header className="bg-white border-b border-slate-200 px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-slate-200 shrink-0">
             <SafeImage src={brandLogo} alt={brandName} fill className="object-cover" />
           </div>
-          <div>
-            <span className="font-bold text-sm text-slate-950 block">{brandName}</span>
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Dedicated Virtual Try-On</span>
+          <div className="min-w-0">
+            <span className="font-bold text-xs sm:text-sm text-slate-950 block truncate">{brandName}</span>
+            <span className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wider truncate block">Dedicated Virtual Try-On</span>
           </div>
         </div>
-        <Link href={`/brands/${brandSlug}`} className="text-xs font-bold underline text-slate-800">
-          Back to {brandName} Storefront
+        <Link href={`/brands/${brandSlug}`} className="text-[11px] sm:text-xs font-bold underline text-slate-800 whitespace-nowrap shrink-0">
+          <span className="hidden sm:inline">Back to {brandName} Storefront</span>
+          <span className="sm:hidden">Storefront</span>
         </Link>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full flex-1 space-y-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-8 w-full flex-1 space-y-5 sm:space-y-6">
         <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950">{brandName} Virtual Fitting Room</h1>
+          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-950">{brandName} Virtual Fitting Room</h1>
           <p className="text-xs sm:text-sm text-slate-600">
             Browse and try on {eligibleGarments.length} eligible garments belonging exclusively to {brandName}.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
           {/* Left: Photo & Consent */}
-          <div className="lg:col-span-4 rounded-3xl bg-white border border-slate-200 p-5 space-y-4">
+          <div className="lg:col-span-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 space-y-4">
             <h2 className="font-bold text-sm text-slate-900">1. Upload Customer Photo</h2>
             <label className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 rounded accent-slate-950" />
@@ -156,8 +157,8 @@ export default function DedicatedBrandPublicTryOnPage() {
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
               <SafeImage src={personImg} alt="Subject" fill className="object-cover" />
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="flex-1 gap-1.5">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="flex-1 min-w-[140px] gap-1.5">
                 <Upload className="w-3.5 h-3.5" /> {appearance.uploadBtnText}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setPersonImg(personImg === SAMPLE_MODELS[0] ? SAMPLE_MODELS[1] : SAMPLE_MODELS[0])}>
@@ -167,7 +168,7 @@ export default function DedicatedBrandPublicTryOnPage() {
           </div>
 
           {/* Center: Result Stage */}
-          <div className="lg:col-span-4 rounded-3xl bg-white border border-slate-200 p-5 space-y-4">
+          <div className="lg:col-span-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 space-y-4">
             <h2 className="font-bold text-sm text-slate-900">2. Try-On Result</h2>
             {phase === 'processing' ? (
               <div className="aspect-[3/4] rounded-2xl bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-2">

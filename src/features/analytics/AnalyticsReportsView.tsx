@@ -192,7 +192,39 @@ export function AnalyticsReportsView({
             title="Top Performing Garments"
             subtitle="Ranked by units sold from your brand catalog"
           >
-            <div className="overflow-x-auto">
+            <div className="sm:hidden space-y-2.5 text-xs">
+              {topProducts.map((p) => {
+                const views = p.viewsCount || 1;
+                const sales = p.salesCount || 0;
+                const cvr = ((sales / views) * 100).toFixed(1);
+                return (
+                  <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 truncate">{p.name}</p>
+                        <p className="text-[11px] text-slate-500">{p.category} · ${p.price.toFixed(2)}</p>
+                      </div>
+                      <span className="font-bold text-emerald-700 shrink-0">{cvr}% CVR</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 block">Views</span>
+                        <span className="font-semibold text-slate-700 tabular-nums">{views.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Sold</span>
+                        <span className="font-extrabold text-slate-950 tabular-nums">{sales}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-400 block">Stock</span>
+                        <span className="font-semibold text-slate-700 tabular-nums">{p.stock}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
@@ -240,7 +272,7 @@ export function AnalyticsReportsView({
                 {[...safeCustomers]
                   .sort((a, b) => b.totalSpend - a.totalSpend)
                   .map((c) => (
-                    <div key={c.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
+                    <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-slate-200">
                       <div>
                         <p className="font-bold text-slate-900">{c.name}</p>
                         <p className="text-slate-500">
@@ -260,7 +292,7 @@ export function AnalyticsReportsView({
 
         {tab === 'marketplace' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <KpiCard label="Marketplace Views" value={mktImpressions.toLocaleString()} icon={<Eye className="w-4 h-4" />} />
               <KpiCard label="Marketplace Clicks" value={mktClicks.toLocaleString()} icon={<Globe className="w-4 h-4" />} />
               <KpiCard
@@ -271,7 +303,31 @@ export function AnalyticsReportsView({
               <KpiCard label="Marketplace Revenue" value={`$${mktRevenue.toFixed(2)}`} icon={<ShoppingBag className="w-4 h-4" />} />
             </div>
             <SectionCard title="Post-by-Post Marketplace Performance">
-              <div className="overflow-x-auto">
+              <div className="sm:hidden space-y-2.5 text-xs">
+                {safePosts.map((p) => (
+                  <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-slate-900 line-clamp-2 leading-snug">{p.title}</p>
+                      <StatusBadge status={p.status} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 block">Impressions</span>
+                        <span className="font-semibold text-slate-700 tabular-nums">{p.impressions.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Clicks / Favs</span>
+                        <span className="font-semibold text-slate-700 tabular-nums">{p.clicks.toLocaleString()} / {p.favorites}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-400 block">Revenue</span>
+                        <span className="font-extrabold text-slate-950 tabular-nums">${p.revenue.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
@@ -307,7 +363,7 @@ export function AnalyticsReportsView({
 
         {tab === 'virtual-try-on' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <KpiCard label="Completed Sessions" value={completedTryOns} icon={<Sparkles className="w-4 h-4 text-amber-600" />} />
               <KpiCard label="Failed / Rejected" value={failedTryOns} positive={failedTryOns === 0} icon={<BarChart3 className="w-4 h-4" />} />
               <KpiCard label="Cart Conversions" value={tryOnCartAdds} icon={<ShoppingBag className="w-4 h-4" />} />

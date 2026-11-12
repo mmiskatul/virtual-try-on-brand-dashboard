@@ -65,22 +65,22 @@ export function AuthShell({
       </aside>
 
       {/* Right Authentication Workspace */}
-      <main className="lg:col-span-7 xl:col-span-7 flex flex-col justify-center py-8 px-4 sm:px-8 relative">
-        <div className="w-full max-w-md mx-auto space-y-5">
+      <main className="lg:col-span-7 xl:col-span-7 flex flex-col justify-center py-5 sm:py-8 px-3 sm:px-8 relative">
+        <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-5">
           {/* Top Navigation Bar */}
-          <div className="flex items-center justify-between">
-            <Link href="/login" className="flex items-center gap-2.5 lg:hidden">
-              <div className="w-9 h-9 rounded-xl bg-stone-950 text-white flex items-center justify-center font-serif font-bold text-base shadow-sm">
+          <div className="flex items-center justify-between gap-2">
+            <Link href="/login" className="flex items-center gap-2 sm:gap-2.5 lg:hidden min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-stone-950 text-white flex items-center justify-center font-serif font-bold text-sm sm:text-base shadow-sm shrink-0">
                 V
               </div>
-              <span className="font-serif font-bold tracking-[0.14em] text-sm text-stone-950 leading-none">
+              <span className="font-serif font-bold tracking-[0.12em] sm:tracking-[0.14em] text-xs sm:text-sm text-stone-950 leading-none truncate">
                 V-TRY <span className="text-[10px] font-sans text-stone-500 font-bold">BRANDS</span>
               </span>
             </Link>
 
             <a
               href={marketplaceUrl}
-              className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-stone-950 transition-colors"
+              className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-stone-950 transition-colors shrink-0"
             >
               <span>Marketplace</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -88,7 +88,7 @@ export function AuthShell({
           </div>
 
           {/* Card */}
-          <div className="rounded-3xl bg-white border border-stone-200/90 shadow-xl shadow-stone-900/5 p-6 sm:p-8 space-y-5">
+          <div className="rounded-2xl sm:rounded-3xl bg-white border border-stone-200/90 shadow-xl shadow-stone-900/5 p-5 sm:p-8 space-y-5">
             {authTab && (
               <div
                 role="tablist"

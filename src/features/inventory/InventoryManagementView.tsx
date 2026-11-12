@@ -194,7 +194,7 @@ export function InventoryManagementView({
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KpiCard label="Total Units in Stock" value={totalUnits.toLocaleString()} icon={<Boxes className="w-4 h-4" />} />
           <KpiCard label="Retail Stock Value" value={`$${stockValue.toLocaleString()}`} icon={<Building2 className="w-4 h-4" />} />
           <KpiCard
@@ -216,7 +216,7 @@ export function InventoryManagementView({
             title="Catalog Inventory Status"
             subtitle="Quick +5 / -1 stock controls or route directly to batch adjustments."
             right={
-              <div className="relative w-56">
+              <div className="relative w-full sm:w-56">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   value={search}
@@ -230,67 +230,126 @@ export function InventoryManagementView({
             {filteredProducts.length === 0 ? (
               <EmptyState title="No products found" description="Create apparel SKUs in Product Management." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                      <th className="py-2.5 pr-4">Product</th>
-                      <th className="py-2.5 pr-4">SKU</th>
-                      <th className="py-2.5 pr-4">Warehouse</th>
-                      <th className="py-2.5 pr-4">Threshold</th>
-                      <th className="py-2.5 pr-4">Available</th>
-                      <th className="py-2.5 pr-4">Health</th>
-                      <th className="py-2.5 text-right">Quick Adjust</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredProducts.map((p) => {
-                      const low = p.stock > 0 && p.stock < (p.lowStockThreshold || 5);
-                      const out = p.stock <= 0;
-                      return (
-                        <tr key={p.id}>
-                          <td className="py-3 pr-4 font-bold text-slate-900">{p.name}</td>
-                          <td className="py-3 pr-4 font-mono text-slate-600">{p.sku}</td>
-                          <td className="py-3 pr-4 text-slate-600">{p.warehouseLocation || 'Dhaka Main Studio'}</td>
-                          <td className="py-3 pr-4 text-slate-500">{p.lowStockThreshold || 5} units</td>
-                          <td className="py-3 pr-4 font-extrabold text-slate-950">{p.stock}</td>
-                          <td className="py-3 pr-4">
-                            <StatusBadge status={out ? 'FAILED' : low ? 'PENDING' : 'ACTIVE'} />
-                          </td>
-                          <td className="py-3 text-right">
-                            <div className="inline-flex gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!canEdit || p.stock <= 0}
-                                onClick={() => {
-                                  adjustStock(p.id, -1, 'Quick counter decrement', p.warehouseLocation || 'Dhaka Main Studio');
-                                  showToast(`Decremented ${p.sku} by 1.`);
-                                }}
-                                className="h-7 px-2 text-xs"
-                              >
-                                -1
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!canEdit}
-                                onClick={() => {
-                                  adjustStock(p.id, 5, 'Quick atelier restock', p.warehouseLocation || 'Dhaka Main Studio');
-                                  showToast(`Restocked ${p.sku} (+5 units).`);
-                                }}
-                                className="h-7 px-2 text-xs"
-                              >
-                                +5
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="sm:hidden space-y-2.5 text-xs">
+                  {filteredProducts.map((p) => {
+                    const low = p.stock > 0 && p.stock < (p.lowStockThreshold || 5);
+                    const out = p.stock <= 0;
+                    return (
+                      <div key={p.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 break-words">{p.name}</p>
+                            <p className="font-mono text-[11px] text-slate-500">{p.sku}</p>
+                          </div>
+                          <StatusBadge status={out ? 'FAILED' : low ? 'PENDING' : 'ACTIVE'} />
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                          <div>
+                            <span className="text-slate-400 block">Warehouse</span>
+                            <span className="font-semibold text-slate-700 break-words">{p.warehouseLocation || 'Dhaka Main Studio'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Threshold</span>
+                            <span className="text-slate-600">{p.lowStockThreshold || 5}u</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-slate-400 block">Available</span>
+                            <span className="font-extrabold text-slate-950 tabular-nums">{p.stock}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!canEdit || p.stock <= 0}
+                            onClick={() => {
+                              adjustStock(p.id, -1, 'Quick counter decrement', p.warehouseLocation || 'Dhaka Main Studio');
+                              showToast(`Decremented ${p.sku} by 1.`);
+                            }}
+                            className="h-8 px-3 text-xs flex-1"
+                          >
+                            -1 Unit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!canEdit}
+                            onClick={() => {
+                              adjustStock(p.id, 5, 'Quick atelier restock', p.warehouseLocation || 'Dhaka Main Studio');
+                              showToast(`Restocked ${p.sku} (+5 units).`);
+                            }}
+                            className="h-8 px-3 text-xs flex-1"
+                          >
+                            +5 Units
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                        <th className="py-2.5 pr-4">Product</th>
+                        <th className="py-2.5 pr-4">SKU</th>
+                        <th className="py-2.5 pr-4">Warehouse</th>
+                        <th className="py-2.5 pr-4">Threshold</th>
+                        <th className="py-2.5 pr-4">Available</th>
+                        <th className="py-2.5 pr-4">Health</th>
+                        <th className="py-2.5 text-right">Quick Adjust</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredProducts.map((p) => {
+                        const low = p.stock > 0 && p.stock < (p.lowStockThreshold || 5);
+                        const out = p.stock <= 0;
+                        return (
+                          <tr key={p.id}>
+                            <td className="py-3 pr-4 font-bold text-slate-900">{p.name}</td>
+                            <td className="py-3 pr-4 font-mono text-slate-600">{p.sku}</td>
+                            <td className="py-3 pr-4 text-slate-600">{p.warehouseLocation || 'Dhaka Main Studio'}</td>
+                            <td className="py-3 pr-4 text-slate-500">{p.lowStockThreshold || 5} units</td>
+                            <td className="py-3 pr-4 font-extrabold text-slate-950">{p.stock}</td>
+                            <td className="py-3 pr-4">
+                              <StatusBadge status={out ? 'FAILED' : low ? 'PENDING' : 'ACTIVE'} />
+                            </td>
+                            <td className="py-3 text-right">
+                              <div className="inline-flex gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={!canEdit || p.stock <= 0}
+                                  onClick={() => {
+                                    adjustStock(p.id, -1, 'Quick counter decrement', p.warehouseLocation || 'Dhaka Main Studio');
+                                    showToast(`Decremented ${p.sku} by 1.`);
+                                  }}
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  -1
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={!canEdit}
+                                  onClick={() => {
+                                    adjustStock(p.id, 5, 'Quick atelier restock', p.warehouseLocation || 'Dhaka Main Studio');
+                                    showToast(`Restocked ${p.sku} (+5 units).`);
+                                  }}
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  +5
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </SectionCard>
         )}
@@ -304,7 +363,7 @@ export function InventoryManagementView({
             >
               <div className="space-y-3 text-xs">
                 {safeWarehouses.map((w) => (
-                  <div key={w.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
+                  <div key={w.id} className="flex flex-wrap items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl border border-slate-200">
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-slate-900">{w.name}</p>
@@ -438,39 +497,61 @@ export function InventoryManagementView({
             {safeLogs.length === 0 ? (
               <EmptyState title="No movements recorded yet" description="Stock adjustments and fulfillment deductions appear here." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                      <th className="py-2.5 pr-4">Product / SKU</th>
-                      <th className="py-2.5 pr-4">Location</th>
-                      <th className="py-2.5 pr-4">Delta</th>
-                      <th className="py-2.5 pr-4">Result Stock</th>
-                      <th className="py-2.5 pr-4">Reason</th>
-                      <th className="py-2.5 pr-4">Actor</th>
-                      <th className="py-2.5">Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {safeLogs.map((l) => (
-                      <tr key={l.id}>
-                        <td className="py-3 pr-4">
-                          <p className="font-bold text-slate-900">{l.productName}</p>
+              <>
+                <div className="sm:hidden space-y-2.5 text-xs">
+                  {safeLogs.map((l) => (
+                    <div key={l.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 break-words">{l.productName}</p>
                           <p className="font-mono text-[11px] text-slate-500">{l.variantSku}</p>
-                        </td>
-                        <td className="py-3 pr-4 text-slate-600">{l.location}</td>
-                        <td className={`py-3 pr-4 font-extrabold ${l.change >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {l.change >= 0 ? `+${l.change}` : l.change}
-                        </td>
-                        <td className="py-3 pr-4 font-bold text-slate-900">{l.newStock}</td>
-                        <td className="py-3 pr-4 text-slate-600">{l.reason}</td>
-                        <td className="py-3 pr-4 text-slate-600">{l.actor}</td>
-                        <td className="py-3 text-slate-400">{l.timestamp}</td>
+                        </div>
+                        <span className={`font-extrabold shrink-0 ${l.change >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          {l.change >= 0 ? `+${l.change}` : l.change} (→ {l.newStock})
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600">{l.reason} · {l.location}</p>
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                        <span>By {l.actor}</span>
+                        <span>{l.timestamp}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                        <th className="py-2.5 pr-4">Product / SKU</th>
+                        <th className="py-2.5 pr-4">Location</th>
+                        <th className="py-2.5 pr-4">Delta</th>
+                        <th className="py-2.5 pr-4">Result Stock</th>
+                        <th className="py-2.5 pr-4">Reason</th>
+                        <th className="py-2.5 pr-4">Actor</th>
+                        <th className="py-2.5">Timestamp</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {safeLogs.map((l) => (
+                        <tr key={l.id}>
+                          <td className="py-3 pr-4">
+                            <p className="font-bold text-slate-900">{l.productName}</p>
+                            <p className="font-mono text-[11px] text-slate-500">{l.variantSku}</p>
+                          </td>
+                          <td className="py-3 pr-4 text-slate-600">{l.location}</td>
+                          <td className={`py-3 pr-4 font-extrabold ${l.change >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                            {l.change >= 0 ? `+${l.change}` : l.change}
+                          </td>
+                          <td className="py-3 pr-4 font-bold text-slate-900">{l.newStock}</td>
+                          <td className="py-3 pr-4 text-slate-600">{l.reason}</td>
+                          <td className="py-3 pr-4 text-slate-600">{l.actor}</td>
+                          <td className="py-3 text-slate-400">{l.timestamp}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </SectionCard>
         )}

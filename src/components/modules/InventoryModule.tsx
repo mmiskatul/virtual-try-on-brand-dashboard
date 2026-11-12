@@ -17,7 +17,7 @@ export function InventoryModule({ products, onAddStock, onDeductStock }: Invento
         <h3 className="font-bold text-base text-gray-900">Concurrency-Safe Stock Adjustment</h3>
         <p className="text-xs text-gray-500">Simulate incoming warehouse shipments or inventory reconciliations.</p>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {products.map((p) => (
             <div key={p.id} className="p-4 rounded-xl bg-white border border-gray-200 space-y-3">
               <div className="flex items-center gap-3">

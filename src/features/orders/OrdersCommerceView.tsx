@@ -191,7 +191,7 @@ export function OrdersCommerceView({
                   <div className="divide-y divide-slate-100">
                     {(order.items || []).length > 0 ? (
                       order.items!.map((item, idx) => (
-                        <div key={idx} className="py-3 flex items-center justify-between gap-4 text-xs">
+                        <div key={idx} className="py-3 flex flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-4 text-xs">
                           <div>
                             <p className="font-bold text-slate-900">{item.productName}</p>
                             <p className="text-slate-500">
@@ -313,19 +313,20 @@ export function OrdersCommerceView({
                           Active: {order.trackingNumber}
                         </p>
                       )}
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <input
                           type="text"
                           disabled={!canEditOrders}
                           value={trackingDraft}
                           onChange={(e) => setTrackingDraft(e.target.value)}
                           placeholder="e.g. PATHAO-88412"
-                          className="flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs"
+                          className="w-full sm:flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs"
                         />
                         <Button
                           size="sm"
                           disabled={!canEditOrders || !trackingDraft.trim()}
                           onClick={() => handleSaveTracking(order)}
+                          className="w-full sm:w-auto"
                         >
                           Save
                         </Button>
@@ -486,8 +487,67 @@ export function OrdersCommerceView({
                 description="Try clearing search filters or check again once shoppers complete checkout."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <>
+                <div className="sm:hidden space-y-3">
+                  {filteredOrders.map((o) => (
+                    <div key={o.id} className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2.5 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <Link href={`/dashboard/orders/${encodeURIComponent(o.id)}`} className="font-mono font-extrabold text-slate-900 hover:underline break-all">
+                            {o.id}
+                          </Link>
+                          <p className="font-semibold text-slate-900 mt-0.5 truncate">{o.customerName}</p>
+                          <p className="text-[11px] text-slate-500 truncate">{o.customerEmail}</p>
+                        </div>
+                        <span className="text-sm font-extrabold text-slate-950 tabular-nums shrink-0">${o.total.toFixed(2)}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                        <span>{o.date}</span>
+                        <span>•</span>
+                        <span>{o.itemCount} unit(s)</span>
+                        <StatusBadge status={o.paymentStatus || 'PAID'} />
+                        <StatusBadge status={o.status} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                        <select
+                          disabled={!canEditOrders || savingId === o.id}
+                          value={o.status}
+                          onChange={(e) => {
+                            const val = e.target.value as Order['status'];
+                            if (val === 'CANCELLED' || val === 'REFUNDED') {
+                              setConfirmAction({
+                                title: `${val === 'CANCELLED' ? 'Cancel' : 'Refund'} ${o.id}?`,
+                                description: `This action will mark order ${o.id} ($${o.total.toFixed(2)}) as ${val}.`,
+                                confirmLabel: `Confirm ${val}`,
+                                onRun: () => {
+                                  handleStatusUpdate(o, val);
+                                  setConfirmAction(null);
+                                },
+                              });
+                            } else {
+                              handleStatusUpdate(o, val);
+                            }
+                          }}
+                          className="flex-1 min-w-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold bg-white"
+                        >
+                          <option value="PENDING">PENDING</option>
+                          <option value="PROCESSING">PROCESSING</option>
+                          <option value="SHIPPED">SHIPPED</option>
+                          <option value="DELIVERED">DELIVERED</option>
+                          <option value="CANCELLED">CANCELLED</option>
+                          {!isLiveBackend && <option value="REFUNDED">REFUNDED</option>}
+                        </select>
+                        <Link href={`/dashboard/orders/${encodeURIComponent(o.id)}`}>
+                          <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                            Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
                       <th className="py-2.5 pr-4">Order ID</th>
@@ -561,8 +621,9 @@ export function OrdersCommerceView({
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
+                  </table>
+                </div>
+              </>
             )}
           </SectionCard>
         )}
@@ -586,8 +647,40 @@ export function OrdersCommerceView({
             {safeAbandoned.length === 0 ? (
               <EmptyState title="No abandoned checkouts" description="Checkouts left incomplete will appear here." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <>
+                <div className="sm:hidden space-y-3">
+                  {safeAbandoned.map((c) => (
+                    <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2.5 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate">{c.customerName}</p>
+                          <p className="text-[11px] text-slate-500 truncate">{c.customerEmail}</p>
+                        </div>
+                        <span className="font-extrabold text-slate-950 tabular-nums shrink-0">${c.value.toFixed(2)}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                        <span>{c.itemCount} unit(s) • {c.lastActiveAt}</span>
+                        <StatusBadge status={c.recoverySent ? 'COMPLETED' : 'PENDING'} />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={c.recoverySent || !canEditOrders}
+                        onClick={() => {
+                          markAbandonedRecovered(c.id);
+                          recordAudit('ABANDONED_CART_LOGGED', c.customerEmail, 'Logged manual follow-up');
+                          showToast(`Recorded manual follow-up for ${c.customerName}.`);
+                        }}
+                        className="w-full justify-center gap-1.5 text-xs"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        {c.recoverySent ? 'Logged' : 'Log Follow-Up'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
                       <th className="py-2.5 pr-4">Customer</th>
@@ -630,8 +723,9 @@ export function OrdersCommerceView({
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
+                  </table>
+                </div>
+              </>
             )}
           </SectionCard>
         )}
@@ -644,70 +738,123 @@ export function OrdersCommerceView({
             {safeReturns.length === 0 ? (
               <EmptyState title="No return requests" description="Active RMA and return requests will appear here." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                      <th className="py-2.5 pr-4">RMA ID</th>
-                      <th className="py-2.5 pr-4">Order</th>
-                      <th className="py-2.5 pr-4">Customer</th>
-                      <th className="py-2.5 pr-4">Product & Reason</th>
-                      <th className="py-2.5 pr-4">Amount</th>
-                      <th className="py-2.5 pr-4">Status</th>
-                      <th className="py-2.5 text-right">Review</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {safeReturns.map((r) => (
-                      <tr key={r.id}>
-                        <td className="py-3 pr-4 font-bold text-slate-900">{r.id}</td>
-                        <td className="py-3 pr-4">
-                          <Link href={`/dashboard/orders/${encodeURIComponent(r.orderId)}`} className="underline">
-                            {r.orderId}
-                          </Link>
-                        </td>
-                        <td className="py-3 pr-4">{r.customerName}</td>
-                        <td className="py-3 pr-4">
-                          <p className="font-semibold text-slate-900">{r.productName}</p>
-                          <p className="text-[11px] text-slate-500">{r.reason}</p>
-                        </td>
-                        <td className="py-3 pr-4 font-bold">${r.amount.toFixed(2)}</td>
-                        <td className="py-3 pr-4">
-                          <StatusBadge status={r.status} />
-                        </td>
-                        <td className="py-3 text-right">
-                          <div className="inline-flex gap-1.5">
-                            {(['APPROVED', 'REJECTED', 'REFUNDED'] as ReturnRequest['status'][]).map((st) => (
-                              <Button
-                                key={st}
-                                size="sm"
-                                variant={st === 'REJECTED' ? 'outline' : 'secondary'}
-                                disabled={!canEditOrders || r.status === st}
-                                onClick={() =>
-                                  setConfirmAction({
-                                    title: `Mark return ${r.id} as ${st}?`,
-                                    description: `Customer ${r.customerName} ($${r.amount.toFixed(2)}) for ${r.productName}.`,
-                                    confirmLabel: st,
-                                    onRun: () => {
-                                      updateReturnStatus(r.id, st);
-                                      recordAudit('RETURN_UPDATED', r.id, `Changed return state to ${st}`);
-                                      showToast(`Return ${r.id} marked ${st}.`);
-                                      setConfirmAction(null);
-                                    },
-                                  })
-                                }
-                                className="h-7 px-2 text-[11px]"
-                              >
-                                {st}
-                              </Button>
-                            ))}
+              <>
+                <div className="sm:hidden space-y-2.5 text-xs">
+                  {safeReturns.map((r) => (
+                    <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900">{r.id}</span>
+                            <Link href={`/dashboard/orders/${encodeURIComponent(r.orderId)}`} className="underline text-slate-600">
+                              {r.orderId}
+                            </Link>
                           </div>
-                        </td>
+                          <p className="text-slate-600 mt-0.5">{r.customerName}</p>
+                        </div>
+                        <div className="text-right space-y-1 shrink-0">
+                          <p className="font-bold text-slate-900 tabular-nums">${r.amount.toFixed(2)}</p>
+                          <StatusBadge status={r.status} />
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-slate-100">
+                        <p className="font-semibold text-slate-900">{r.productName}</p>
+                        <p className="text-[11px] text-slate-500">{r.reason}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {(['APPROVED', 'REJECTED', 'REFUNDED'] as ReturnRequest['status'][]).map((st) => (
+                          <Button
+                            key={st}
+                            size="sm"
+                            variant={st === 'REJECTED' ? 'outline' : 'secondary'}
+                            disabled={!canEditOrders || r.status === st}
+                            onClick={() =>
+                              setConfirmAction({
+                                title: `Mark return ${r.id} as ${st}?`,
+                                description: `Customer ${r.customerName} ($${r.amount.toFixed(2)}) for ${r.productName}.`,
+                                confirmLabel: st,
+                                onRun: () => {
+                                  updateReturnStatus(r.id, st);
+                                  recordAudit('RETURN_UPDATED', r.id, `Changed return state to ${st}`);
+                                  showToast(`Return ${r.id} marked ${st}.`);
+                                  setConfirmAction(null);
+                                },
+                              })
+                            }
+                            className="h-7 px-2.5 text-[11px]"
+                          >
+                            {st}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                        <th className="py-2.5 pr-4">RMA ID</th>
+                        <th className="py-2.5 pr-4">Order</th>
+                        <th className="py-2.5 pr-4">Customer</th>
+                        <th className="py-2.5 pr-4">Product & Reason</th>
+                        <th className="py-2.5 pr-4">Amount</th>
+                        <th className="py-2.5 pr-4">Status</th>
+                        <th className="py-2.5 text-right">Review</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {safeReturns.map((r) => (
+                        <tr key={r.id}>
+                          <td className="py-3 pr-4 font-bold text-slate-900">{r.id}</td>
+                          <td className="py-3 pr-4">
+                            <Link href={`/dashboard/orders/${encodeURIComponent(r.orderId)}`} className="underline">
+                              {r.orderId}
+                            </Link>
+                          </td>
+                          <td className="py-3 pr-4">{r.customerName}</td>
+                          <td className="py-3 pr-4">
+                            <p className="font-semibold text-slate-900">{r.productName}</p>
+                            <p className="text-[11px] text-slate-500">{r.reason}</p>
+                          </td>
+                          <td className="py-3 pr-4 font-bold">${r.amount.toFixed(2)}</td>
+                          <td className="py-3 pr-4">
+                            <StatusBadge status={r.status} />
+                          </td>
+                          <td className="py-3 text-right">
+                            <div className="inline-flex gap-1.5">
+                              {(['APPROVED', 'REJECTED', 'REFUNDED'] as ReturnRequest['status'][]).map((st) => (
+                                <Button
+                                  key={st}
+                                  size="sm"
+                                  variant={st === 'REJECTED' ? 'outline' : 'secondary'}
+                                  disabled={!canEditOrders || r.status === st}
+                                  onClick={() =>
+                                    setConfirmAction({
+                                      title: `Mark return ${r.id} as ${st}?`,
+                                      description: `Customer ${r.customerName} ($${r.amount.toFixed(2)}) for ${r.productName}.`,
+                                      confirmLabel: st,
+                                      onRun: () => {
+                                        updateReturnStatus(r.id, st);
+                                        recordAudit('RETURN_UPDATED', r.id, `Changed return state to ${st}`);
+                                        showToast(`Return ${r.id} marked ${st}.`);
+                                        setConfirmAction(null);
+                                      },
+                                    })
+                                  }
+                                  className="h-7 px-2 text-[11px]"
+                                >
+                                  {st}
+                                </Button>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </SectionCard>
         )}
@@ -730,7 +877,7 @@ export function OrdersCommerceView({
                   .map((o) => (
                     <div
                       key={o.id}
-                      className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200"
+                      className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl border border-slate-200"
                     >
                       <div>
                         <p className="font-bold text-slate-900">
@@ -749,7 +896,7 @@ export function OrdersCommerceView({
                   .map((r) => (
                     <div
                       key={r.id}
-                      className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200"
+                      className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl border border-slate-200"
                     >
                       <div>
                         <p className="font-bold text-slate-900">

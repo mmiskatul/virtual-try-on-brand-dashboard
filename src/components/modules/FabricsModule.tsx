@@ -12,7 +12,7 @@ interface FabricsProps {
 export function FabricsModule({ fabrics, onAddFabric }: FabricsProps) {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
         <div>
           <h3 className="font-bold text-base text-gray-900">Fabric & Texture Library</h3>
           <p className="text-xs text-gray-500">Define physical composition and care specs for your apparel line.</p>
@@ -25,10 +25,10 @@ export function FabricsModule({ fabrics, onAddFabric }: FabricsProps) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
         {fabrics.map(f => (
           <div key={f.id} className="glass-panel p-5 rounded-2xl border border-gray-200 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
               <h4 className="font-bold text-sm text-gray-900">{f.name}</h4>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-gray-100 text-black border border-gray-300">
                 {f.stretch} STRETCH

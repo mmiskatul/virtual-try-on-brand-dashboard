@@ -148,7 +148,7 @@ export function BillingCreditsView({
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KpiCard label="Current Plan" value={profile.plan} icon={<Zap className="w-4 h-4 text-amber-600" />} />
           <KpiCard label="Credits Consumed" value={profile.quotaUsed.toLocaleString()} icon={<Sparkles className="w-4 h-4" />} />
           <KpiCard label="Credits Remaining" value={remaining.toLocaleString()} icon={<Coins className="w-4 h-4" />} />
@@ -171,33 +171,52 @@ export function BillingCreditsView({
               Logged Completed Credits in Recent Telemetry Window: <strong>{completedCredits}</strong> credit(s). Failed AI pre-checks do not deduct merchant quota.
             </p>
 
-            <div className="pt-3 border-t border-slate-100 overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                    <th className="py-2 pr-4">Session ID</th>
-                    <th className="py-2 pr-4">Product</th>
-                    <th className="py-2 pr-4">Status</th>
-                    <th className="py-2 pr-4">Credits</th>
-                    <th className="py-2 pr-4">Latency</th>
-                    <th className="py-2 text-right">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {safeSessions.map((s) => (
-                    <tr key={s.id}>
-                      <td className="py-2.5 pr-4 font-mono text-slate-800">{s.id}</td>
-                      <td className="py-2.5 pr-4 font-semibold">{s.productName}</td>
-                      <td className="py-2.5 pr-4">
-                        <StatusBadge status={s.status} />
-                      </td>
-                      <td className="py-2.5 pr-4 font-bold">{s.creditsUsed}</td>
-                      <td className="py-2.5 pr-4 text-slate-500">{(s.durationMs / 1000).toFixed(2)}s</td>
-                      <td className="py-2.5 text-right text-slate-500">{s.createdAt}</td>
+            <div className="pt-3 border-t border-slate-100">
+              <div className="sm:hidden space-y-2.5 text-xs">
+                {safeSessions.map((s) => (
+                  <div key={s.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 break-words">{s.productName}</p>
+                        <p className="font-mono text-[11px] text-slate-500 break-all">{s.id}</p>
+                      </div>
+                      <StatusBadge status={s.status} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600">
+                      <span><strong className="text-slate-900">{s.creditsUsed}</strong> credits · {(s.durationMs / 1000).toFixed(2)}s</span>
+                      <span className="text-slate-400">{s.createdAt}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                      <th className="py-2 pr-4">Session ID</th>
+                      <th className="py-2 pr-4">Product</th>
+                      <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pr-4">Credits</th>
+                      <th className="py-2 pr-4">Latency</th>
+                      <th className="py-2 text-right">Timestamp</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {safeSessions.map((s) => (
+                      <tr key={s.id}>
+                        <td className="py-2.5 pr-4 font-mono text-slate-800">{s.id}</td>
+                        <td className="py-2.5 pr-4 font-semibold">{s.productName}</td>
+                        <td className="py-2.5 pr-4">
+                          <StatusBadge status={s.status} />
+                        </td>
+                        <td className="py-2.5 pr-4 font-bold">{s.creditsUsed}</td>
+                        <td className="py-2.5 pr-4 text-slate-500">{(s.durationMs / 1000).toFixed(2)}s</td>
+                        <td className="py-2.5 text-right text-slate-500">{s.createdAt}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </SectionCard>
         )}
@@ -225,7 +244,7 @@ export function BillingCreditsView({
                     }`}
                   >
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
                           {pl.id}
                         </span>
@@ -265,7 +284,33 @@ export function BillingCreditsView({
 
         {(tab === 'overview' || tab === 'invoices') && (
           <SectionCard title="Billing Invoices" subtitle="Monthly SaaS subscription and credit pack receipts.">
-            <div className="overflow-x-auto">
+            <div className="sm:hidden space-y-2.5 text-xs">
+              {safeInvoices.map((inv) => (
+                <div key={inv.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-mono font-bold text-slate-900 break-all">{inv.id}</p>
+                      <p className="text-[11px] text-slate-500">{inv.period} · {inv.plan}</p>
+                    </div>
+                    <div className="text-right space-y-1 shrink-0">
+                      <p className="font-extrabold text-slate-950 tabular-nums">${inv.amount.toFixed(2)}</p>
+                      <StatusBadge status={inv.status} />
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadInvoiceText(inv)}
+                      className="h-8 px-3 gap-1.5 text-xs w-full sm:w-auto"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download Receipt
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
@@ -310,7 +355,7 @@ export function BillingCreditsView({
             title="Payment Methods on File"
             subtitle="Configured SaaS billing methods for automatic plan renewal."
           >
-            <div className="rounded-xl border border-slate-200 p-4 flex items-center justify-between text-xs">
+            <div className="rounded-xl border border-slate-200 p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-slate-100 text-slate-900">
                   <CreditCard className="w-4 h-4" />

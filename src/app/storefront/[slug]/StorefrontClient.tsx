@@ -43,25 +43,27 @@ export function StorefrontClient({ brand, products }: StorefrontClientProps) {
       </div>
 
       {/* Brand Storefront Navigation */}
-      <header className="border-b border-gray-200 bg-white/70 backdrop-blur-xl sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-xs text-gray-500 hover:text-black flex items-center gap-1.5 transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
+      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-xl sticky top-0 z-40 px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+          <Link href="/" className="text-xs text-gray-500 hover:text-black flex items-center gap-1 transition-colors shrink-0">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Back to Dashboard</span>
+            <span className="sm:hidden">Back</span>
           </Link>
-          <div className="h-4 w-px bg-gray-100" />
-          <div className="flex items-center gap-3">
+          <div className="h-4 w-px bg-gray-200 shrink-0" />
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Image
               src={brand.logo}
               alt={brand.name}
               width={32}
               height={32}
-              className="w-8 h-8 rounded-full object-cover ring-1 ring-black/20"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-1 ring-black/20 shrink-0"
             />
-            <span className="font-extrabold tracking-wider uppercase text-sm text-gray-900">{brand.name}</span>
+            <span className="font-extrabold tracking-wider uppercase text-xs sm:text-sm text-gray-900 truncate">{brand.name}</span>
           </div>
         </div>
 
-        <nav className="flex items-center gap-6 text-xs font-semibold text-gray-700">
+        <nav className="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar w-full md:w-auto text-xs font-semibold text-gray-700 pb-0.5 md:pb-0">
           <button onClick={() => setFilter('All')} className={`hover:text-black transition-colors ${filter === 'All' ? 'text-black font-bold' : ''}`}>Collection</button>
           <button onClick={() => setFilter('Dresses')} className={`hover:text-black transition-colors ${filter === 'Dresses' ? 'text-black font-bold' : ''}`}>Dresses</button>
           <button onClick={() => setFilter('Tops')} className={`hover:text-black transition-colors ${filter === 'Tops' ? 'text-black font-bold' : ''}`}>Tops</button>
@@ -90,13 +92,13 @@ export function StorefrontClient({ brand, products }: StorefrontClientProps) {
       </section>
 
       {/* Product Catalog */}
-      <main className="max-w-7xl mx-auto px-6 py-12 flex-1 w-full space-y-8">
-        <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-          <h2 className="text-xl font-black text-gray-900">Current Storefront Offerings ({filtered.length})</h2>
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8 sm:py-12 flex-1 w-full space-y-6 sm:space-y-8">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-4">
+          <h2 className="text-lg sm:text-xl font-black text-gray-900">Current Storefront Offerings ({filtered.length})</h2>
           <span className="text-xs text-gray-500">Authentic luxury apparel verified by {brand.name}</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-8">
           {filtered.map(product => (
             <div key={product.id} className="group glass-card rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-300 transition-all flex flex-col justify-between">
               <div className="relative aspect-[3/4] overflow-hidden bg-white">
@@ -135,8 +137,8 @@ export function StorefrontClient({ brand, products }: StorefrontClientProps) {
 
       {/* Virtual Try-On Simulation Modal */}
       {activeTryOnModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/80 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-md p-6 rounded-3xl border border-gray-300 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-white/80 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-md p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-300 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-gray-200 pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-black" />

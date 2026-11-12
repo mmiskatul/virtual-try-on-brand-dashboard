@@ -163,7 +163,7 @@ export function GettingStartedWizard() {
                 <input value={slogan} onChange={(e) => setSlogan(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setStep(1)}>&larr; Back</Button>
               <Button size="sm" onClick={handleSaveIdentity}>Save &amp; Continue &rarr;</Button>
             </div>
@@ -175,7 +175,7 @@ export function GettingStartedWizard() {
             <p className="text-slate-600">
               Your dedicated public storefront is hosted cleanly at <code>/brands/{profile.slug}</code>. Customize sections, navigation, and pages inside the Storefront Builder.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link href="/dashboard/storefront/editor">
                 <Button variant="outline" size="sm">Open Visual Storefront Editor</Button>
               </Link>
@@ -191,7 +191,7 @@ export function GettingStartedWizard() {
               <input value={prodName} onChange={(e) => setProdName(e.target.value)} placeholder="Garment Name (e.g. Raw Silk Coat)" className="px-3 py-2 rounded-xl border border-slate-200" />
               <input type="number" value={prodPrice} onChange={(e) => setProdPrice(e.target.value)} placeholder="Price ($)" className="px-3 py-2 rounded-xl border border-slate-200" />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setStep(3)}>&larr; Back</Button>
               <Button size="sm" onClick={handleCreateQuickProduct}>Create Garment &amp; Continue</Button>
               <Button variant="outline" size="sm" onClick={() => setStep(5)}>Skip</Button>
@@ -206,7 +206,7 @@ export function GettingStartedWizard() {
               Enable Brand Virtual Try-On Experience (<code>/try/{profile.slug}</code>)
             </label>
             <p className="text-slate-600">Shoppers visiting your brand try-on URL only see eligible garments belonging strictly to {profile.name}.</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link href="/dashboard/virtual-try-on/appearance"><Button variant="outline" size="sm">Customize Try-On UI</Button></Link>
               <Button size="sm" onClick={() => setStep(6)}>Continue to Marketplace Setup &rarr;</Button>
             </div>
@@ -223,7 +223,7 @@ export function GettingStartedWizard() {
                 3. Creating a <strong>Marketplace Post</strong> publishes selected styles to global marketplace discovery.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link href="/dashboard/marketplace/create"><Button variant="outline" size="sm">Create Marketplace Post</Button></Link>
               <Button size="sm" onClick={() => setStep(7)}>Review Launch Checklist &rarr;</Button>
             </div>

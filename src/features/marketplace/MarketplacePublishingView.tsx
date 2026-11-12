@@ -156,7 +156,7 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
         </div>
 
         {tab === 'analytics' && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <KpiCard label="Total Impressions" value={totalImpressions.toLocaleString()} icon={<Eye className="w-4 h-4" />} />
             <KpiCard label="Product Clicks" value={totalClicks.toLocaleString()} change={`${ctr}% CTR`} icon={<MousePointerClick className="w-4 h-4" />} />
             <KpiCard label="Attributed Orders" value={posts.reduce((s, p) => s + p.orders, 0)} icon={<ShoppingBag className="w-4 h-4" />} />
@@ -232,8 +232,8 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
           <SectionCard>
             <div className="space-y-3">
               {visiblePosts.map((post) => (
-                <div key={post.id} className="p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-                  <div className="flex items-center gap-3.5 min-w-0">
+                <div key={post.id} className="p-3.5 sm:p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 text-xs">
+                  <div className="flex items-start sm:items-center gap-3.5 min-w-0">
                     <div className="relative w-14 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0">
                       <SafeImage src={post.featuredImage} alt={post.title} fill className="object-cover" />
                     </div>
@@ -242,7 +242,7 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
                         <StatusBadge status={post.status} />
                         <span className="text-[11px] font-semibold text-slate-500">{post.collection}</span>
                       </div>
-                      <p className="font-bold text-slate-950 truncate">{post.title}</p>
+                      <p className="font-bold text-slate-950 line-clamp-2 leading-snug">{post.title}</p>
                       <p className="text-[11px] text-slate-500">
                         {post.impressions.toLocaleString()} views • {post.clicks} clicks • {post.orders} orders (${post.revenue.toLocaleString()})
                       </p>

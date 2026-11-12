@@ -193,7 +193,7 @@ export function IntegrationsDeveloperView({
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
               {Object.entries(gateways).map(([name, enabled]) => (
-                <div key={name} className="p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div key={name} className="p-3.5 sm:p-4 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-bold text-slate-900">{name}</p>
                     <p className="text-slate-500">{enabled ? 'Enabled in checkout' : 'Disabled'}</p>
@@ -222,7 +222,7 @@ export function IntegrationsDeveloperView({
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               {Object.entries(couriers).map(([name, enabled]) => (
-                <div key={name} className="p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div key={name} className="p-3.5 sm:p-4 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-bold text-slate-900">{name}</p>
                     <p className="text-slate-500">{enabled ? 'Active carrier' : 'Inactive'}</p>
@@ -298,7 +298,7 @@ export function IntegrationsDeveloperView({
           >
             {revealedSecretOnce && (
               <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 space-y-2 text-xs text-emerald-950">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-extrabold">Copy Your New API Secret Key Now</p>
                   <Button
                     size="sm"
@@ -316,7 +316,7 @@ export function IntegrationsDeveloperView({
                 <p className="font-mono break-all bg-white/90 px-3 py-2 rounded-lg border border-emerald-200">
                   {revealedSecretOnce}
                 </p>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[11px] text-emerald-800">
                     For security, once dismissed this raw secret cannot be displayed again.
                   </span>
@@ -348,44 +348,71 @@ export function IntegrationsDeveloperView({
             {safeKeys.length === 0 ? (
               <EmptyState title="No API keys generated" description="Create a credential to integrate external inventory or ERP systems." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                      <th className="py-2.5 pr-4">Name</th>
-                      <th className="py-2.5 pr-4">Masked Key</th>
-                      <th className="py-2.5 pr-4">Rate Limit</th>
-                      <th className="py-2.5 pr-4">Last Used</th>
-                      <th className="py-2.5 pr-4">Status</th>
-                      <th className="py-2.5 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {safeKeys.map((k) => (
-                      <tr key={k.id}>
-                        <td className="py-3 pr-4 font-bold text-slate-900">{k.name}</td>
-                        <td className="py-3 pr-4 font-mono text-slate-600">{k.publicPrefix}</td>
-                        <td className="py-3 pr-4">{k.rateLimitPerMin} req/min</td>
-                        <td className="py-3 pr-4 text-slate-500">{k.lastUsedAt}</td>
-                        <td className="py-3 pr-4">
-                          <StatusBadge status={k.status} />
-                        </td>
-                        <td className="py-3 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!canManage || k.status === 'REVOKED'}
-                            onClick={() => setConfirmRevokeId(k.id)}
-                            className="h-7 px-2.5 text-[11px] text-rose-700"
-                          >
-                            {k.status === 'REVOKED' ? 'Revoked' : 'Revoke'}
-                          </Button>
-                        </td>
+              <>
+                <div className="sm:hidden space-y-2.5 text-xs">
+                  {safeKeys.map((k) => (
+                    <div key={k.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 break-words">{k.name}</p>
+                          <p className="font-mono text-[11px] text-slate-600 break-all">{k.publicPrefix}</p>
+                        </div>
+                        <StatusBadge status={k.status} />
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                        <span>{k.rateLimitPerMin} req/min · Used {k.lastUsedAt}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={!canManage || k.status === 'REVOKED'}
+                          onClick={() => setConfirmRevokeId(k.id)}
+                          className="h-7 px-2.5 text-[11px] text-rose-700"
+                        >
+                          {k.status === 'REVOKED' ? 'Revoked' : 'Revoke'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                        <th className="py-2.5 pr-4">Name</th>
+                        <th className="py-2.5 pr-4">Masked Key</th>
+                        <th className="py-2.5 pr-4">Rate Limit</th>
+                        <th className="py-2.5 pr-4">Last Used</th>
+                        <th className="py-2.5 pr-4">Status</th>
+                        <th className="py-2.5 text-right">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {safeKeys.map((k) => (
+                        <tr key={k.id}>
+                          <td className="py-3 pr-4 font-bold text-slate-900">{k.name}</td>
+                          <td className="py-3 pr-4 font-mono text-slate-600">{k.publicPrefix}</td>
+                          <td className="py-3 pr-4">{k.rateLimitPerMin} req/min</td>
+                          <td className="py-3 pr-4 text-slate-500">{k.lastUsedAt}</td>
+                          <td className="py-3 pr-4">
+                            <StatusBadge status={k.status} />
+                          </td>
+                          <td className="py-3 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!canManage || k.status === 'REVOKED'}
+                              onClick={() => setConfirmRevokeId(k.id)}
+                              className="h-7 px-2.5 text-[11px] text-rose-700"
+                            >
+                              {k.status === 'REVOKED' ? 'Revoked' : 'Revoke'}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </SectionCard>
         )}

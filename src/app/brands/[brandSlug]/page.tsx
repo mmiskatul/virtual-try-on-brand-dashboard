@@ -94,41 +94,44 @@ export default function PublicBrandStorefrontPage() {
       )}
 
       {/* Clean Customer-Only Header (Zero Admin Links Exposed) */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="relative w-9 h-9 rounded-full overflow-hidden border border-slate-200">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-slate-200 shrink-0">
             <SafeImage src={brandLogo} alt={brandName} fill className="object-cover" />
           </div>
-          <span className="font-bold text-sm tracking-wide uppercase flex items-center gap-1.5">
-            {brandName} <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span className="font-bold text-xs sm:text-sm tracking-wide uppercase flex items-center gap-1 min-w-0">
+            <span className="truncate">{brandName}</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           </span>
         </div>
 
         <Link
           href={`/try/${brandSlug}`}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-xs font-bold shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-white text-[11px] sm:text-xs font-bold shadow-sm whitespace-nowrap shrink-0"
           style={{ backgroundColor: accentColor }}
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Virtual Try-On Studio
+          <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+          <span>Try-On</span>
+          <span className="hidden sm:inline">Studio</span>
         </Link>
       </header>
 
       {/* Banner */}
-      <section className="relative h-64 sm:h-80 bg-slate-900 flex items-center justify-center text-center text-white px-6">
+      <section className="relative h-56 sm:h-80 bg-slate-900 flex items-center justify-center text-center text-white px-4 sm:px-6">
         <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover opacity-65" />
         <div className="relative z-10 max-w-2xl space-y-2">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200 font-bold">
+          <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-amber-200 font-bold">
             Dedicated Brand Storefront
           </p>
-          <h1 className="text-3xl sm:text-5xl font-extrabold">{brandName}</h1>
+          <h1 className="text-2xl sm:text-5xl font-extrabold leading-tight">{brandName}</h1>
           <p className="text-xs sm:text-sm text-white/90">{brandDesc}</p>
         </div>
       </section>
 
       {/* Brand Catalog */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full flex-1 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-4">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-10 w-full flex-1 space-y-5 sm:space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white border border-slate-200 rounded-2xl p-3 sm:p-4">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto">
             {categories.map((c) => (
               <button
                 key={c}
@@ -154,7 +157,7 @@ export default function PublicBrandStorefrontPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
           {visible.map((p) => (
             <div key={p.id} className="rounded-2xl border border-slate-200 bg-white overflow-hidden flex flex-col justify-between group">
               <div className="relative aspect-[3/4] bg-slate-100">
@@ -165,7 +168,7 @@ export default function PublicBrandStorefrontPage() {
                   </span>
                 )}
               </div>
-              <div className="p-4 space-y-2.5">
+              <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
                 <div>
                   <h3 className="font-bold text-xs sm:text-sm text-slate-900 truncate">{p.name}</h3>
                   <p className="text-xs font-extrabold text-slate-950 mt-0.5">${p.price}</p>

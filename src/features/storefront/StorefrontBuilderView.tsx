@@ -185,7 +185,7 @@ export function StorefrontBuilderView({ initialTab = 'editor' }: { initialTab?: 
               title="Responsive Live Wireframe Preview"
               className="lg:col-span-7"
               right={
-                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl">
                   <button type="button" onClick={() => setViewport('desktop')} className={`p-1.5 rounded-lg ${viewport === 'desktop' ? 'bg-white shadow' : ''}`}>
                     <Monitor className="w-4 h-4" />
                   </button>
@@ -200,7 +200,7 @@ export function StorefrontBuilderView({ initialTab = 'editor' }: { initialTab?: 
             >
               <div
                 className={`mx-auto border border-slate-300 rounded-2xl overflow-hidden bg-[#FAF9F6] transition-all ${
-                  viewport === 'mobile' ? 'max-w-[340px]' : viewport === 'tablet' ? 'max-w-[560px]' : 'w-full'
+                  viewport === 'mobile' ? 'w-full max-w-[340px]' : viewport === 'tablet' ? 'w-full max-w-[560px]' : 'w-full'
                 }`}
               >
                 <div className="px-4 py-2 text-center text-[11px] font-bold text-white" style={{ backgroundColor: profile.primaryColor }}>
@@ -244,12 +244,12 @@ export function StorefrontBuilderView({ initialTab = 'editor' }: { initialTab?: 
                 </div>
               ))}
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <input
                   value={newPageTitle}
                   onChange={(e) => setNewPageTitle(e.target.value)}
                   placeholder="New Page Title (e.g. Lookbook 2026)"
-                  className="px-3 py-2 rounded-xl border border-slate-200 text-xs flex-1 max-w-sm"
+                  className="px-3 py-2 rounded-xl border border-slate-200 text-xs w-full sm:flex-1 sm:max-w-sm"
                 />
                 <Button
                   size="sm"
@@ -293,9 +293,9 @@ export function StorefrontBuilderView({ initialTab = 'editor' }: { initialTab?: 
                   </button>
                 </div>
               ))}
-              <div className="flex flex-wrap gap-2 pt-2">
-                <input value={newMenuLabel} onChange={(e) => setNewMenuLabel(e.target.value)} placeholder="Menu label" className="px-3 py-2 rounded-xl border border-slate-200" />
-                <input value={newMenuHref} onChange={(e) => setNewMenuHref(e.target.value)} placeholder="Target path or #anchor" className="px-3 py-2 rounded-xl border border-slate-200" />
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-2">
+                <input value={newMenuLabel} onChange={(e) => setNewMenuLabel(e.target.value)} placeholder="Menu label" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
+                <input value={newMenuHref} onChange={(e) => setNewMenuHref(e.target.value)} placeholder="Target path or #anchor" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
                 <Button
                   size="sm"
                   onClick={() => {
@@ -314,20 +314,20 @@ export function StorefrontBuilderView({ initialTab = 'editor' }: { initialTab?: 
         {tab === 'domain' && (
           <SectionCard title="Storefront Domains & SSL Configuration">
             <div className="space-y-4 text-xs max-w-2xl">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                <div>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
                   <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                    <Globe className="w-4 h-4" /> Platform Subdomain
+                    <Globe className="w-4 h-4 shrink-0" /> Platform Subdomain
                   </p>
-                  <p className="font-mono text-slate-600 mt-0.5">{profile.domain?.subdomain}</p>
+                  <p className="font-mono text-slate-600 mt-0.5 break-all">{profile.domain?.subdomain}</p>
                 </div>
                 <StatusBadge status="ACTIVE" />
               </div>
 
               <div className="space-y-2">
                 <label className="block font-bold text-slate-800">Custom Domain</label>
-                <div className="flex gap-2">
-                  <input value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} placeholder="shop.yourbrand.com" className="flex-1 px-3 py-2 rounded-xl border border-slate-200" />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} placeholder="shop.yourbrand.com" className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
                   <Button
                     size="sm"
                     onClick={() => {

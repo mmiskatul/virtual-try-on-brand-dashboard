@@ -91,6 +91,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const hideToast = useUiStore((s) => s.hideToast);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
@@ -309,9 +310,39 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
 
-      {/* Bottom Public Storefront / Try-On Links + Credits */}
+      {/* Bottom Public Storefront / Try-On Links + Role + Credits */}
       {(!sidebarCollapsed || isMobile) && (
         <div className="p-3 border-t border-slate-200 space-y-2.5 bg-slate-50/80">
+          {isMobile && (
+            <div className="md:hidden space-y-1.5">
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="font-semibold text-slate-500">Staff Role</span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    isLiveBackend
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLiveBackend ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                  {isLiveBackend ? 'Live Sync' : 'Demo'}
+                </span>
+              </div>
+              <select
+                value={activeRole}
+                onChange={(e) => setActiveRole(e.target.value as StaffRole)}
+                aria-label="Active Staff Role"
+                className="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none"
+              >
+                {(Object.keys(ROLE_LABELS) as StaffRole[]).map((role) => (
+                  <option key={role} value={role}>
+                    Role: {ROLE_LABELS[role].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-1.5">
             <Link
               href={`/brands/${profile.slug}`}
@@ -334,7 +365,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-1.5">
             <div className="flex justify-between text-[11px]">
               <span className="text-slate-500 font-medium">AI Try-On Credits</span>
-              <span className="font-bold text-slate-900">
+              <span className="font-bold text-slate-900 tabular-nums">
                 {profile.quotaUsed}/{profile.quotaMax}
               </span>
             </div>
@@ -342,24 +373,38 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="h-full bg-slate-950 rounded-full" style={{ width: `${quotaPct}%` }} />
             </div>
           </div>
+
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setHelpOpen(true);
+              }}
+              className="sm:hidden w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Workspace Docs</span>
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
+    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 overflow-x-clip">
       <ToastNotification message={toastMessage} />
 
       {/* Desktop Left Sidebar */}
-      <aside className={`hidden lg:block sticky top-0 h-screen shrink-0 transition-all duration-200 ${sidebarCollapsed ? 'w-16' : 'w-68 w-[272px]'}`}>
+      <aside className={`hidden lg:block sticky top-0 h-screen shrink-0 transition-all duration-200 ${sidebarCollapsed ? 'w-16' : 'w-[272px]'}`}>
         {renderSidebarBody(false)}
       </aside>
 
       {/* Mobile Sidebar Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex bg-black/50 backdrop-blur-sm">
-          <div className="w-72 max-w-[85vw] h-full shadow-2xl">{renderSidebarBody(true)}</div>
+          <div className="w-[85vw] max-w-72 h-full shadow-2xl">{renderSidebarBody(true)}</div>
           <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
         </div>
       )}
@@ -367,23 +412,30 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Main Column */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-3">
-          {/* Left: Sidebar Toggle + Breadcrumbs */}
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="sticky top-0 z-30 h-14 sm:h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-3">
+          {/* Left: Sidebar Toggle + Mobile Brand + Breadcrumbs */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open mobile menu"
-              className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100"
+              className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 border border-slate-200/80 shrink-0"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
+
+            <Link
+              href="/dashboard"
+              className="md:hidden font-extrabold text-xs sm:text-sm text-slate-950 truncate max-w-[120px] sm:max-w-[180px]"
+            >
+              {profile.name}
+            </Link>
 
             <button
               type="button"
               onClick={toggleSidebarCollapsed}
               aria-label="Toggle sidebar width"
-              className="hidden lg:inline-flex p-2 rounded-xl text-slate-500 hover:text-slate-950 hover:bg-slate-100"
+              className="hidden lg:inline-flex p-2 rounded-xl text-slate-500 hover:text-slate-950 hover:bg-slate-100 shrink-0"
             >
               {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             </button>
@@ -448,7 +500,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Right Action Cluster */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen((o) => !o)}
+              aria-label="Toggle mobile search"
+              className={`sm:hidden p-2 rounded-xl border transition-colors ${
+                mobileSearchOpen
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {mobileSearchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+            </button>
+
             {/* Live Connection Badge */}
             <span
               title={isLiveBackend ? 'Connected to live backend at port 4000' : 'Running with local workspace data (Sign in or start backend to sync live)'}
@@ -573,14 +638,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <span>{merchantInitial}</span>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
                 </div>
-                <span className="max-w-[110px] sm:max-w-[140px] truncate font-semibold">
+                <span className="max-w-[84px] sm:max-w-[140px] truncate font-semibold hidden min-[400px]:inline sm:inline">
                   {merchantDisplayName}
                 </span>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-500 shrink-0 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {accountMenuOpen && (
-                <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 z-50 text-xs">
+                <div className="absolute right-0 mt-2 w-[min(18rem,calc(100vw-1.5rem))] bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 z-50 text-xs">
                   <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100 mb-2">
                     <div className="w-10 h-10 rounded-full bg-slate-950 text-white flex items-center justify-center text-sm font-bold shrink-0">
                       {merchantInitial}
@@ -673,10 +738,96 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        {/* Expandable Mobile Search Strip (< sm) */}
+        {mobileSearchOpen && (
+          <div className="sm:hidden border-b border-slate-200 bg-white px-3 py-2.5 z-20">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products, SKUs, orders, customers..."
+                className="w-full pl-9 pr-8 py-2 rounded-full bg-slate-100 border border-slate-200 text-xs focus:bg-white focus:outline-none focus:border-slate-900"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {searchQuery.trim() && (
+                <div className="mt-2 bg-white border border-slate-200 rounded-2xl shadow-lg p-1.5 max-h-64 overflow-y-auto">
+                  {searchResults.length === 0 ? (
+                    <p className="text-xs text-slate-500 p-3 text-center">No matching workspace items found.</p>
+                  ) : (
+                    searchResults.map((res, idx) => (
+                      <Link
+                        key={idx}
+                        href={res.href}
+                        onClick={() => {
+                          setSearchQuery('');
+                          setMobileSearchOpen(false);
+                        }}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-xs gap-2"
+                      >
+                        <span className="font-semibold text-slate-900 truncate">{res.label}</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 shrink-0">
+                          {res.category}
+                        </span>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Main Workspace Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1440px] w-full mx-auto space-y-6">
+        <main className="flex-1 px-3.5 py-4 pb-24 sm:p-6 lg:p-8 lg:pb-8 max-w-[1440px] w-full mx-auto space-y-5 sm:space-y-6">
           {children}
         </main>
+
+        {/* Mobile Quick Dock (< lg) */}
+        <nav
+          aria-label="Mobile quick navigation"
+          className="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(15,23,42,0.06)]"
+        >
+          {[
+            { label: 'Overview', href: '/dashboard', icon: LayoutDashboard, match: (p: string) => p === '/dashboard' || p === '/dashboard/overview' },
+            { label: 'Products', href: '/dashboard/products', icon: ShoppingBag, match: (p: string) => p.startsWith('/dashboard/products') },
+            { label: 'Orders', href: '/dashboard/orders', icon: PackageCheck, match: (p: string) => p.startsWith('/dashboard/orders') },
+            { label: 'Try-On', href: '/dashboard/virtual-try-on', icon: Sparkles, match: (p: string) => p.startsWith('/dashboard/virtual-try-on') },
+          ].map((nav) => {
+            const NavIcon = nav.icon;
+            const active = nav.match(pathname);
+            return (
+              <Link
+                key={nav.href}
+                href={nav.href}
+                className={`flex flex-col items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl text-[10px] font-bold transition-colors min-w-[58px] ${
+                  active ? 'text-slate-950 bg-slate-100' : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <NavIcon className="w-4 h-4" />
+                <span>{nav.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-500 hover:text-slate-900 min-w-[58px]"
+          >
+            <Menu className="w-4 h-4" />
+            <span>Modules</span>
+          </button>
+        </nav>
       </div>
 
       {/* Help Center Modal */}

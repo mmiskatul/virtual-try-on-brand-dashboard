@@ -209,7 +209,7 @@ export function MarketingManagementView({
                     className="w-full rounded-xl border border-slate-200 px-3 py-2"
                   />
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Start Date</span>
                     <input
@@ -247,53 +247,85 @@ export function MarketingManagementView({
               {safeDiscounts.length === 0 ? (
                 <EmptyState title="No promo codes" description="Create a percentage or fixed discount code." />
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                        <th className="py-2.5 pr-4">Code</th>
-                        <th className="py-2.5 pr-4">Benefit</th>
-                        <th className="py-2.5 pr-4">Scope & Min</th>
-                        <th className="py-2.5 pr-4">Usage</th>
-                        <th className="py-2.5 pr-4">Status</th>
-                        <th className="py-2.5 text-right">Toggle</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {safeDiscounts.map((d) => (
-                        <tr key={d.id}>
-                          <td className="py-3 pr-4 font-mono font-extrabold text-slate-950">{d.code}</td>
-                          <td className="py-3 pr-4 font-bold text-slate-800">
-                            {d.type === 'PERCENTAGE' ? `${d.value}% OFF` : `$${d.value} OFF`}
-                          </td>
-                          <td className="py-3 pr-4 text-slate-600">
-                            {d.scope.replace('_', ' ')} • Min ${d.minOrderValue}
-                          </td>
-                          <td className="py-3 pr-4 text-slate-600">
-                            {d.usageCount} / {d.usageLimit}
-                          </td>
-                          <td className="py-3 pr-4">
-                            <StatusBadge status={d.active ? 'ACTIVE' : 'PAUSED'} />
-                          </td>
-                          <td className="py-3 text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={!canCreate}
-                              onClick={() => {
-                                toggleDiscountActive(d.id);
-                                showToast(`${d.code} ${d.active ? 'paused' : 'activated'}.`);
-                              }}
-                              className="h-7 px-2.5 text-[11px]"
-                            >
-                              {d.active ? 'Pause' : 'Activate'}
-                            </Button>
-                          </td>
+                <>
+                  <div className="sm:hidden space-y-2.5 text-xs">
+                    {safeDiscounts.map((d) => (
+                      <div key={d.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-mono font-extrabold text-slate-950 break-all">{d.code}</p>
+                            <p className="font-bold text-slate-700 mt-0.5">
+                              {d.type === 'PERCENTAGE' ? `${d.value}% OFF` : `$${d.value} OFF`}
+                            </p>
+                          </div>
+                          <StatusBadge status={d.active ? 'ACTIVE' : 'PAUSED'} />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600">
+                          <span>{d.scope.replace('_', ' ')} · Min ${d.minOrderValue} · {d.usageCount}/{d.usageLimit}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!canCreate}
+                            onClick={() => {
+                              toggleDiscountActive(d.id);
+                              showToast(`${d.code} ${d.active ? 'paused' : 'activated'}.`);
+                            }}
+                            className="h-7 px-2.5 text-[11px]"
+                          >
+                            {d.active ? 'Pause' : 'Activate'}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                          <th className="py-2.5 pr-4">Code</th>
+                          <th className="py-2.5 pr-4">Benefit</th>
+                          <th className="py-2.5 pr-4">Scope & Min</th>
+                          <th className="py-2.5 pr-4">Usage</th>
+                          <th className="py-2.5 pr-4">Status</th>
+                          <th className="py-2.5 text-right">Toggle</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {safeDiscounts.map((d) => (
+                          <tr key={d.id}>
+                            <td className="py-3 pr-4 font-mono font-extrabold text-slate-950">{d.code}</td>
+                            <td className="py-3 pr-4 font-bold text-slate-800">
+                              {d.type === 'PERCENTAGE' ? `${d.value}% OFF` : `$${d.value} OFF`}
+                            </td>
+                            <td className="py-3 pr-4 text-slate-600">
+                              {d.scope.replace('_', ' ')} • Min ${d.minOrderValue}
+                            </td>
+                            <td className="py-3 pr-4 text-slate-600">
+                              {d.usageCount} / {d.usageLimit}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <StatusBadge status={d.active ? 'ACTIVE' : 'PAUSED'} />
+                            </td>
+                            <td className="py-3 text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!canCreate}
+                                onClick={() => {
+                                  toggleDiscountActive(d.id);
+                                  showToast(`${d.code} ${d.active ? 'paused' : 'activated'}.`);
+                                }}
+                                className="h-7 px-2.5 text-[11px]"
+                              >
+                                {d.active ? 'Pause' : 'Activate'}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </SectionCard>
 
@@ -315,7 +347,7 @@ export function MarketingManagementView({
                   />
                 </label>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Type</span>
                     <select
@@ -339,7 +371,7 @@ export function MarketingManagementView({
                   </label>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Min Order ($)</span>
                     <input
@@ -362,7 +394,7 @@ export function MarketingManagementView({
                   </label>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Scope</span>
                     <select
@@ -415,7 +447,7 @@ export function MarketingManagementView({
 
             <div className="space-y-2 text-xs">
               {safeCustomers.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
+                <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-slate-200">
                   <div>
                     <p className="font-bold text-slate-900">{c.name}</p>
                     <p className="text-slate-500">{c.email}</p>

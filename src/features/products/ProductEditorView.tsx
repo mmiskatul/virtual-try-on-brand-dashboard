@@ -283,7 +283,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               {variants.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-xs">
                   {variants.map((v) => (
-                    <div key={v.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                    <div key={v.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
                       <span className="font-bold">{v.size} / {v.color}</span>
                       <span className="font-mono text-slate-500">{v.sku} ({v.stockQuantity}u)</span>
                     </div>
@@ -293,12 +293,12 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
             </SectionCard>
 
             <SectionCard title="E & F. Specifications & Inventory">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div><label className="block font-bold mb-1">Master SKU *</label><input value={sku} onChange={(e) => setSku(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" /></div>
                 <div><label className="block font-bold mb-1">Total Stock</label><input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                 <div><label className="block font-bold mb-1">Low-Stock Alert</label><input type="number" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                 <div><label className="block font-bold mb-1">Warehouse</label><input value={warehouseLocation} onChange={(e) => setWarehouseLocation(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div className="col-span-2"><label className="block font-bold mb-1">Material Composition</label><input value={material} onChange={(e) => setMaterial(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
+                <div className="min-[400px]:col-span-2"><label className="block font-bold mb-1">Material Composition</label><input value={material} onChange={(e) => setMaterial(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                 <div><label className="block font-bold mb-1">Weight</label><input value={weightGsm} onChange={(e) => setWeightGsm(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                 <div><label className="block font-bold mb-1">Fit Type</label><input value={fitType} onChange={(e) => setFitType(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
               </div>
