@@ -3,7 +3,7 @@ import { BrandProfile, Fabric, Product } from '../../types';
 export const ONBOARDING_STEPS = [
   '1. Brand Name',
   '2. Contact Info',
-  '3. Colors & Photos',
+  '3. Style & Media',
   '4. Products & Try-On',
   '5. Review & Save',
 ] as const;
@@ -97,35 +97,42 @@ export const BRAND_COLOR_PRESETS = [
   { label: 'Cobalt Studio', primaryColor: '#1E3A8A', accentColor: '#2563EB' },
 ] as const;
 
-export const SAMPLE_LOGO_PRESETS = [
-  {
-    label: 'Editorial Monogram',
-    url: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Minimalist Tag',
-    url: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Studio Atelier',
-    url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&auto=format&fit=crop&q=80',
-  },
-] as const;
+export type StorefrontHeaderStyle = 'split' | 'minimal' | 'centered' | 'cover';
 
-export const SAMPLE_BANNER_PRESETS = [
+export const STOREFRONT_HEADER_STYLES: ReadonlyArray<{
+  id: StorefrontHeaderStyle;
+  label: string;
+  tagline: string;
+}> = [
   {
-    label: 'Luxury Atelier Loft',
-    url: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1400&auto=format&fit=crop&q=80',
+    id: 'split',
+    label: 'Editorial Split',
+    tagline: 'Brand info left, framed showcase right',
   },
   {
-    label: 'Tailored Collection',
-    url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1400&auto=format&fit=crop&q=80',
+    id: 'minimal',
+    label: 'Clean Typography',
+    tagline: 'Crisp studio header without heavy banner',
   },
   {
-    label: 'Minimal Runway Rack',
-    url: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1400&auto=format&fit=crop&q=80',
+    id: 'centered',
+    label: 'Centered Atelier',
+    tagline: 'Centered emblem, headline & soft tint',
   },
-] as const;
+  {
+    id: 'cover',
+    label: 'Full Cover Hero',
+    tagline: 'Edge-to-edge feature photo backdrop',
+  },
+];
+
+export function normalizeHeaderStyle(value?: string): StorefrontHeaderStyle {
+  const clean = String(value || '').trim().toLowerCase();
+  if (clean === 'minimal' || clean === 'centered' || clean === 'cover' || clean === 'split') {
+    return clean;
+  }
+  return 'split';
+}
 
 export function toBrandSlug(value: string): string {
   const cleaned = String(value || '')
@@ -138,6 +145,17 @@ export function toBrandSlug(value: string): string {
 
 export function isHttpImageUrl(url: string | undefined): boolean {
   return Boolean(url && /^https?:\/\//i.test(url.trim()));
+}
+
+export function isValidImageSource(url: string | undefined): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  return (
+    /^https?:\/\//i.test(trimmed) ||
+    trimmed.startsWith('/') ||
+    /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(trimmed)
+  );
 }
 
 export interface OnboardingFormState {
@@ -162,6 +180,7 @@ export interface OnboardingFormState {
   website: string;
   primaryColor: string;
   accentColor: string;
+  headerStyle: StorefrontHeaderStyle;
   logoUrl: string;
   bannerUrl: string;
 }
@@ -286,8 +305,11 @@ export function createInitialOnboardingForm(params: {
       savedDraft?.accentColor ||
       (allowLiveProfileFallback ? profile.accentColor : undefined) ||
       BRAND_COLOR_PRESETS[0].accentColor,
-    logoUrl: savedDraft?.logo || (allowLiveProfileFallback ? profile.logo || '' : ''),
-    bannerUrl: savedDraft?.banner || (allowLiveProfileFallback ? profile.banner || '' : ''),
+    headerStyle: normalizeHeaderStyle(
+      savedDraft?.headerStyle || (allowLiveProfileFallback ? profile.headerStyle : undefined)
+    ),
+    logoUrl: savedDraft?.logo ?? (allowLiveProfileFallback ? profile.logo || '' : ''),
+    bannerUrl: savedDraft?.banner ?? (allowLiveProfileFallback ? profile.banner || '' : ''),
   };
 }
 

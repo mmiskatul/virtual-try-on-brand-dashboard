@@ -12,6 +12,7 @@ import {
   Globe,
   Image as ImageIcon,
   Layers,
+  Layout,
   Loader2,
   Lock,
   Package,
@@ -20,6 +21,7 @@ import {
   ShieldCheck,
   Sparkles,
   Store,
+  Trash2,
   Upload,
   Wand2,
 } from 'lucide-react';
@@ -35,12 +37,12 @@ import {
   CURRENCY_OPTIONS,
   ONBOARDING_STEPS,
   OnboardingFormState,
-  SAMPLE_BANNER_PRESETS,
-  SAMPLE_LOGO_PRESETS,
+  STOREFRONT_HEADER_STYLES,
+  StorefrontHeaderStyle,
   buildSampleBrandFormValues,
   buildSampleStarterCatalog,
   createInitialOnboardingForm,
-  isHttpImageUrl,
+  isValidImageSource,
   normalizeBusinessType,
   parseCategorySelection,
   toBrandSlug,
@@ -51,6 +53,599 @@ const SAMPLE_GARMENT_IMAGE =
 
 const FIELD_INPUT_CLASS =
   'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors focus:outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10';
+
+interface ImageUploadCardProps {
+  label: string;
+  helperText: string;
+  imageUrl: string;
+  uploading: boolean;
+  emptyActionLabel: string;
+  aspectClassName?: string;
+  onUploadFile: (file: File | undefined) => void;
+  onRemove: () => void;
+}
+
+function ImageUploadCard({
+  label,
+  helperText,
+  imageUrl,
+  uploading,
+  emptyActionLabel,
+  aspectClassName = 'h-32',
+  onUploadFile,
+  onRemove,
+}: ImageUploadCardProps) {
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) onUploadFile(dropped);
+  };
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      className={`space-y-3 p-4 rounded-2xl border transition-colors ${
+        dragging
+          ? 'border-slate-950 bg-slate-100/80'
+          : 'border-slate-200 bg-slate-50/70'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+            <ImageIcon className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+            <span>{label}</span>
+          </span>
+          <p className="text-[11px] text-slate-500 mt-0.5">{helperText}</p>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-[11px] font-bold transition-colors"
+            >
+              <Trash2 className="w-3 h-3" />
+              Remove
+            </button>
+          )}
+          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer transition-colors">
+            {uploading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Upload className="w-3 h-3" />
+            )}
+            <span>
+              {uploading ? 'Uploading...' : imageUrl ? 'Change Photo' : emptyActionLabel}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                onUploadFile(e.target.files?.[0]);
+                e.currentTarget.value = '';
+              }}
+            />
+          </label>
+        </div>
+      </div>
+
+      {imageUrl ? (
+        <div
+          className={`relative w-full ${aspectClassName} rounded-xl overflow-hidden border border-slate-200 bg-white`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt={label}
+            className="w-full h-full object-cover"
+          />
+          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-white text-[10px] font-bold backdrop-blur-sm">
+            Uploaded Ready
+          </span>
+        </div>
+      ) : (
+        <label
+          className={`flex flex-col items-center justify-center text-center gap-1.5 w-full ${aspectClassName} rounded-xl border-2 border-dashed border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50/70 cursor-pointer transition-colors px-4`}
+        >
+          <span className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center">
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+          </span>
+          <span className="text-xs font-bold text-slate-900">
+            {uploading ? 'Uploading image...' : 'Click or drag & drop an image here'}
+          </span>
+          <span className="text-[11px] text-slate-500">
+            PNG, JPG or WebP · Up to 10 MB
+          </span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              onUploadFile(e.target.files?.[0]);
+              e.currentTarget.value = '';
+            }}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
+const PREVIEW_CATALOG_ITEMS = [
+  { name: 'Structured Linen Blazer', price: '৳3,850', tag: 'New' },
+  { name: 'Cotton Pleat Shirt', price: '৳1,950', tag: 'Try-On' },
+  { name: 'Tailored Wide Trousers', price: '৳2,450', tag: 'Popular' },
+] as const;
+
+interface ShopMockupPreviewProps {
+  styleId: StorefrontHeaderStyle;
+  brandName: string;
+  storefrontTitle: string;
+  slogan: string;
+  announcement: string;
+  primaryColor: string;
+  accentColor: string;
+  logoUrl: string;
+  bannerUrl: string;
+}
+
+function ShopDesignThumbnail({
+  styleId,
+  brandName,
+  primaryColor,
+  accentColor,
+  logoUrl,
+  bannerUrl,
+}: Pick<ShopMockupPreviewProps, 'styleId' | 'brandName' | 'primaryColor' | 'accentColor' | 'logoUrl' | 'bannerUrl'>) {
+  const initial = (brandName.trim() || 'B').charAt(0).toUpperCase();
+  const displayName = brandName.trim() || 'Your Shop';
+
+  return (
+    <div className="w-full rounded-xl border border-slate-200 bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)] text-slate-900">
+      {/* Mini Browser Strip */}
+      <div className="px-2 py-1 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+        </div>
+        <span className="text-[8px] font-semibold text-slate-500 truncate max-w-[110px]">
+          {displayName}
+        </span>
+      </div>
+
+      {/* Mini Storefront Nav */}
+      <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between gap-1 bg-white">
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="w-3.5 h-3.5 rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center text-[7px] font-bold shrink-0">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              initial
+            )}
+          </span>
+          <span className="text-[8px] font-bold truncate uppercase">{displayName}</span>
+        </div>
+        <span
+          className="px-1.5 py-0.5 rounded-full text-[7px] font-bold text-white shrink-0"
+          style={{ backgroundColor: accentColor }}
+        >
+          Try-On
+        </span>
+      </div>
+
+      {/* Distinct Shop UI Body */}
+      {styleId === 'split' && (
+        <div className="p-2 space-y-2 bg-slate-50/50">
+          <div className="grid grid-cols-12 gap-1.5 items-center bg-white rounded-lg p-1.5 border border-slate-100">
+            <div className="col-span-7 space-y-1">
+              <span
+                className="inline-block h-1.5 w-8 rounded-full"
+                style={{ backgroundColor: accentColor }}
+              />
+              <p className="text-[9px] font-extrabold leading-tight text-slate-900 truncate">
+                {displayName}
+              </p>
+              <span
+                className="inline-block px-1.5 py-0.5 rounded text-[7px] font-bold text-white"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Shop Now
+              </span>
+            </div>
+            <div
+              className="col-span-5 h-11 rounded-md overflow-hidden border border-slate-200"
+              style={{ backgroundColor: `${primaryColor}18` }}
+            >
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full opacity-85"
+                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                />
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="rounded-md bg-white border border-slate-100 p-1 space-y-1">
+                <div className="h-7 rounded bg-slate-100" />
+                <div className="h-1 w-full rounded bg-slate-200" />
+                <div className="h-1 w-6 rounded bg-slate-300" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {styleId === 'minimal' && (
+        <div className="bg-white border-t-2 p-2 space-y-2" style={{ borderTopColor: primaryColor }}>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-[9px] font-black tracking-tight text-slate-950 truncate">
+                {displayName} Studio
+              </p>
+              <div className="flex gap-1">
+                <span className="px-1 py-0.5 rounded bg-slate-900 text-white text-[6px] font-bold">
+                  All
+                </span>
+                <span className="px-1 py-0.5 rounded bg-slate-100 text-slate-600 text-[6px]">
+                  New
+                </span>
+              </div>
+            </div>
+            <span
+              className="w-4 h-4 rounded-md shrink-0"
+              style={{ backgroundColor: `${primaryColor}20` }}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[0, 1].map((idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="h-12 rounded-lg bg-slate-100 border border-slate-200/70" />
+                <div className="flex justify-between items-center">
+                  <span className="h-1 w-8 rounded bg-slate-300" />
+                  <span
+                    className="h-1.5 w-4 rounded-full"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {styleId === 'centered' && (
+        <div className="bg-white">
+          <div
+            className="px-2 py-2.5 text-center space-y-1"
+            style={{ background: `linear-gradient(180deg, ${primaryColor}16 0%, #ffffff 100%)` }}
+          >
+            <div className="w-5 h-5 mx-auto rounded-full overflow-hidden border border-white shadow-sm bg-white flex items-center justify-center text-[8px] font-extrabold">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initial
+              )}
+            </div>
+            <p className="text-[9px] font-extrabold text-slate-950 truncate">{displayName}</p>
+            <span
+              className="inline-block px-2 py-0.5 rounded-full text-[6px] font-bold text-white"
+              style={{ backgroundColor: accentColor }}
+            >
+              Boutique Collection
+            </span>
+          </div>
+          <div className="px-2 pb-2 grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="rounded-lg bg-slate-50 border border-slate-100 p-1 space-y-1">
+                <div className="h-7 rounded-md bg-slate-200/70" />
+                <div
+                  className="h-2 rounded text-center"
+                  style={{ backgroundColor: primaryColor }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {styleId === 'cover' && (
+        <div className="bg-white">
+          <div
+            className="relative h-14 px-2 pb-1.5 flex items-end overflow-hidden text-white"
+            style={{ backgroundColor: primaryColor }}
+          >
+            {bannerUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-55" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent" />
+            <div className="relative z-10 flex items-center gap-1 min-w-0">
+              <span className="w-4 h-4 rounded bg-white text-slate-950 text-[7px] font-extrabold flex items-center justify-center overflow-hidden shrink-0">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  initial
+                )}
+              </span>
+              <p className="text-[8px] font-extrabold truncate">{displayName}</p>
+            </div>
+          </div>
+          <div className="p-2 grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="rounded border border-slate-200 p-1 space-y-1">
+                <div className="h-6 rounded-sm bg-slate-100" />
+                <div className="h-1 w-full rounded bg-slate-300" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FullShopLivePreview({
+  styleId,
+  brandName,
+  storefrontTitle,
+  slogan,
+  announcement,
+  primaryColor,
+  accentColor,
+  logoUrl,
+  bannerUrl,
+}: ShopMockupPreviewProps) {
+  const initial = (brandName.trim() || 'B').charAt(0).toUpperCase();
+  const displayBrand = brandName.trim() || 'Your Brand';
+  const displayTitle = storefrontTitle.trim() || 'Shop Page Title';
+  const displaySlogan = slogan.trim() || 'Add a short tagline in Step 1';
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-[#FAF9F6] text-slate-900">
+      {announcement.trim() && (
+        <div
+          className="px-4 py-1.5 text-center text-[11px] font-bold text-white"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {announcement}
+        </div>
+      )}
+
+      {/* Storefront Top Navbar Preview */}
+      <div className="px-4 sm:px-5 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center font-extrabold text-xs text-slate-900 shrink-0">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="Brand Mark" className="w-full h-full object-cover" />
+            ) : (
+              <span>{initial}</span>
+            )}
+          </div>
+          <span className="text-xs font-extrabold uppercase tracking-wide truncate">{displayBrand}</span>
+        </div>
+        <div className="hidden sm:flex items-center gap-4 text-[11px] font-semibold text-slate-500">
+          <span className="text-slate-950 font-bold">Shop All</span>
+          <span>New Arrivals</span>
+          <span>Collections</span>
+        </div>
+        <span
+          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold text-white shrink-0"
+          style={{ backgroundColor: accentColor }}
+        >
+          <Sparkles className="w-3 h-3" />
+          Try-On Studio
+        </span>
+      </div>
+
+      {/* Hero Section Based on Chosen Shop Design */}
+      {styleId === 'split' && (
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 sm:p-6 items-center bg-white border-b border-slate-200">
+          <div className="sm:col-span-7 space-y-2.5 min-w-0">
+            <span
+              className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+              style={{ backgroundColor: accentColor }}
+            >
+              {displayBrand}
+            </span>
+            <h3 className="text-lg sm:text-xl font-extrabold text-slate-950 leading-tight truncate">
+              {displayTitle}
+            </h3>
+            <p className="text-xs text-slate-600 line-clamp-2">{displaySlogan}</p>
+            <div className="pt-1 flex flex-wrap gap-1.5">
+              <span
+                className="px-3.5 py-1.5 rounded-full text-[11px] font-bold text-white"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Browse Collection
+              </span>
+              <span className="px-3.5 py-1.5 rounded-full text-[11px] font-semibold border border-slate-200 bg-slate-50 text-slate-700">
+                Try On Online
+              </span>
+            </div>
+          </div>
+          <div className="sm:col-span-5">
+            <div className="relative h-36 sm:h-40 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center">
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="Showcase Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-white"
+                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                >
+                  <Sparkles className="w-5 h-5 mb-1 opacity-90" />
+                  <span className="text-xs font-bold">Featured Lookbook Card</span>
+                  <span className="text-[10px] opacity-80">Upload a photo or keep color card</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {styleId === 'minimal' && (
+        <div
+          className="p-5 sm:p-6 bg-white border-b border-slate-200 border-t-4"
+          style={{ borderTopColor: primaryColor }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1 min-w-0">
+              <span
+                className="text-[11px] font-bold uppercase tracking-[0.2em]"
+                style={{ color: accentColor }}
+              >
+                {displayBrand}
+              </span>
+              <h3 className="text-lg sm:text-xl font-extrabold text-slate-950 truncate">
+                {displayTitle}
+              </h3>
+              <p className="text-xs text-slate-500 truncate">{displaySlogan}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+                All Items
+              </span>
+              <span
+                className="px-3.5 py-1.5 rounded-full text-white text-[11px] font-bold"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Virtual Fitting Room
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {styleId === 'centered' && (
+        <div
+          className="px-5 py-6 sm:py-7 text-center flex flex-col items-center justify-center gap-2 border-b border-slate-200"
+          style={{ background: `linear-gradient(180deg, ${primaryColor}14 0%, #ffffff 100%)` }}
+        >
+          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-white text-slate-950 flex items-center justify-center font-extrabold text-base">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="Brand Mark" className="w-full h-full object-cover" />
+            ) : (
+              <span>{initial}</span>
+            )}
+          </div>
+          <span
+            className="inline-block px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+            style={{ backgroundColor: accentColor }}
+          >
+            {displayBrand}
+          </span>
+          <h3 className="text-lg font-extrabold text-slate-950 max-w-xl">{displayTitle}</h3>
+          <p className="text-xs text-slate-600 max-w-md">{displaySlogan}</p>
+        </div>
+      )}
+
+      {styleId === 'cover' && (
+        <div
+          className="relative h-40 sm:h-44 flex items-end p-5 text-white overflow-hidden"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {bannerUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={bannerUrl}
+              alt="Storefront Hero Preview"
+              className="absolute inset-0 w-full h-full object-cover opacity-55"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
+          <div className="relative z-10 flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/80 bg-white text-slate-950 flex items-center justify-center font-extrabold text-lg shrink-0">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Brand Logo Preview" className="w-full h-full object-cover" />
+              ) : (
+                <span>{initial}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <span
+                className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white mb-1"
+                style={{ backgroundColor: accentColor }}
+              >
+                {displayBrand}
+              </span>
+              <h3 className="text-base sm:text-lg font-extrabold leading-tight truncate">
+                {displayTitle}
+              </h3>
+              <p className="text-xs text-slate-200 truncate">{displaySlogan}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sample Storefront Catalog Section */}
+      <div className="p-4 sm:p-5 space-y-3 bg-[#FAF9F6]">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold text-slate-900">Featured Clothes Preview</span>
+          <span className="text-[11px] text-slate-500">All prices in BDT (৳)</span>
+        </div>
+        <div className={`grid gap-3 ${styleId === 'minimal' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'}`}>
+          {PREVIEW_CATALOG_ITEMS.slice(0, styleId === 'minimal' ? 2 : 3).map((item) => (
+            <div
+              key={item.name}
+              className={`bg-white border border-slate-200 overflow-hidden flex flex-col justify-between ${
+                styleId === 'centered' ? 'rounded-2xl' : styleId === 'minimal' ? 'rounded-xl' : 'rounded-xl'
+              }`}
+            >
+              <div
+                className="h-24 flex items-start justify-between p-2.5"
+                style={{
+                  background: `linear-gradient(145deg, ${primaryColor}10, ${accentColor}16)`,
+                }}
+              >
+                <span className="px-2 py-0.5 rounded-full bg-white/90 text-slate-800 text-[10px] font-bold border border-slate-200">
+                  {item.tag}
+                </span>
+              </div>
+              <div className="p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>
+                  <span className="text-xs font-extrabold text-slate-950 shrink-0">{item.price}</span>
+                </div>
+                <div
+                  className="w-full py-1.5 rounded-lg text-center text-[11px] font-bold text-white"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  Try On Virtually
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export interface GettingStartedWizardProps {
   embeddedInModal?: boolean;
@@ -314,8 +909,9 @@ export function GettingStartedWizard({
       brandStory: formToSave.brandStory.trim() || cleanDesc,
       primaryColor: formToSave.primaryColor,
       accentColor: formToSave.accentColor,
-      ...(formToSave.logoUrl.trim() ? { logo: formToSave.logoUrl.trim() } : {}),
-      ...(formToSave.bannerUrl.trim() ? { banner: formToSave.bannerUrl.trim() } : {}),
+      headerStyle: formToSave.headerStyle,
+      logo: formToSave.logoUrl.trim(),
+      banner: formToSave.bannerUrl.trim(),
       socialLinks: {
         ...(profile.socialLinks || {}),
         instagram: formToSave.instagram.trim(),
@@ -326,7 +922,7 @@ export function GettingStartedWizard({
           title: cleanTitle,
           description: formToSave.shortDescription.trim() || cleanDesc,
           canonicalUrl: `https://vton.store/brands/${cleanSlug}`,
-          ogImage: isHttpImageUrl(formToSave.bannerUrl) ? formToSave.bannerUrl : '',
+          ogImage: isValidImageSource(formToSave.bannerUrl) ? formToSave.bannerUrl.trim() : '',
           allowIndexing: true,
         }),
         title: cleanTitle,
@@ -366,12 +962,13 @@ export function GettingStartedWizard({
 
     if (!syncBackend) return { backendSaved: false };
 
-    const safeLogo = isHttpImageUrl(formToSave.logoUrl) ? formToSave.logoUrl.trim() : undefined;
-    const safeBanner = isHttpImageUrl(formToSave.bannerUrl) ? formToSave.bannerUrl.trim() : undefined;
+    const safeLogo = isValidImageSource(formToSave.logoUrl) ? formToSave.logoUrl.trim() : '';
+    const safeBanner = isValidImageSource(formToSave.bannerUrl) ? formToSave.bannerUrl.trim() : '';
 
     const storefrontSettingsPayload: Record<string, any> = {
       primaryColor: formToSave.primaryColor,
       accentColor: formToSave.accentColor,
+      headerStyle: formToSave.headerStyle,
       announcement: formToSave.announcement.trim(),
       aboutText: formToSave.brandStory.trim() || formToSave.shortDescription.trim(),
       storefrontTitle: cleanTitle,
@@ -393,7 +990,7 @@ export function GettingStartedWizard({
         instagram: formToSave.instagram.trim(),
         website: formToSave.website.trim(),
       },
-      ...(safeBanner ? { bannerImage: safeBanner } : {}),
+      bannerImage: safeBanner,
       ...(options?.markCompleted
         ? { onboardingCompleted: true, onboardingCompletedAt: Date.now() }
         : {}),
@@ -404,8 +1001,8 @@ export function GettingStartedWizard({
         name: cleanName,
         ...(cleanDesc ? { description: cleanDesc } : {}),
         contactEmail: formToSave.bizEmail.trim() || undefined,
-        ...(safeLogo ? { logoUrl: safeLogo } : {}),
-        ...(safeBanner ? { bannerUrl: safeBanner } : {}),
+        logoUrl: safeLogo,
+        bannerUrl: safeBanner,
         storefrontSettings: storefrontSettingsPayload,
       });
       return { backendSaved: true };
@@ -582,7 +1179,7 @@ export function GettingStartedWizard({
     brandStorefrontPublished: boolean;
     isTryOnEligible: boolean;
   }): Promise<Product> => {
-    const safeImage = isHttpImageUrl(productDraft.image) ? productDraft.image : SAMPLE_GARMENT_IMAGE;
+    const safeImage = isValidImageSource(productDraft.image) ? productDraft.image : SAMPLE_GARMENT_IMAGE;
     const variants = [
       {
         id: `var_${productDraft.sku}_s`,
@@ -1371,13 +1968,69 @@ export function GettingStartedWizard({
         </SectionCard>
       )}
 
-      {/* STEP 3: VISUAL IDENTITY, LOGO & BANNER */}
+      {/* STEP 3: STOREFRONT DESIGN, COLORS & MEDIA UPLOADS */}
       {step === 3 && (
         <SectionCard
-          title="3. Shop Colors, Logo & Cover Photo"
-          subtitle="Pick your colors and add a logo and banner photo. Check how your shop header will look below."
+          title="3. Shop Design, Colors & Brand Photos"
+          subtitle="Pick a storefront layout style, choose your colors, and upload optional photos. Preview how your shop header looks below."
         >
-          <form onSubmit={handleSaveStep3} className="space-y-5">
+          <form onSubmit={handleSaveStep3} className="space-y-6">
+            {/* Storefront Design Picker (Full Mini UI Cards) */}
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Layout className="w-3.5 h-3.5" />
+                  Choose How Your Shop Should Look (Pick 1 of 4 UI Designs)
+                </p>
+                <span className="text-[11px] text-slate-500">
+                  Selected:{' '}
+                  <strong className="text-slate-900">
+                    {STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label}
+                  </strong>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {STOREFRONT_HEADER_STYLES.map((option) => {
+                  const selected = form.headerStyle === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => updateField('headerStyle', option.id)}
+                      className={`p-2.5 rounded-2xl border text-left transition-all space-y-2.5 ${
+                        selected
+                          ? 'border-slate-950 ring-2 ring-slate-950 bg-slate-50 shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70'
+                      }`}
+                    >
+                      <ShopDesignThumbnail
+                        styleId={option.id}
+                        brandName={form.brandName}
+                        primaryColor={form.primaryColor}
+                        accentColor={form.accentColor}
+                        logoUrl={form.logoUrl}
+                        bannerUrl={form.bannerUrl}
+                      />
+                      <div className="flex items-start justify-between gap-2 px-0.5">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-950 leading-tight">{option.label}</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            {option.tagline}
+                          </p>
+                        </div>
+                        {selected && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-slate-950 text-white text-[10px] font-bold shrink-0">
+                            <Check className="w-2.5 h-2.5" />
+                            Selected
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Color Palette Selection */}
             <div className="space-y-2.5">
               <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -1451,142 +2104,57 @@ export function GettingStartedWizard({
               </div>
             </div>
 
-            {/* Logo & Banner Upload / Presets */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 text-xs">
-              <div className="space-y-2.5 p-4 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5" />
-                    Logo Photo
-                  </span>
-                  <label className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold cursor-pointer">
-                    <Upload className="w-3 h-3" />
-                    <span>{uploadingField === 'logo' ? 'Uploading...' : 'Upload Logo'}</span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      onChange={(e) => void handleUploadAsset('logo', e.target.files?.[0])}
-                    />
-                  </label>
-                </div>
-                <input
-                  type="url"
-                  value={form.logoUrl}
-                  onChange={(e) => updateField('logoUrl', e.target.value)}
-                  placeholder="Paste photo link or pick an example below"
-                  className={FIELD_INPUT_CLASS}
-                />
-                <div className="flex flex-wrap gap-1.5">
-                  {SAMPLE_LOGO_PRESETS.map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => updateField('logoUrl', preset.url)}
-                      className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold ${
-                        form.logoUrl === preset.url
-                          ? 'border-slate-950 bg-slate-950 text-white'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      Use: {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Direct Image Upload Cards (Upload-Only, Zero URL Inputs) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <ImageUploadCard
+                label="Brand Mark / Emblem (Optional)"
+                helperText="Upload a square logo or monogram mark for your shop header."
+                imageUrl={form.logoUrl}
+                uploading={uploadingField === 'logo'}
+                emptyActionLabel="Upload Logo"
+                aspectClassName="h-36"
+                onUploadFile={(file) => void handleUploadAsset('logo', file)}
+                onRemove={() => updateField('logoUrl', '')}
+              />
 
-              <div className="space-y-2.5 p-4 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <Store className="w-3.5 h-3.5" />
-                    Cover Banner Photo
-                  </span>
-                  <label className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold cursor-pointer">
-                    <Upload className="w-3 h-3" />
-                    <span>{uploadingField === 'banner' ? 'Uploading...' : 'Upload Banner'}</span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      onChange={(e) => void handleUploadAsset('banner', e.target.files?.[0])}
-                    />
-                  </label>
-                </div>
-                <input
-                  type="url"
-                  value={form.bannerUrl}
-                  onChange={(e) => updateField('bannerUrl', e.target.value)}
-                  placeholder="Paste photo link or pick an example below"
-                  className={FIELD_INPUT_CLASS}
-                />
-                <div className="flex flex-wrap gap-1.5">
-                  {SAMPLE_BANNER_PRESETS.map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => updateField('bannerUrl', preset.url)}
-                      className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold ${
-                        form.bannerUrl === preset.url
-                          ? 'border-slate-950 bg-slate-950 text-white'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      Use: {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ImageUploadCard
+                label="Showcase / Feature Photo (Optional)"
+                helperText={
+                  form.headerStyle === 'split'
+                    ? 'Displayed as your framed feature card beside your brand intro.'
+                    : form.headerStyle === 'cover'
+                    ? 'Displayed as your full-width hero backdrop photo.'
+                    : 'Used on lookbook cards and subtle header accents.'
+                }
+                imageUrl={form.bannerUrl}
+                uploading={uploadingField === 'banner'}
+                emptyActionLabel="Upload Photo"
+                aspectClassName="h-36"
+                onUploadFile={(file) => void handleUploadAsset('banner', file)}
+                onRemove={() => updateField('bannerUrl', '')}
+              />
             </div>
 
-            {/* Live Storefront Preview */}
-            <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-              {form.announcement.trim() && (
-                <div
-                  className="px-4 py-1.5 text-center text-[11px] font-bold text-white"
-                  style={{ backgroundColor: form.primaryColor }}
-                >
-                  {form.announcement}
-                </div>
-              )}
-              <div className="relative h-44 sm:h-52 bg-slate-900 flex items-end p-5 text-white overflow-hidden">
-                {form.bannerUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={form.bannerUrl}
-                    alt="Storefront Hero Preview"
-                    className="absolute inset-0 w-full h-full object-cover opacity-55"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
-                <div className="relative z-10 flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 border-white/80 bg-white text-slate-950 flex items-center justify-center font-extrabold text-lg shrink-0">
-                    {form.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={form.logoUrl}
-                        alt="Brand Logo Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span>{(form.brandName.trim() || 'B').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <span
-                      className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white mb-1"
-                      style={{ backgroundColor: form.accentColor }}
-                    >
-                      {form.brandName || 'Your Brand'}
-                    </span>
-                    <h3 className="text-base sm:text-lg font-extrabold leading-tight truncate">
-                      {form.storefrontTitle || 'Shop Page Title'}
-                    </h3>
-                    <p className="text-xs text-slate-200 truncate">
-                      {form.slogan || 'Add a short tagline in Step 1'}
-                    </p>
-                  </div>
-                </div>
+            {/* Live Full Shop UI Preview Matching Selected Design */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-bold text-slate-700">
+                  Live Shop UI Preview —{' '}
+                  {STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label}
+                </p>
+                <span className="text-[11px] text-slate-500">Updates instantly as you customize</span>
               </div>
+              <FullShopLivePreview
+                styleId={form.headerStyle}
+                brandName={form.brandName}
+                storefrontTitle={form.storefrontTitle}
+                slogan={form.slogan}
+                announcement={form.announcement}
+                primaryColor={form.primaryColor}
+                accentColor={form.accentColor}
+                logoUrl={form.logoUrl}
+                bannerUrl={form.bannerUrl}
+              />
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1738,26 +2306,16 @@ export function GettingStartedWizard({
                   />
                 </label>
 
-                <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-slate-800">Product Photo Link</span>
-                    <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-bold cursor-pointer">
-                      <Upload className="w-3 h-3" />
-                      <span>{uploadingField === 'product' ? 'Uploading...' : 'Upload Photo'}</span>
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        className="hidden"
-                        onChange={(e) => void handleUploadAsset('product', e.target.files?.[0])}
-                      />
-                    </label>
-                  </div>
-                  <input
-                    type="url"
-                    value={prodImageUrl}
-                    onChange={(e) => setProdImageUrl(e.target.value)}
-                    placeholder="Paste photo link or click Upload Photo"
-                    className={FIELD_INPUT_CLASS}
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <ImageUploadCard
+                    label="Product Photo (Optional)"
+                    helperText="Upload a clear product photo for your store listing and AI Virtual Try-On."
+                    imageUrl={prodImageUrl}
+                    uploading={uploadingField === 'product'}
+                    emptyActionLabel="Upload Product Photo"
+                    aspectClassName="h-28"
+                    onUploadFile={(file) => void handleUploadAsset('product', file)}
+                    onRemove={() => setProdImageUrl('')}
                   />
                 </div>
 
@@ -1906,6 +2464,12 @@ export function GettingStartedWizard({
                   <span className="text-slate-500">Categories:</span>{' '}
                   <span className="text-slate-800">
                     {selectedCategories.length > 0 ? selectedCategories.join(', ') : form.categoryFocus || '—'}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-500">Shop Design:</span>{' '}
+                  <span className="text-slate-800 font-semibold">
+                    {STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label || 'Editorial Split'}
                   </span>
                 </p>
               </div>

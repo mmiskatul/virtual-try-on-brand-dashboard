@@ -457,6 +457,7 @@ export interface BrandProfile {
   primaryColor: string;
   secondaryColor?: string;
   accentColor?: string;
+  headerStyle?: 'split' | 'minimal' | 'centered' | 'cover';
   backgroundColor?: string;
   textColor?: string;
   headingFont?: string;

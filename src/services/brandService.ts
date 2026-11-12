@@ -12,7 +12,8 @@ export class ServiceError extends Error {
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeoutMs = init.body instanceof FormData ? 25000 : 8000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await brandFetch(`${API_BASE}${path}`, {
       ...init,
@@ -146,6 +147,7 @@ export const brandWorkspaceApi = {
       announcement: ss.announcement,
       primaryColor: ss.primaryColor,
       accentColor: ss.accentColor,
+      ...(typeof ss.headerStyle === 'string' ? { headerStyle: ss.headerStyle } : {}),
       ...(ss.socialLinks ? { socialLinks: ss.socialLinks } : {}),
       ...(ss.currency ? { settings: baseSettings } : {}),
       ...(ss.storefrontTitle || ss.shortDescription || t.description

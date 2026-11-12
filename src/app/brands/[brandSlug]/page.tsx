@@ -20,6 +20,10 @@ export default function PublicBrandStorefrontPage() {
   const [brandDesc, setBrandDesc] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [accentColor, setAccentColor] = useState('#0F172A');
+  const [primaryColor, setPrimaryColor] = useState('#0F172A');
+  const [headerStyle, setHeaderStyle] = useState<'split' | 'minimal' | 'centered' | 'cover'>('split');
+  const [storefrontTitle, setStorefrontTitle] = useState('');
+  const [slogan, setSlogan] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [notFoundFlag, setNotFoundFlag] = useState(false);
 
@@ -34,11 +38,15 @@ export default function PublicBrandStorefrontPage() {
         const res = await brandWorkspaceApi.getPublicStorefront(brandSlug);
         if (cancelled) return;
         setBrandName(res.tenant.name);
-        setBrandLogo(res.tenant.logoUrl || DEMO_BRAND_PROFILE.logo);
-        setBrandBanner(res.tenant.bannerUrl || DEMO_BRAND_PROFILE.banner);
+        setBrandLogo(res.tenant.logoUrl || '');
+        setBrandBanner(res.tenant.bannerUrl || res.tenant.storefrontSettings?.bannerImage || '');
         setBrandDesc(res.tenant.description || '');
         setAnnouncement(res.tenant.storefrontSettings?.announcement || '');
         setAccentColor(res.tenant.storefrontSettings?.accentColor || '#0F172A');
+        setPrimaryColor(res.tenant.storefrontSettings?.primaryColor || '#0F172A');
+        setHeaderStyle(res.tenant.storefrontSettings?.headerStyle || 'split');
+        setStorefrontTitle(res.tenant.storefrontSettings?.storefrontTitle || res.tenant.name);
+        setSlogan(res.tenant.storefrontSettings?.slogan || res.tenant.description || '');
         setProducts(res.products.filter((p) => p.brandStorefrontPublished));
         setLoading(false);
         return;
@@ -53,6 +61,10 @@ export default function PublicBrandStorefrontPage() {
         setBrandDesc(DEMO_BRAND_PROFILE.description || '');
         setAnnouncement(DEMO_BRAND_PROFILE.announcement);
         setAccentColor(DEMO_BRAND_PROFILE.primaryColor);
+        setPrimaryColor(DEMO_BRAND_PROFILE.primaryColor);
+        setHeaderStyle('cover');
+        setStorefrontTitle(DEMO_BRAND_PROFILE.name);
+        setSlogan(DEMO_BRAND_PROFILE.description || '');
         setProducts(DEMO_PRODUCTS.filter((p) => p.brandStorefrontPublished));
       } else {
         setNotFoundFlag(true);
@@ -96,8 +108,12 @@ export default function PublicBrandStorefrontPage() {
       {/* Clean Customer-Only Header (Zero Admin Links Exposed) */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-slate-200 shrink-0">
-            <SafeImage src={brandLogo} alt={brandName} fill className="object-cover" />
+          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center font-extrabold text-xs text-slate-900 shrink-0">
+            {brandLogo ? (
+              <SafeImage src={brandLogo} alt={brandName} fill className="object-cover" />
+            ) : (
+              <span>{(brandName || 'B').charAt(0).toUpperCase()}</span>
+            )}
           </div>
           <span className="font-bold text-xs sm:text-sm tracking-wide uppercase flex items-center gap-1 min-w-0">
             <span className="truncate">{brandName}</span>
@@ -116,17 +132,93 @@ export default function PublicBrandStorefrontPage() {
         </Link>
       </header>
 
-      {/* Banner */}
-      <section className="relative h-56 sm:h-80 bg-slate-900 flex items-center justify-center text-center text-white px-4 sm:px-6">
-        <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover opacity-65" />
-        <div className="relative z-10 max-w-2xl space-y-2">
-          <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-amber-200 font-bold">
-            Dedicated Brand Storefront
-          </p>
-          <h1 className="text-2xl sm:text-5xl font-extrabold leading-tight">{brandName}</h1>
-          <p className="text-xs sm:text-sm text-white/90">{brandDesc}</p>
-        </div>
-      </section>
+      {/* Dynamic Storefront Hero Based on Brand Header Design */}
+      {headerStyle === 'split' && (
+        <section className="bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            <div className="md:col-span-7 space-y-3">
+              <span
+                className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-white"
+                style={{ backgroundColor: accentColor }}
+              >
+                {brandName}
+              </span>
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-950 leading-tight">
+                {storefrontTitle || brandName}
+              </h1>
+              <p className="text-sm text-slate-600 max-w-xl">{slogan || brandDesc}</p>
+            </div>
+            <div className="md:col-span-5">
+              <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+                {brandBanner ? (
+                  <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover" />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center p-6 text-center text-white font-bold"
+                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                  >
+                    {brandName} Collection
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {headerStyle === 'minimal' && (
+        <section className="bg-white border-b border-slate-200 border-t-4" style={{ borderTopColor: primaryColor }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+                {brandName}
+              </p>
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-950">
+                {storefrontTitle || brandName}
+              </h1>
+              <p className="text-sm text-slate-600 max-w-2xl">{slogan || brandDesc}</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {headerStyle === 'centered' && (
+        <section
+          className="border-b border-slate-200 px-4 sm:px-6 py-10 sm:py-14 text-center"
+          style={{ background: `linear-gradient(180deg, ${primaryColor}12 0%, #FAF9F6 100%)` }}
+        >
+          <div className="max-w-2xl mx-auto space-y-3">
+            <span
+              className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-white"
+              style={{ backgroundColor: accentColor }}
+            >
+              {brandName}
+            </span>
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-950">
+              {storefrontTitle || brandName}
+            </h1>
+            <p className="text-sm text-slate-600">{slogan || brandDesc}</p>
+          </div>
+        </section>
+      )}
+
+      {headerStyle === 'cover' && (
+        <section
+          className="relative h-56 sm:h-80 flex items-center justify-center text-center text-white px-4 sm:px-6"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {brandBanner && (
+            <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover opacity-65" />
+          )}
+          <div className="relative z-10 max-w-2xl space-y-2">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-amber-200 font-bold">
+              {brandName}
+            </p>
+            <h1 className="text-2xl sm:text-5xl font-extrabold leading-tight">{storefrontTitle || brandName}</h1>
+            <p className="text-xs sm:text-sm text-white/90">{slogan || brandDesc}</p>
+          </div>
+        </section>
+      )}
 
       {/* Brand Catalog */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-10 w-full flex-1 space-y-5 sm:space-y-6">
@@ -157,9 +249,20 @@ export default function PublicBrandStorefrontPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+        <div
+          className={`grid gap-3 sm:gap-5 ${
+            headerStyle === 'minimal'
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+              : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+          }`}
+        >
           {visible.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-slate-200 bg-white overflow-hidden flex flex-col justify-between group">
+            <div
+              key={p.id}
+              className={`border border-slate-200 bg-white overflow-hidden flex flex-col justify-between group ${
+                headerStyle === 'minimal' ? 'rounded-xl' : 'rounded-2xl'
+              }`}
+            >
               <div className="relative aspect-[3/4] bg-slate-100">
                 <SafeImage src={p.image} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                 {!p.marketplacePublished && (
@@ -168,7 +271,7 @@ export default function PublicBrandStorefrontPage() {
                   </span>
                 )}
               </div>
-              <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
+              <div className={`p-3 sm:p-4 space-y-2 sm:space-y-2.5 ${headerStyle === 'centered' ? 'text-center' : ''}`}>
                 <div>
                   <h3 className="font-bold text-xs sm:text-sm text-slate-900 truncate">{p.name}</h3>
                   <p className="text-xs font-extrabold text-slate-950 mt-0.5">৳{p.price}</p>
