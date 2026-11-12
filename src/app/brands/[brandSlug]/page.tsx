@@ -8,6 +8,10 @@ import { DEMO_BRAND_PROFILE, DEMO_PRODUCTS } from '../../../data/brandDemoSeed';
 import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
+import {
+  StorefrontHeaderStyle,
+  normalizeHeaderStyle,
+} from '../../../features/onboarding/onboardingPresets';
 
 export default function PublicBrandStorefrontPage() {
   const params = useParams();
@@ -21,7 +25,7 @@ export default function PublicBrandStorefrontPage() {
   const [announcement, setAnnouncement] = useState('');
   const [accentColor, setAccentColor] = useState('#0F172A');
   const [primaryColor, setPrimaryColor] = useState('#0F172A');
-  const [headerStyle, setHeaderStyle] = useState<'split' | 'minimal' | 'centered' | 'cover'>('split');
+  const [headerStyle, setHeaderStyle] = useState<StorefrontHeaderStyle>('split');
   const [storefrontTitle, setStorefrontTitle] = useState('');
   const [slogan, setSlogan] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -44,7 +48,7 @@ export default function PublicBrandStorefrontPage() {
         setAnnouncement(res.tenant.storefrontSettings?.announcement || '');
         setAccentColor(res.tenant.storefrontSettings?.accentColor || '#0F172A');
         setPrimaryColor(res.tenant.storefrontSettings?.primaryColor || '#0F172A');
-        setHeaderStyle(res.tenant.storefrontSettings?.headerStyle || 'split');
+        setHeaderStyle(normalizeHeaderStyle(res.tenant.storefrontSettings?.headerStyle));
         setStorefrontTitle(res.tenant.storefrontSettings?.storefrontTitle || res.tenant.name);
         setSlogan(res.tenant.storefrontSettings?.slogan || res.tenant.description || '');
         setProducts(res.products.filter((p) => p.brandStorefrontPublished));
@@ -216,6 +220,142 @@ export default function PublicBrandStorefrontPage() {
             </p>
             <h1 className="text-2xl sm:text-5xl font-extrabold leading-tight">{storefrontTitle || brandName}</h1>
             <p className="text-xs sm:text-sm text-white/90">{slogan || brandDesc}</p>
+          </div>
+        </section>
+      )}
+
+      {headerStyle === 'split-reverse' && (
+        <section className="bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            <div className="md:col-span-5">
+              <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+                {brandBanner ? (
+                  <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover" />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center p-6 text-center text-white font-bold"
+                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                  >
+                    {brandName} Collection
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="md:col-span-7 space-y-3">
+              <span
+                className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-white"
+                style={{ backgroundColor: accentColor }}
+              >
+                {brandName}
+              </span>
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-950 leading-tight">
+                {storefrontTitle || brandName}
+              </h1>
+              <p className="text-sm text-slate-600 max-w-xl">{slogan || brandDesc}</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {headerStyle === 'magazine' && (
+        <section className="bg-[#FAF9F6] border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-300 pb-4">
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: accentColor }}>
+                  Editorial Issue • {brandName}
+                </span>
+                <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-950">
+                  {storefrontTitle || brandName}
+                </h1>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 max-w-md">{slogan || brandDesc}</p>
+            </div>
+            <div className="relative h-52 sm:h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+              {brandBanner ? (
+                <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-white font-extrabold text-xl"
+                  style={{ background: `linear-gradient(120deg, ${primaryColor}, ${accentColor})` }}
+                >
+                  {brandName} Lookbook
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {headerStyle === 'grid-showcase' && (
+        <section className="bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+            <div
+              className="md:col-span-6 rounded-2xl p-6 sm:p-8 flex flex-col justify-between text-white"
+              style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+            >
+              <span className="inline-block w-fit px-3 py-1 rounded-full bg-white/20 text-[11px] font-bold uppercase tracking-wider">
+                {brandName} Studio
+              </span>
+              <div className="space-y-2 mt-6">
+                <h1 className="text-2xl sm:text-4xl font-extrabold leading-tight">{storefrontTitle || brandName}</h1>
+                <p className="text-xs sm:text-sm text-white/90">{slogan || brandDesc}</p>
+              </div>
+            </div>
+            <div className="md:col-span-6 grid grid-cols-2 gap-3">
+              <div className="relative col-span-2 h-40 sm:h-44 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+                {brandBanner ? (
+                  <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
+                    Featured Drop Showcase
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Try-On Fit</p>
+                <p className="text-xs font-extrabold text-slate-900 mt-0.5">Live Preview Ready</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Currency</p>
+                <p className="text-xs font-extrabold text-slate-900 mt-0.5">BDT (৳)</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {headerStyle === 'noir-boutique' && (
+        <section className="relative bg-slate-950 text-white border-b border-slate-800 overflow-hidden">
+          <div
+            className="absolute -right-24 -top-24 w-80 h-80 rounded-full opacity-25 blur-3xl pointer-events-none"
+            style={{ backgroundColor: accentColor }}
+          />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14 grid grid-cols-1 md:grid-cols-12 gap-6 items-center relative z-10">
+            <div className="md:col-span-7 space-y-3">
+              <span
+                className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest text-white"
+                style={{ backgroundColor: accentColor }}
+              >
+                {brandName} Noir
+              </span>
+              <h1 className="text-2xl sm:text-4xl font-extrabold leading-tight">{storefrontTitle || brandName}</h1>
+              <p className="text-sm text-slate-300 max-w-xl">{slogan || brandDesc}</p>
+            </div>
+            <div className="md:col-span-5">
+              <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-white/15 bg-slate-900">
+                {brandBanner ? (
+                  <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover opacity-85" />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center p-6 text-center text-white font-bold"
+                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                  >
+                    {brandName} Runway
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       )}

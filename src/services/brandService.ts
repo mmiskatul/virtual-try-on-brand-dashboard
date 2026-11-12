@@ -1,4 +1,5 @@
 import { BRAND_API_URL, brandFetch } from '../lib/api';
+import { normalizeHeaderStyle } from '../features/onboarding/onboardingPresets';
 import { BrandProfile, Fabric, InventoryMovement, Order, Product } from '../types';
 
 const API_BASE = BRAND_API_URL;
@@ -147,7 +148,7 @@ export const brandWorkspaceApi = {
       announcement: ss.announcement,
       primaryColor: ss.primaryColor,
       accentColor: ss.accentColor,
-      ...(typeof ss.headerStyle === 'string' ? { headerStyle: ss.headerStyle } : {}),
+      ...(typeof ss.headerStyle === 'string' ? { headerStyle: normalizeHeaderStyle(ss.headerStyle) } : {}),
       ...(ss.socialLinks ? { socialLinks: ss.socialLinks } : {}),
       ...(ss.currency ? { settings: baseSettings } : {}),
       ...(ss.storefrontTitle || ss.shortDescription || t.description

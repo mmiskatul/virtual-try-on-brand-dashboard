@@ -4,8 +4,7 @@ export const ONBOARDING_STEPS = [
   '1. Brand Name',
   '2. Contact Info',
   '3. Style & Media',
-  '4. Products & Try-On',
-  '5. Review & Save',
+  '4. Review & Save',
 ] as const;
 
 export const CATEGORY_FOCUS_OPTIONS = [
@@ -97,7 +96,15 @@ export const BRAND_COLOR_PRESETS = [
   { label: 'Cobalt Studio', primaryColor: '#1E3A8A', accentColor: '#2563EB' },
 ] as const;
 
-export type StorefrontHeaderStyle = 'split' | 'minimal' | 'centered' | 'cover';
+export type StorefrontHeaderStyle =
+  | 'split'
+  | 'split-reverse'
+  | 'minimal'
+  | 'centered'
+  | 'cover'
+  | 'magazine'
+  | 'grid-showcase'
+  | 'noir-boutique';
 
 export const STOREFRONT_HEADER_STYLES: ReadonlyArray<{
   id: StorefrontHeaderStyle;
@@ -108,6 +115,11 @@ export const STOREFRONT_HEADER_STYLES: ReadonlyArray<{
     id: 'split',
     label: 'Editorial Split',
     tagline: 'Brand info left, framed showcase right',
+  },
+  {
+    id: 'split-reverse',
+    label: 'Mirrored Split',
+    tagline: 'Framed showcase left, brand details right',
   },
   {
     id: 'minimal',
@@ -124,11 +136,35 @@ export const STOREFRONT_HEADER_STYLES: ReadonlyArray<{
     label: 'Full Cover Hero',
     tagline: 'Edge-to-edge feature photo backdrop',
   },
+  {
+    id: 'magazine',
+    label: 'Lookbook Editorial',
+    tagline: 'Oversized masthead with framed lookbook card',
+  },
+  {
+    id: 'grid-showcase',
+    label: 'Bento Boutique',
+    tagline: 'Structured spotlight tiles beside studio hero',
+  },
+  {
+    id: 'noir-boutique',
+    label: 'Runway Noir Stage',
+    tagline: 'High-contrast dark boutique hero stage',
+  },
 ];
 
 export function normalizeHeaderStyle(value?: string): StorefrontHeaderStyle {
   const clean = String(value || '').trim().toLowerCase();
-  if (clean === 'minimal' || clean === 'centered' || clean === 'cover' || clean === 'split') {
+  if (
+    clean === 'split' ||
+    clean === 'split-reverse' ||
+    clean === 'minimal' ||
+    clean === 'centered' ||
+    clean === 'cover' ||
+    clean === 'magazine' ||
+    clean === 'grid-showcase' ||
+    clean === 'noir-boutique'
+  ) {
     return clean;
   }
   return 'split';
@@ -267,6 +303,18 @@ export function createInitialOnboardingForm(params: {
       ? ''
       : rawBrandStory;
 
+  const LEGACY_SAMPLE_IMAGE_URLS = new Set<string>([
+    'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1400&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1400&auto=format&fit=crop&q=80',
+  ]);
+
+  const rawLogo = savedDraft?.logo ?? (allowLiveProfileFallback ? profile.logo || '' : '');
+  const rawBanner = savedDraft?.banner ?? (allowLiveProfileFallback ? profile.banner || '' : '');
+
   return {
     brandName: pick('name', ''),
     storefrontTitle:
@@ -308,8 +356,8 @@ export function createInitialOnboardingForm(params: {
     headerStyle: normalizeHeaderStyle(
       savedDraft?.headerStyle || (allowLiveProfileFallback ? profile.headerStyle : undefined)
     ),
-    logoUrl: savedDraft?.logo ?? (allowLiveProfileFallback ? profile.logo || '' : ''),
-    bannerUrl: savedDraft?.banner ?? (allowLiveProfileFallback ? profile.banner || '' : ''),
+    logoUrl: !isOnboarded && LEGACY_SAMPLE_IMAGE_URLS.has(rawLogo) ? '' : rawLogo,
+    bannerUrl: !isOnboarded && LEGACY_SAMPLE_IMAGE_URLS.has(rawBanner) ? '' : rawBanner,
   };
 }
 

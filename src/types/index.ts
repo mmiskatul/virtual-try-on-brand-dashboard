@@ -457,7 +457,15 @@ export interface BrandProfile {
   primaryColor: string;
   secondaryColor?: string;
   accentColor?: string;
-  headerStyle?: 'split' | 'minimal' | 'centered' | 'cover';
+  headerStyle?:
+    | 'split'
+    | 'split-reverse'
+    | 'minimal'
+    | 'centered'
+    | 'cover'
+    | 'magazine'
+    | 'grid-showcase'
+    | 'noir-boutique';
   backgroundColor?: string;
   textColor?: string;
   headingFont?: string;

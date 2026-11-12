@@ -481,11 +481,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             : [...s.onboardedTenantIds, cleanTenantId],
           onboardingCompletedStepsByTenant: {
             ...s.onboardingCompletedStepsByTenant,
-            [cleanTenantId]: [1, 2, 3, 4, 5],
+            [cleanTenantId]: [1, 2, 3, 4],
           },
           onboardingStepByTenant: {
             ...s.onboardingStepByTenant,
-            [cleanTenantId]: 5,
+            [cleanTenantId]: 4,
           },
           onboardingCompletedIds: Array.from(
             new Set([
@@ -493,12 +493,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               'chk_profile',
               'chk_business',
               'chk_identity',
-              'chk_product',
-              'chk_tryon',
               'chk_launch',
             ])
           ),
-          onboardingStep: 5,
+          onboardingStep: 4,
         }));
         get().recordAudit(
           'ONBOARDING_COMPLETED',

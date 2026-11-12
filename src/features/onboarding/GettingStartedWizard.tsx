@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
   ArrowLeft,
+  ArrowLeftRight,
   Building2,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Globe,
   Image as ImageIcon,
@@ -15,7 +17,6 @@ import {
   Layout,
   Loader2,
   Lock,
-  Package,
   Palette,
   RotateCcw,
   ShieldCheck,
@@ -29,7 +30,7 @@ import { PageHeader, SectionCard, StatusBadge } from '../../components/shared/Ui
 import { brandWorkspaceApi } from '../../services/brandService';
 import { useUiStore } from '../../stores/useUiStore';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
-import { BrandProfile, Fabric, Product } from '../../types';
+import { BrandProfile } from '../../types';
 import {
   BRAND_COLOR_PRESETS,
   BUSINESS_TYPE_OPTIONS,
@@ -40,16 +41,12 @@ import {
   STOREFRONT_HEADER_STYLES,
   StorefrontHeaderStyle,
   buildSampleBrandFormValues,
-  buildSampleStarterCatalog,
   createInitialOnboardingForm,
   isValidImageSource,
   normalizeBusinessType,
   parseCategorySelection,
   toBrandSlug,
 } from './onboardingPresets';
-
-const SAMPLE_GARMENT_IMAGE =
-  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80';
 
 const FIELD_INPUT_CLASS =
   'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors focus:outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10';
@@ -403,6 +400,149 @@ function ShopDesignThumbnail({
           </div>
         </div>
       )}
+
+      {styleId === 'split-reverse' && (
+        <div className="p-2 space-y-2 bg-slate-50/50">
+          <div className="grid grid-cols-12 gap-1.5 items-center bg-white rounded-lg p-1.5 border border-slate-100">
+            <div
+              className="col-span-5 h-11 rounded-md overflow-hidden border border-slate-200"
+              style={{ backgroundColor: `${primaryColor}18` }}
+            >
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full opacity-85"
+                  style={{ background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})` }}
+                />
+              )}
+            </div>
+            <div className="col-span-7 space-y-1 text-right">
+              <div
+                className="inline-block px-1.5 py-0.5 rounded-full text-[6px] font-bold text-white"
+                style={{ backgroundColor: accentColor }}
+              >
+                Mirrored
+              </div>
+              <p className="text-[9px] font-extrabold leading-tight text-slate-900 truncate">
+                {displayName}
+              </p>
+              <span
+                className="inline-block px-1.5 py-0.5 rounded text-[7px] font-bold text-white"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Explore
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="rounded-md bg-white border border-slate-100 p-1 space-y-1">
+                <div className="h-7 rounded bg-slate-100" />
+                <div className="h-1 w-full rounded bg-slate-200" />
+                <div className="h-1 w-6 rounded bg-slate-300" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {styleId === 'magazine' && (
+        <div className="bg-[#FAF9F6] p-2 space-y-1.5">
+          <div className="flex items-end justify-between border-b border-slate-200 pb-1">
+            <p className="text-[9px] font-black uppercase tracking-tight text-slate-950 truncate">
+              {displayName}
+            </p>
+            <span className="text-[6px] font-bold uppercase" style={{ color: accentColor }}>
+              Issue 01
+            </span>
+          </div>
+          <div className="h-10 rounded-md overflow-hidden border border-slate-200 bg-white">
+            {bannerUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div
+                className="w-full h-full"
+                style={{ background: `linear-gradient(120deg, ${primaryColor}, ${accentColor})` }}
+              />
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <div className="h-4 rounded bg-white border border-slate-200" />
+            <div className="h-4 rounded bg-white border border-slate-200" />
+          </div>
+        </div>
+      )}
+
+      {styleId === 'grid-showcase' && (
+        <div className="bg-white p-2 space-y-1.5">
+          <div className="grid grid-cols-12 gap-1.5">
+            <div
+              className="col-span-6 rounded-md p-1.5 text-white flex flex-col justify-between h-14"
+              style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+            >
+              <span className="text-[6px] uppercase font-bold opacity-80">Bento</span>
+              <p className="text-[8px] font-extrabold leading-tight truncate">{displayName}</p>
+            </div>
+            <div className="col-span-6 grid grid-rows-2 gap-1 h-14">
+              <div className="rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+                {bannerUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full" style={{ backgroundColor: `${primaryColor}20` }} />
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                <div className="rounded bg-slate-100" />
+                <div className="rounded" style={{ backgroundColor: `${accentColor}30` }} />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="h-5 rounded bg-slate-50 border border-slate-100" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {styleId === 'noir-boutique' && (
+        <div className="bg-slate-950 text-white p-2 space-y-1.5">
+          <div className="flex items-center justify-between gap-1.5 rounded-md bg-white/5 border border-white/10 p-1.5">
+            <div className="min-w-0 space-y-1">
+              <span
+                className="inline-block px-1.5 py-0.5 rounded-full text-[6px] font-bold uppercase text-white"
+                style={{ backgroundColor: accentColor }}
+              >
+                Noir
+              </span>
+              <p className="text-[9px] font-extrabold truncate">{displayName}</p>
+            </div>
+            <div className="w-10 h-9 rounded overflow-hidden border border-white/15 shrink-0 bg-slate-900">
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full"
+                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                />
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="rounded bg-white/10 border border-white/10 p-1 space-y-1">
+                <div className="h-5 rounded-sm bg-white/15" />
+                <div className="h-1 w-full rounded bg-white/30" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -603,6 +743,145 @@ function FullShopLivePreview({
         </div>
       )}
 
+      {styleId === 'split-reverse' && (
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 sm:p-6 items-center bg-white border-b border-slate-200">
+          <div className="sm:col-span-5">
+            <div className="relative h-36 sm:h-40 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center">
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="Showcase Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center p-4 text-center text-white text-xs font-bold"
+                  style={{ background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})` }}
+                >
+                  {displayBrand} Feature Photo
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="sm:col-span-7 space-y-2.5 min-w-0">
+            <span
+              className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+              style={{ backgroundColor: accentColor }}
+            >
+              {displayBrand}
+            </span>
+            <h3 className="text-lg sm:text-xl font-extrabold text-slate-950 leading-tight truncate">
+              {displayTitle}
+            </h3>
+            <p className="text-xs text-slate-600 line-clamp-2">{displaySlogan}</p>
+            <div className="pt-1 flex flex-wrap gap-1.5">
+              <span
+                className="px-3.5 py-1.5 rounded-full text-[11px] font-bold text-white"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Browse Collection
+              </span>
+              <span className="px-3.5 py-1.5 rounded-full text-[11px] font-semibold border border-slate-200 bg-slate-50 text-slate-700">
+                Try On Online
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {styleId === 'magazine' && (
+        <div className="p-5 sm:p-6 bg-[#FAF9F6] border-b border-slate-200 space-y-3.5">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-3">
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+                Lookbook Issue • {displayBrand}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 truncate">
+                {displayTitle}
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600 max-w-xs line-clamp-2">{displaySlogan}</p>
+          </div>
+          <div className="h-32 sm:h-36 rounded-2xl overflow-hidden border border-slate-200 bg-white">
+            {bannerUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bannerUrl} alt="Lookbook Cover" className="w-full h-full object-cover" />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center text-white text-xs font-bold"
+                style={{ background: `linear-gradient(120deg, ${primaryColor}, ${accentColor})` }}
+              >
+                {displayBrand} Lookbook Showcase
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {styleId === 'grid-showcase' && (
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 p-5 sm:p-6 bg-white border-b border-slate-200 items-stretch">
+          <div
+            className="sm:col-span-6 rounded-2xl p-4 sm:p-5 text-white flex flex-col justify-between"
+            style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+          >
+            <span className="inline-block w-fit px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider">
+              {displayBrand}
+            </span>
+            <div className="space-y-1 mt-4">
+              <h3 className="text-base sm:text-lg font-extrabold truncate">{displayTitle}</h3>
+              <p className="text-xs text-white/90 line-clamp-2">{displaySlogan}</p>
+            </div>
+          </div>
+          <div className="sm:col-span-6 grid grid-cols-2 gap-2.5">
+            <div className="col-span-2 h-24 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="Boutique Tile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[11px] font-bold text-slate-500">
+                  Showcase Banner Tile
+                </div>
+              )}
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Studio Mode</p>
+              <p className="text-[11px] font-extrabold text-slate-900">Try-On Enabled</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Pricing</p>
+              <p className="text-[11px] font-extrabold text-slate-900">BDT (৳)</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {styleId === 'noir-boutique' && (
+        <div className="relative p-5 sm:p-6 bg-slate-950 text-white border-b border-slate-800 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+          <div className="sm:col-span-7 space-y-2 min-w-0">
+            <span
+              className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest text-white"
+              style={{ backgroundColor: accentColor }}
+            >
+              {displayBrand} Noir
+            </span>
+            <h3 className="text-lg sm:text-xl font-extrabold truncate">{displayTitle}</h3>
+            <p className="text-xs text-slate-300 line-clamp-2">{displaySlogan}</p>
+          </div>
+          <div className="sm:col-span-5">
+            <div className="relative h-32 rounded-2xl overflow-hidden border border-white/15 bg-slate-900">
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="Noir Runway" className="w-full h-full object-cover opacity-85" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-white text-xs font-bold"
+                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                >
+                  Runway Stage
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sample Storefront Catalog Section */}
       <div className="p-4 sm:p-5 space-y-3 bg-[#FAF9F6]">
         <div className="flex items-center justify-between text-xs">
@@ -665,10 +944,6 @@ export function GettingStartedWizard({
   const { data: session } = useSession();
 
   const profile = useWorkspaceStore((s) => s.profile);
-  const products = useWorkspaceStore((s) => s.products);
-  const fabrics = useWorkspaceStore((s) => s.fabrics);
-  const addProduct = useWorkspaceStore((s) => s.addProduct);
-  const addFabricRecord = useWorkspaceStore((s) => s.addFabricRecord);
   const tryOnConfig = useWorkspaceStore((s) => s.tryOnConfig);
   const updateTryOnConfig = useWorkspaceStore((s) => s.updateTryOnConfig);
   const onboardingStepByTenant = useWorkspaceStore((s) => s.onboardingStepByTenant);
@@ -709,8 +984,7 @@ export function GettingStartedWizard({
       completedStepsForTenant.includes(2) &&
       Boolean(savedTenantDraft?.email?.trim()));
   const step3Done = isAlreadyOnboarded || (step2Done && completedStepsForTenant.includes(3));
-  const step4Done = isAlreadyOnboarded || (step3Done && completedStepsForTenant.includes(4));
-  const maxUnlockedStep = step4Done ? 5 : step3Done ? 4 : step2Done ? 3 : step1Done ? 2 : 1;
+  const maxUnlockedStep = step3Done ? 4 : step2Done ? 3 : step1Done ? 2 : 1;
 
   const rawTenantStep = onboardingStepByTenant[activeTenantId] || 1;
   const step = Math.min(Math.max(rawTenantStep, 1), maxUnlockedStep);
@@ -720,9 +994,9 @@ export function GettingStartedWizard({
   const [saving, setSaving] = useState(false);
   const [saveStage, setSaveStage] = useState<'idle' | 'saving' | 'verifying' | 'redirecting' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [sampleLoading, setSampleLoading] = useState(false);
   const [canUndoExample, setCanUndoExample] = useState(false);
-  const [uploadingField, setUploadingField] = useState<'logo' | 'banner' | 'product' | null>(null);
+  const [uploadingField, setUploadingField] = useState<'logo' | 'banner' | null>(null);
+  const designCarouselRef = useRef<HTMLDivElement | null>(null);
 
   const [form, setForm] = useState<OnboardingFormState>(() =>
     createInitialOnboardingForm({
@@ -733,18 +1007,6 @@ export function GettingStartedWizard({
       sessionEmail: resolvedSessionEmail,
     })
   );
-
-  // Step 4 custom starter product fields
-  const [prodName, setProdName] = useState('');
-  const [prodSku, setProdSku] = useState('');
-  const [prodCategory, setProdCategory] = useState('');
-  const [prodTryOnCat, setProdTryOnCat] = useState<'' | 'tops' | 'bottoms' | 'dresses' | 'outerwear'>('');
-  const [prodPrice, setProdPrice] = useState('125');
-  const [prodStock, setProdStock] = useState('25');
-  const [prodImageUrl, setProdImageUrl] = useState('');
-  const [prodDescription, setProdDescription] = useState('');
-  const [publishStorefront, setPublishStorefront] = useState(true);
-  const [enableTryOnItem, setEnableTryOnItem] = useState(true);
 
   const initializedTenantRef = useRef<string | null>(null);
   const liveSyncedTenantRef = useRef<string | null>(null);
@@ -863,15 +1125,52 @@ export function GettingStartedWizard({
       step1Done,
       step2Done,
       step3Done,
-      step4Done,
       isAlreadyOnboarded,
     ];
     const totalDone = completedSections.filter(Boolean).length;
     return {
       totalDone,
-      pct: Math.round((totalDone / 5) * 100),
+      pct: Math.round((totalDone / 4) * 100),
     };
-  }, [step1Done, step2Done, step3Done, step4Done, isAlreadyOnboarded]);
+  }, [step1Done, step2Done, step3Done, isAlreadyOnboarded]);
+
+  const activeDesignIndex = useMemo(() => {
+    const idx = STOREFRONT_HEADER_STYLES.findIndex((item) => item.id === form.headerStyle);
+    return idx >= 0 ? idx : 0;
+  }, [form.headerStyle]);
+
+  const scrollDesignCarouselToIndex = (index: number) => {
+    const container = designCarouselRef.current;
+    if (!container) return;
+    const cards = container.querySelectorAll<HTMLElement>('[data-design-card="true"]');
+    const targetCard = cards[index];
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  };
+
+  const handleSelectDesign = (styleId: StorefrontHeaderStyle, index?: number) => {
+    updateField('headerStyle', styleId);
+    const resolvedIdx =
+      typeof index === 'number'
+        ? index
+        : STOREFRONT_HEADER_STYLES.findIndex((item) => item.id === styleId);
+    if (resolvedIdx >= 0) {
+      scrollDesignCarouselToIndex(resolvedIdx);
+    }
+  };
+
+  const handleSwapDesign = (direction: 'left' | 'right') => {
+    const total = STOREFRONT_HEADER_STYLES.length;
+    const nextIdx =
+      direction === 'left'
+        ? (activeDesignIndex - 1 + total) % total
+        : (activeDesignIndex + 1) % total;
+    const nextOption = STOREFRONT_HEADER_STYLES[nextIdx];
+    if (nextOption) {
+      handleSelectDesign(nextOption.id, nextIdx);
+    }
+  };
 
   const persistBrandForm = async (
     formToSave: OnboardingFormState,
@@ -1142,7 +1441,7 @@ export function GettingStartedWizard({
   };
 
   const handleUploadAsset = async (
-    field: 'logo' | 'banner' | 'product',
+    field: 'logo' | 'banner',
     file: File | undefined
   ) => {
     if (!file) return;
@@ -1155,209 +1454,14 @@ export function GettingStartedWizard({
     }
     if (field === 'logo') {
       updateField('logoUrl', res.url);
-    } else if (field === 'banner') {
-      updateField('bannerUrl', res.url);
     } else {
-      setProdImageUrl(res.url);
+      updateField('bannerUrl', res.url);
     }
     notify(
       res.provider === 'local_preview'
         ? 'Image attached in local preview mode.'
         : 'Image uploaded successfully.'
     );
-  };
-
-  const createSingleProduct = async (productDraft: {
-    name: string;
-    sku: string;
-    category: string;
-    tryOnCategory: 'tops' | 'bottoms' | 'dresses' | 'outerwear';
-    price: number;
-    stock: number;
-    description: string;
-    image: string;
-    brandStorefrontPublished: boolean;
-    isTryOnEligible: boolean;
-  }): Promise<Product> => {
-    const safeImage = isValidImageSource(productDraft.image) ? productDraft.image : SAMPLE_GARMENT_IMAGE;
-    const variants = [
-      {
-        id: `var_${productDraft.sku}_s`,
-        sku: `${productDraft.sku}-S`,
-        size: 'S',
-        color: 'Default',
-        stockQuantity: Math.max(1, Math.floor(productDraft.stock / 3)),
-        available: true,
-      },
-      {
-        id: `var_${productDraft.sku}_m`,
-        sku: `${productDraft.sku}-M`,
-        size: 'M',
-        color: 'Default',
-        stockQuantity: Math.max(1, Math.ceil(productDraft.stock / 2)),
-        available: true,
-      },
-      {
-        id: `var_${productDraft.sku}_l`,
-        sku: `${productDraft.sku}-L`,
-        size: 'L',
-        color: 'Default',
-        stockQuantity: Math.max(1, productDraft.stock - Math.floor(productDraft.stock / 3) - Math.ceil(productDraft.stock / 2)),
-        available: true,
-      },
-    ];
-
-    try {
-      const created = await brandWorkspaceApi.createProduct({
-        name: productDraft.name,
-        sku: productDraft.sku,
-        category: productDraft.category,
-        price: productDraft.price,
-        description: productDraft.description,
-        images: [safeImage],
-        brandStorefrontPublished: productDraft.brandStorefrontPublished,
-        marketplacePublished: false,
-        isTryOnEligible: productDraft.isTryOnEligible,
-        tryOnCategory: productDraft.tryOnCategory,
-        variants,
-      });
-      return created;
-    } catch {
-      return {
-        id: `prod_onboard_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        tenantId: activeTenantId,
-        name: productDraft.name,
-        slug: toBrandSlug(productDraft.name),
-        sku: productDraft.sku,
-        category: productDraft.category,
-        shortDescription: productDraft.description.slice(0, 120),
-        description: productDraft.description,
-        price: productDraft.price,
-        stock: productDraft.stock,
-        lowStockThreshold: 5,
-        catalogStatus: productDraft.brandStorefrontPublished ? 'ACTIVE' : 'DRAFT',
-        brandStorefrontPublished: productDraft.brandStorefrontPublished,
-        marketplacePublished: false,
-        isTryOnEligible: productDraft.isTryOnEligible,
-        tryOnCategory: productDraft.tryOnCategory,
-        includeInBrandTryOn: productDraft.isTryOnEligible,
-        includeInMarketplaceTryOn: false,
-        imageQualityStatus: 'VERIFIED',
-        image: productDraft.image || safeImage,
-        images: [productDraft.image || safeImage],
-        variants,
-      };
-    }
-  };
-
-  const handleAddCustomProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prodName.trim()) {
-      notify('Enter a garment product name first.');
-      return;
-    }
-    if (!prodCategory) {
-      notify('Please pick a product category first.');
-      return;
-    }
-    if (!prodTryOnCat) {
-      notify('Please pick a try-on body area first.');
-      return;
-    }
-    setSaving(true);
-    const cleanSku =
-      prodSku.trim() ||
-      `${toBrandSlug(form.brandName).slice(0, 3).toUpperCase() || 'SKU'}-${Date.now()
-        .toString()
-        .slice(-4)}`;
-    const priceNum = Math.max(0, Number(prodPrice) || 95);
-    const stockNum = Math.max(1, Number(prodStock) || 20);
-
-    const created = await createSingleProduct({
-      name: prodName.trim(),
-      sku: cleanSku,
-      category: prodCategory,
-      tryOnCategory: prodTryOnCat,
-      price: priceNum,
-      stock: stockNum,
-      description:
-        prodDescription.trim() ||
-        `Starter catalog garment created during ${form.brandName || 'Brand'} onboarding.`,
-      image: prodImageUrl.trim() || SAMPLE_GARMENT_IMAGE,
-      brandStorefrontPublished: publishStorefront,
-      isTryOnEligible: enableTryOnItem,
-    });
-
-    addProduct(created);
-    markChecklist('chk_product');
-    setProdName('');
-    setProdSku('');
-    setProdCategory('');
-    setProdTryOnCat('');
-    setProdDescription('');
-    setSaving(false);
-    notify(`Added "${created.name}" (${created.sku}) to your catalog.`);
-  };
-
-  const handleAddSampleStarterKit = async () => {
-    setSampleLoading(true);
-    const { products: sampleProducts, fabric: sampleFabric } = buildSampleStarterCatalog(
-      activeTenantId,
-      form.brandName
-    );
-
-    const existingNames = new Set(products.map((p) => p.name.toLowerCase()));
-    let addedProductsCount = 0;
-
-    for (const item of sampleProducts) {
-      if (existingNames.has(item.name.toLowerCase())) continue;
-      const created = await createSingleProduct({
-        name: item.name,
-        sku: item.sku,
-        category: item.category,
-        tryOnCategory: (item.tryOnCategory as 'tops' | 'bottoms' | 'dresses' | 'outerwear') || 'tops',
-        price: item.price,
-        stock: item.stock,
-        description: item.description || '',
-        image: item.image,
-        brandStorefrontPublished: true,
-        isTryOnEligible: true,
-      });
-      addProduct(created);
-      addedProductsCount += 1;
-    }
-
-    let createdFabric: Fabric = sampleFabric;
-    try {
-      const fabRes = await brandWorkspaceApi.createFabric({
-        name: sampleFabric.name,
-        composition: sampleFabric.composition,
-        color: sampleFabric.color,
-        weightGsm: sampleFabric.weightGsm,
-        stretch: sampleFabric.stretch,
-        thickness: sampleFabric.thickness,
-        care: sampleFabric.care,
-      });
-      if (fabRes?.fabric) createdFabric = fabRes.fabric;
-    } catch {
-      // Keep local starter fabric when offline
-    }
-    addFabricRecord(createdFabric);
-    markChecklist('chk_product');
-    setSampleLoading(false);
-
-    notify(
-      addedProductsCount > 0
-        ? `Sample Starter Kit loaded: ${addedProductsCount} Try-On garments + 1 fabric specification added.`
-        : 'Sample Starter fabric synced (sample garments were already present in catalog).'
-    );
-  };
-
-  const handleSaveCatalogAndContinue = () => {
-    if (products.length > 0) markChecklist('chk_product');
-    if (tryOnConfig.enabled) markChecklist('chk_tryon');
-    markOnboardingStepCompleted(activeTenantId, 4);
-    setStep(5, activeTenantId);
   };
 
   const handleCompleteOnboarding = async () => {
@@ -1450,7 +1554,7 @@ export function GettingStartedWizard({
               Complete Your Shop Info &amp; Basic Settings
             </p>
             <p className="text-[11px] sm:text-xs text-slate-600">
-              Add your brand name, shop title, contact details, colors, and sample items to open your dashboard.
+              Add your brand name, shop title, contact details, colors, and shop design to open your dashboard.
             </p>
           </div>
           {step === 1 && (
@@ -1484,7 +1588,7 @@ export function GettingStartedWizard({
               ? `Shop Setup Guide — ${form.brandName || profile.name}`
               : 'Set Up Your Brand & Shop Details'
           }
-          subtitle="Add your brand name, shop title, contact info, colors, and starter products."
+          subtitle="Add your brand name, shop title, contact info, colors, and storefront layout."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={isAlreadyOnboarded ? 'ACTIVE' : 'PENDING'} />
@@ -1527,7 +1631,7 @@ export function GettingStartedWizard({
           <div className="flex items-center gap-2 min-w-0">
             <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0" />
             <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-              Setup Progress: {readiness.totalDone} of 5 sections completed ({readiness.pct}%)
+              Setup Progress: {readiness.totalDone} of 4 sections completed ({readiness.pct}%)
             </p>
           </div>
           <span className="text-[11px] font-semibold text-slate-500">
@@ -1543,7 +1647,7 @@ export function GettingStartedWizard({
       </div>
 
       {/* Stepper Navigation */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {ONBOARDING_STEPS.map((label, idx) => {
           const stepNum = idx + 1;
           const active = step === stepNum;
@@ -1552,8 +1656,7 @@ export function GettingStartedWizard({
             (stepNum === 1 && step1Done) ||
             (stepNum === 2 && step2Done) ||
             (stepNum === 3 && step3Done) ||
-            (stepNum === 4 && step4Done) ||
-            (stepNum === 5 && isAlreadyOnboarded);
+            (stepNum === 4 && isAlreadyOnboarded);
           return (
             <button
               key={label}
@@ -1975,29 +2078,70 @@ export function GettingStartedWizard({
           subtitle="Pick a storefront layout style, choose your colors, and upload optional photos. Preview how your shop header looks below."
         >
           <form onSubmit={handleSaveStep3} className="space-y-6">
-            {/* Storefront Design Picker (Full Mini UI Cards) */}
-            <div className="space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Layout className="w-3.5 h-3.5" />
-                  Choose How Your Shop Should Look (Pick 1 of 4 UI Designs)
-                </p>
-                <span className="text-[11px] text-slate-500">
-                  Selected:{' '}
-                  <strong className="text-slate-900">
-                    {STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label}
-                  </strong>
-                </span>
+            {/* Storefront Design Picker (8 UI Designs with Left-to-Right Swap Carousel) */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Layout className="w-3.5 h-3.5" />
+                    Choose How Your Shop Should Look (Swap Left ↔ Right Across 8 UI Designs)
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Selected ({activeDesignIndex + 1} of {STOREFRONT_HEADER_STYLES.length}):{' '}
+                    <strong className="text-slate-900">
+                      {STOREFRONT_HEADER_STYLES[activeDesignIndex]?.label}
+                    </strong>
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(form.headerStyle === 'split' || form.headerStyle === 'split-reverse') && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSelectDesign(form.headerStyle === 'split' ? 'split-reverse' : 'split')
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-800 transition-colors"
+                      title="Swap hero text and photo between left and right"
+                    >
+                      <ArrowLeftRight className="w-3 h-3" />
+                      Swap Left ↔ Right
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    aria-label="Swap previous design left"
+                    onClick={() => handleSwapDesign('left')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-800 transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Swap next design right"
+                    onClick={() => handleSwapDesign('right')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-950 bg-slate-950 hover:bg-slate-800 text-[11px] font-bold text-white transition-colors"
+                  >
+                    Next
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                {STOREFRONT_HEADER_STYLES.map((option) => {
+
+              <div
+                ref={designCarouselRef}
+                className="flex gap-3.5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 -mx-1 px-1"
+              >
+                {STOREFRONT_HEADER_STYLES.map((option, idx) => {
                   const selected = form.headerStyle === option.id;
                   return (
                     <button
                       key={option.id}
+                      data-design-card="true"
                       type="button"
-                      onClick={() => updateField('headerStyle', option.id)}
-                      className={`p-2.5 rounded-2xl border text-left transition-all space-y-2.5 ${
+                      onClick={() => handleSelectDesign(option.id, idx)}
+                      className={`w-[225px] sm:w-[245px] shrink-0 snap-start p-2.5 rounded-2xl border text-left transition-all space-y-2.5 ${
                         selected
                           ? 'border-slate-950 ring-2 ring-slate-950 bg-slate-50 shadow-sm'
                           : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70'
@@ -2026,6 +2170,24 @@ export function GettingStartedWizard({
                         )}
                       </div>
                     </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                {STOREFRONT_HEADER_STYLES.map((option, idx) => {
+                  const active = form.headerStyle === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleSelectDesign(option.id, idx)}
+                      className={`h-2 rounded-full transition-all ${
+                        active ? 'w-6 bg-slate-950' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                      }`}
+                      title={`${idx + 1}. ${option.label}`}
+                      aria-label={`Select ${option.label}`}
+                    />
                   );
                 })}
               </div>
@@ -2172,7 +2334,7 @@ export function GettingStartedWizard({
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition-colors"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Next: Products &amp; Try-On
+                Next: Review &amp; Save
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2180,256 +2342,10 @@ export function GettingStartedWizard({
         </SectionCard>
       )}
 
-      {/* STEP 4: STARTER / SAMPLE CATALOG & TRY-ON */}
+      {/* STEP 4: REVIEW & FINAL SAVE */}
       {step === 4 && (
-        <div className="space-y-5">
-          {/* One-click Sample Starter Collection */}
-          <SectionCard
-            title="4A. Quick Sample Items (1 Click)"
-            subtitle="Add 2 sample clothes and 1 fabric note with one click so you can test your shop and Virtual Try-On right away."
-            right={
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
-                {products.length} Items • {fabrics.length} Fabrics
-              </span>
-            }
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs">
-              <div className="space-y-1">
-                <p className="font-bold text-slate-950 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-slate-700" />
-                  Sample Pack: 2 Clothes + 1 Fabric Note
-                </p>
-                <p className="text-slate-600 leading-relaxed">
-                  Adds a <strong>{form.brandName || 'Brand'} Signature Blazer</strong>, a{' '}
-                  <strong>Silk Top</strong> (with S/M/L sizes), and a fabric note into your shop.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={sampleLoading}
-                onClick={handleAddSampleStarterKit}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 disabled:opacity-60 text-white font-bold shrink-0 transition-colors"
-              >
-                {sampleLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                Add Sample Items
-              </button>
-            </div>
-          </SectionCard>
-
-          {/* Custom Product Quick Form + Try-On Configuration */}
-          <SectionCard
-            title="4B. Add Your Own First Product & Try-On Settings"
-            subtitle="Add your own item (optional) and choose your Virtual Try-On settings."
-          >
-            <form onSubmit={handleAddCustomProduct} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                <label className="block space-y-1.5">
-                  <span className="font-bold text-slate-800 block">Item Name *</span>
-                  <input
-                    type="text"
-                    value={prodName}
-                    onChange={(e) => setProdName(e.target.value)}
-                    placeholder="e.g. Classic Cotton Coat"
-                    className={FIELD_INPUT_CLASS}
-                  />
-                </label>
-
-                <label className="block space-y-1.5">
-                  <span className="font-bold text-slate-800 block">Item Code (SKU)</span>
-                  <input
-                    type="text"
-                    value={prodSku}
-                    onChange={(e) => setProdSku(e.target.value)}
-                    placeholder="Leave blank to auto-create"
-                    className={`${FIELD_INPUT_CLASS} font-mono`}
-                  />
-                </label>
-
-                <label className="block space-y-1.5">
-                  <span className="font-bold text-slate-800 block">Price (৳ BDT)</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={prodPrice}
-                    onChange={(e) => setProdPrice(e.target.value)}
-                    className={FIELD_INPUT_CLASS}
-                  />
-                </label>
-
-                <label className="block space-y-1.5">
-                  <span className="font-bold text-slate-800 block">Category</span>
-                  <select
-                    value={prodCategory}
-                    onChange={(e) => setProdCategory(e.target.value)}
-                    className={FIELD_INPUT_CLASS}
-                  >
-                    <option value="">Select category...</option>
-                    <option value="Tops">Tops &amp; Shirts</option>
-                    <option value="Dresses">Dresses</option>
-                    <option value="Outerwear">Jackets &amp; Coats</option>
-                    <option value="Bottoms">Pants &amp; Skirts</option>
-                  </select>
-                </label>
-
-                <label className="block space-y-1.5">
-                  <span className="font-bold text-slate-800 block">Try-On Body Area</span>
-                  <select
-                    value={prodTryOnCat}
-                    onChange={(e) =>
-                      setProdTryOnCat(
-                        e.target.value as '' | 'tops' | 'bottoms' | 'dresses' | 'outerwear'
-                      )
-                    }
-                    className={FIELD_INPUT_CLASS}
-                  >
-                    <option value="">Select try-on area...</option>
-                    <option value="tops">Tops / Shirts</option>
-                    <option value="dresses">Dresses / Full Outfit</option>
-                    <option value="outerwear">Jackets / Coats</option>
-                    <option value="bottoms">Pants / Skirts</option>
-                  </select>
-                </label>
-
-                <label className="block space-y-1.5">
-                  <span className="font-bold text-slate-800 block">Stock Count</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={prodStock}
-                    onChange={(e) => setProdStock(e.target.value)}
-                    className={FIELD_INPUT_CLASS}
-                  />
-                </label>
-
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <ImageUploadCard
-                    label="Product Photo (Optional)"
-                    helperText="Upload a clear product photo for your store listing and AI Virtual Try-On."
-                    imageUrl={prodImageUrl}
-                    uploading={uploadingField === 'product'}
-                    emptyActionLabel="Upload Product Photo"
-                    aspectClassName="h-28"
-                    onUploadFile={(file) => void handleUploadAsset('product', file)}
-                    onRemove={() => setProdImageUrl('')}
-                  />
-                </div>
-
-                <label className="block space-y-1.5 sm:col-span-2 lg:col-span-3">
-                  <span className="font-bold text-slate-800 block">Item Description</span>
-                  <input
-                    type="text"
-                    value={prodDescription}
-                    onChange={(e) => setProdDescription(e.target.value)}
-                    placeholder="Fabric feel, size notes, or care tips..."
-                    className={FIELD_INPUT_CLASS}
-                  />
-                </label>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1">
-                <div className="flex flex-wrap items-center gap-4">
-                  <label className="inline-flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={publishStorefront}
-                      onChange={(e) => setPublishStorefront(e.target.checked)}
-                    />
-                    Show on my shop page right away
-                  </label>
-                  <label className="inline-flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={enableTryOnItem}
-                      onChange={(e) => setEnableTryOnItem(e.target.checked)}
-                    />
-                    Allow Virtual Try-On for this item
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-900 bg-white hover:bg-slate-950 hover:text-white text-slate-950 font-bold transition-colors"
-                >
-                  <Package className="w-3.5 h-3.5" />
-                  Add Product
-                </button>
-              </div>
-            </form>
-
-            {/* Virtual Try-On Toggle Bar */}
-            <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={tryOnConfig.enabled}
-                  onChange={(e) =>
-                    updateTryOnConfig({
-                      enabled: e.target.checked,
-                      publicPageActive: e.target.checked,
-                    })
-                  }
-                  className="mt-0.5"
-                />
-                <span>
-                  <strong className="block text-slate-900">
-                    Turn On Customer Try-On Page (/try/{computedSlug})
-                  </strong>
-                  <span className="text-slate-500">
-                    Customers can upload their photo to try on your clothes online.
-                  </span>
-                </span>
-              </label>
-
-              <label className="block space-y-1 p-3 rounded-xl border border-slate-200 bg-slate-50">
-                <span className="font-bold text-slate-800 block">Try-On Image Quality</span>
-                <select
-                  value={tryOnConfig.mode}
-                  onChange={(e) =>
-                    updateTryOnConfig({
-                      mode: e.target.value as 'balanced' | 'high_fidelity' | 'fast_preview',
-                    })
-                  }
-                  className={FIELD_INPUT_CLASS}
-                >
-                  <option value="balanced">Balanced Speed &amp; Quality (Recommended)</option>
-                  <option value="high_fidelity">Best Detail</option>
-                  <option value="fast_preview">Fast Preview</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => handleStepSwitch(3)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-800"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveCatalogAndContinue}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
-              >
-                Next: Review &amp; Save
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </SectionCard>
-        </div>
-      )}
-
-      {/* STEP 5: REVIEW & FINAL SAVE */}
-      {step === 5 && (
         <SectionCard
-          title="5. Check Details & Save"
+          title="4. Check Details & Save"
           subtitle="Look over your shop details below. Click Save to store everything on the server and open your dashboard."
         >
           <div className="space-y-4">
@@ -2512,33 +2428,25 @@ export function GettingStartedWizard({
             <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2.5 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Products &amp; Try-On Status
+                  <Palette className="w-4 h-4 text-emerald-600" />
+                  Colors, Photos &amp; Shop Design
                 </p>
-                <div className="flex items-center gap-2">
-                  {products.length === 0 && (
-                    <button
-                      type="button"
-                      disabled={sampleLoading}
-                      onClick={handleAddSampleStarterKit}
-                      className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-slate-900"
-                    >
-                      {sampleLoading ? 'Adding Sample...' : '+ Quick Add Sample Items'}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleStepSwitch(4)}
-                    className="text-[11px] font-bold text-slate-700 underline"
-                  >
-                    Edit Products
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleStepSwitch(3)}
+                  className="text-[11px] font-bold text-slate-700 underline"
+                >
+                  Edit Design
+                </button>
               </div>
               <p className="text-slate-600">
-                Your shop currently has <strong>{products.length} item(s)</strong>,{' '}
-                <strong>{fabrics.length} fabric note(s)</strong>, and Virtual Try-On is{' '}
-                <strong>{tryOnConfig.enabled ? 'On' : 'Off'}</strong>.
+                Design:{' '}
+                <strong className="text-slate-900">
+                  {STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label || 'Editorial Split'}
+                </strong>{' '}
+                • Main Color <strong className="font-mono">{form.primaryColor}</strong> • Brand Logo{' '}
+                <strong>{form.logoUrl ? 'Uploaded' : 'Not uploaded'}</strong> • Feature Photo{' '}
+                <strong>{form.bannerUrl ? 'Uploaded' : 'Not uploaded'}</strong>
               </p>
             </div>
 
@@ -2553,7 +2461,7 @@ export function GettingStartedWizard({
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => handleStepSwitch(4)}
+                onClick={() => handleStepSwitch(3)}
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-xs font-bold text-slate-800"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />

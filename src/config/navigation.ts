@@ -36,7 +36,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'LayoutDashboard',
     items: [
       { label: 'Dashboard', href: '/dashboard', module: 'overview' },
-      { label: 'Getting Started', href: '/dashboard/getting-started', module: 'overview' },
     ],
   },
   {
@@ -44,6 +43,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     label: 'BRAND & STOREFRONT',
     icon: 'Palette',
     items: [
+      { label: 'Getting Started', href: '/dashboard/getting-started', module: 'overview' },
       { label: 'Brand Hub', href: '/dashboard/brand', module: 'brand' },
       { label: 'Brand Profile', href: '/dashboard/brand/profile', module: 'brand' },
       { label: 'Visual Identity', href: '/dashboard/brand/identity', module: 'brand' },
