@@ -44,15 +44,8 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'Palette',
     items: [
       { label: 'Getting Started', href: '/dashboard/getting-started', module: 'overview' },
-      { label: 'Brand Hub', href: '/dashboard/brand', module: 'brand' },
-      { label: 'Brand Profile', href: '/dashboard/brand/profile', module: 'brand' },
-      { label: 'Visual Identity', href: '/dashboard/brand/identity', module: 'brand' },
-      { label: 'Brand Media Library', href: '/dashboard/brand/media', module: 'brand' },
+      { label: 'Brand Verification & Assets', href: '/dashboard/brand', module: 'brand' },
       { label: 'Storefront Builder', href: '/dashboard/storefront/editor', module: 'storefront' },
-      { label: 'Website Pages', href: '/dashboard/storefront/pages', module: 'storefront' },
-      { label: 'Navigation & Menus', href: '/dashboard/storefront/navigation', module: 'storefront' },
-      { label: 'Storefront Domain', href: '/dashboard/storefront/domain', module: 'storefront' },
-      { label: 'Storefront SEO', href: '/dashboard/storefront/seo', module: 'storefront' },
     ],
   },
   {

@@ -45,13 +45,13 @@ import {
 import { Button } from '../../components/ui/button';
 
 const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: string }> = [
-  { id: 'chk_profile', label: 'Complete brand profile & story', href: '/dashboard/brand/profile' },
-  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/brand/identity' },
-  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/storefront/editor' },
-  { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/settings/business' },
+  { id: 'chk_profile', label: 'Complete brand profile & story', href: '/dashboard/getting-started' },
+  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/getting-started' },
+  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/getting-started' },
+  { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/getting-started' },
   { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/create' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },
-  { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/storefront' },
+  { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/storefront/editor' },
   { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on/configuration' },
   { id: 'chk_publish', label: 'Publish first product to global marketplace', href: '/dashboard/marketplace/create' },
   { id: 'chk_test_tryon', label: 'Test public Virtual Try-On studio', href: '/dashboard/virtual-try-on/studio' },

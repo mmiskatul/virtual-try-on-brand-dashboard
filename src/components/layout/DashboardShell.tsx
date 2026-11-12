@@ -474,7 +474,20 @@ export function DashboardShell({
             );
             if (visibleItems.length === 0) return null;
 
-            const groupExpanded = openGroups.includes(group.id) || visibleItems.some((i) => pathname === i.href);
+            const isNavMatch = (href: string) => {
+              if (href === '/dashboard') {
+                return pathname === '/dashboard' || pathname === '/dashboard/overview';
+              }
+              if (href === '/dashboard/brand') {
+                return pathname === '/dashboard/brand' || pathname.startsWith('/dashboard/brand/');
+              }
+              if (href === '/dashboard/storefront/editor') {
+                return pathname === '/dashboard/storefront' || pathname.startsWith('/dashboard/storefront/');
+              }
+              return pathname === href;
+            };
+
+            const groupExpanded = openGroups.includes(group.id) || visibleItems.some((i) => isNavMatch(i.href));
 
             return (
               <div key={group.id} className="space-y-0.5">
@@ -502,7 +515,7 @@ export function DashboardShell({
                 {groupExpanded && (!sidebarCollapsed || isMobile) && (
                   <div className="pl-7 pr-1 space-y-0.5">
                     {visibleItems.map((item) => {
-                      const active = pathname === item.href;
+                      const active = isNavMatch(item.href);
                       const lockedByOnboarding =
                         isOnboardingGateActive && !item.href.startsWith('/dashboard/getting-started');
                       const badgeVal = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
