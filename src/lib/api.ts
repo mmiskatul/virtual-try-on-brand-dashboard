@@ -24,7 +24,8 @@ function shouldAttemptRefresh(url: string): boolean {
     lower.includes('/auth/login') ||
     lower.includes('/auth/register') ||
     lower.includes('/auth/refresh') ||
-    lower.includes('/auth/logout')
+    lower.includes('/auth/logout') ||
+    lower.includes('/auth/oauth')
   );
 }
 

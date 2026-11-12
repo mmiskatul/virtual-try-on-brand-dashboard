@@ -1,10 +1,9 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
-import { isAllowedBrandRole } from './portal-auth';
+import { getBackendApiBaseUrl, isAllowedBrandRole } from './portal-auth';
 
-const BACKEND_API_URL =
-  process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
+const BACKEND_API_URL = getBackendApiBaseUrl();
 const useSecureNextAuthCookies = Boolean(process.env.NEXTAUTH_URL?.startsWith('https://'));
 
 function readCookieHeader(req: any): string | undefined {
@@ -106,7 +105,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   providers.push(
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: 'select_account',
+        },
+      },
     })
   );
 }
@@ -136,12 +140,65 @@ export const authOptions: NextAuthOptions = {
     },
   },
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google') {
+        if (!account.id_token || !user?.email) {
+          return '/login?error=GoogleSyncFailed';
+        }
+        try {
+          const syncRes = await fetch(`${BACKEND_API_URL}/api/v1/auth/oauth-google`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Auth-Portal': 'brand',
+              'X-Auth-Transport': 'cookie',
+            },
+            body: JSON.stringify({
+              idToken: account.id_token,
+              email: user.email,
+              name: user.name,
+            }),
+            cache: 'no-store',
+          });
+          const syncData = await syncRes.json().catch(() => ({}));
+          if (!syncRes.ok || !syncData?.oauthExchangeCode || !syncData?.user?.id) {
+            if (syncData?.error === 'PortalMismatch') {
+              return '/login?error=PortalMismatch';
+            }
+            if (syncData?.error === 'TenantSuspended') {
+              return '/login?error=TenantSuspended';
+            }
+            return '/login?error=GoogleSyncFailed';
+          }
+          if (!isAllowedBrandRole(syncData.user.role)) {
+            return '/login?error=PortalMismatch';
+          }
+          user.id = syncData.user.id;
+          user.name = syncData.user.name || user.name;
+          user.email = syncData.user.email || user.email;
+          user.role = syncData.user.role || 'BRAND_OWNER';
+          user.tenantId = syncData.user.tenantId || syncData.tenant?.id;
+          user.oauthExchangeCode = syncData.oauthExchangeCode;
+          user.emailVerified = true;
+          return true;
+        } catch {
+          return '/login?error=GoogleSyncFailed';
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role || 'BRAND_OWNER';
         token.tenantId = user.tenantId;
         token.emailVerified = Boolean(user.emailVerified);
+        if (user.oauthExchangeCode) {
+          token.oauthExchangeCode = user.oauthExchangeCode;
+        }
+        if (user.image) {
+          token.picture = user.image;
+        }
       }
       return token;
     },
@@ -151,6 +208,9 @@ export const authOptions: NextAuthOptions = {
         session.user.role = (token.role as string) || 'BRAND_OWNER';
         session.user.tenantId = token.tenantId;
         session.user.emailVerified = Boolean(token.emailVerified);
+        if (typeof token.picture === 'string' && token.picture) {
+          session.user.image = token.picture;
+        }
       }
       return session;
     }

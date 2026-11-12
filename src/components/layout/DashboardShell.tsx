@@ -150,6 +150,84 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     draftPosts: draftPostsCount,
   };
 
+  const { data: authSession, status: authSessionStatus } = useSession();
+  const lastSyncedAt = useWorkspaceStore((s) => s.lastSyncedAt);
+  const onboardedTenantIds = useWorkspaceStore((s) => s.onboardedTenantIds);
+  const onboardingProfileDrafts = useWorkspaceStore((s) => s.onboardingProfileDrafts);
+  const saveOnboardingProfileForTenant = useWorkspaceStore((s) => s.saveOnboardingProfileForTenant);
+
+  const [storeHydrated, setStoreHydrated] = useState(false);
+  const syncedDraftKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setStoreHydrated(useWorkspaceStore.persist.hasHydrated());
+    const unsub = useWorkspaceStore.persist.onFinishHydration(() => {
+      setStoreHydrated(true);
+    });
+    return () => {
+      unsub();
+    };
+  }, []);
+
+  const activeTenantId = String(authSession?.user?.tenantId || profile.id || 'tenant_aura').trim();
+  const sessionRoleUpper = String(authSession?.user?.role || '').toUpperCase();
+  const isOwnerUser = sessionRoleUpper === 'BRAND_OWNER' || sessionRoleUpper === 'OWNER';
+  const isGettingStartedRoute = pathname.startsWith('/dashboard/getting-started');
+  const isTenantOnboarded = activeTenantId ? onboardedTenantIds.includes(activeTenantId) : true;
+
+  const isOnboardingGateActive =
+    mounted &&
+    storeHydrated &&
+    authSessionStatus === 'authenticated' &&
+    isOwnerUser &&
+    Boolean(activeTenantId) &&
+    !isTenantOnboarded;
+
+  useEffect(() => {
+    if (!storeHydrated || !mounted || !activeTenantId) return;
+    const syncKey = `${activeTenantId}:${profile.id || 'none'}:${lastSyncedAt || 'init'}`;
+    if (syncedDraftKeyRef.current === syncKey) return;
+    syncedDraftKeyRef.current = syncKey;
+
+    const savedDraft = onboardingProfileDrafts[activeTenantId];
+    if (!savedDraft) return;
+
+    const liveMatchesTenant = profile.id === activeTenantId;
+    saveOnboardingProfileForTenant(activeTenantId, {
+      ...savedDraft,
+      ...(liveMatchesTenant && profile.name ? { name: profile.name } : {}),
+      ...(liveMatchesTenant && profile.email ? { email: profile.email } : {}),
+      ...(liveMatchesTenant && profile.description ? { description: profile.description } : {}),
+      ...(liveMatchesTenant && profile.logo ? { logo: profile.logo } : {}),
+      ...(liveMatchesTenant && profile.banner ? { banner: profile.banner } : {}),
+      ...(liveMatchesTenant && profile.primaryColor ? { primaryColor: profile.primaryColor } : {}),
+      ...(liveMatchesTenant && profile.accentColor ? { accentColor: profile.accentColor } : {}),
+      ...(liveMatchesTenant && profile.announcement ? { announcement: profile.announcement } : {}),
+    });
+  }, [
+    storeHydrated,
+    mounted,
+    activeTenantId,
+    lastSyncedAt,
+    profile.id,
+    profile.name,
+    profile.email,
+    profile.description,
+    profile.logo,
+    profile.banner,
+    profile.primaryColor,
+    profile.accentColor,
+    profile.announcement,
+    onboardingProfileDrafts,
+    saveOnboardingProfileForTenant,
+  ]);
+
+  useEffect(() => {
+    if (isOnboardingGateActive && !isGettingStartedRoute) {
+      router.replace('/dashboard/getting-started');
+    }
+  }, [isOnboardingGateActive, isGettingStartedRoute, router]);
+
   // Dynamic Breadcrumbs
   const breadcrumbs = useMemo(() => {
     const segs = pathname.split('/').filter(Boolean);
@@ -216,7 +294,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
         {/* Workspace Identity */}
         <div className="flex items-center justify-between px-2 pb-3 border-b border-slate-100">
-          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+          <Link href={isOnboardingGateActive ? '/dashboard/getting-started' : '/dashboard'} className="flex items-center gap-2.5 min-w-0">
             <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
               <SafeImage src={profile.logo} alt={profile.name} fill className="object-cover" />
             </div>
@@ -239,6 +317,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
+        {isOnboardingGateActive && (!sidebarCollapsed || isMobile) && (
+          <div className="mx-1 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-950 space-y-1">
+            <p className="font-bold flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+              <span>Owner Setup Required</span>
+            </p>
+            <p className="text-amber-800 leading-relaxed">
+              Complete brand onboarding profile, title, and starter setup to unlock workspace sections.
+            </p>
+          </div>
+        )}
+
         {/* Collapsible Navigation Groups */}
         <nav className="space-y-1.5" aria-label="Brand Dashboard Navigation">
           {SIDEBAR_NAV_GROUPS.map((group) => {
@@ -256,7 +346,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   type="button"
                   onClick={() => {
                     if (sidebarCollapsed && !isMobile) {
-                      router.push(visibleItems[0].href);
+                      router.push(isOnboardingGateActive ? '/dashboard/getting-started' : visibleItems[0].href);
                     } else {
                       toggleNavGroup(group.id);
                     }
@@ -277,7 +367,31 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <div className="pl-7 pr-1 space-y-0.5">
                     {visibleItems.map((item) => {
                       const active = pathname === item.href;
+                      const lockedByOnboarding =
+                        isOnboardingGateActive && !item.href.startsWith('/dashboard/getting-started');
                       const badgeVal = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
+
+                      if (lockedByOnboarding) {
+                        return (
+                          <button
+                            key={item.href}
+                            type="button"
+                            onClick={() => {
+                              showToast('Complete Brand Onboarding first to access other workspace modules.');
+                              setTimeout(hideToast, 3000);
+                              if (isMobile) setMobileMenuOpen(false);
+                              router.push('/dashboard/getting-started');
+                            }}
+                            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-100/60 font-medium cursor-not-allowed text-left"
+                          >
+                            <span className="truncate">{item.label}</span>
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 shrink-0">
+                              Setup
+                            </span>
+                          </button>
+                        );
+                      }
+
                       return (
                         <Link
                           key={item.href}
@@ -411,6 +525,26 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Main Column */}
       <div className="flex-1 flex flex-col min-w-0">
+        {isOnboardingGateActive && !isGettingStartedRoute && (
+          <div className="fixed inset-0 z-50 bg-slate-50/95 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="max-w-md w-full rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-lg space-y-3">
+              <div className="w-11 h-11 rounded-2xl bg-slate-950 text-white mx-auto flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 animate-spin" />
+              </div>
+              <h2 className="text-base font-bold text-slate-950">Opening Brand Onboarding Setup</h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Your brand owner profile requires initial configuration before entering the workspace.
+              </p>
+              <button
+                type="button"
+                onClick={() => router.replace('/dashboard/getting-started')}
+                className="w-full py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
+              >
+                Continue to Onboarding
+              </button>
+            </div>
+          </div>
+        )}
         {/* Top Header */}
         <header className="sticky top-0 z-30 h-14 sm:h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-3">
           {/* Left: Sidebar Toggle + Mobile Brand + Breadcrumbs */}
@@ -425,7 +559,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
 
             <Link
-              href="/dashboard"
+              href={isOnboardingGateActive ? '/dashboard/getting-started' : '/dashboard'}
               className="md:hidden font-extrabold text-xs sm:text-sm text-slate-950 truncate max-w-[120px] sm:max-w-[180px]"
             >
               {profile.name}

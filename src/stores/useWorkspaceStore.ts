@@ -90,6 +90,8 @@ export interface WorkspaceState {
   webhooks: WebhookSubscription[];
   onboardingStep: number;
   onboardingCompletedIds: string[];
+  onboardedTenantIds: string[];
+  onboardingProfileDrafts: Record<string, Partial<BrandProfile>>;
 
   setLiveSync: (live: boolean) => void;
   setActiveRole: (role: StaffRole) => void;
@@ -141,6 +143,10 @@ export interface WorkspaceState {
 
   setOnboardingStep: (step: number) => void;
   toggleOnboardingChecklist: (id: string) => void;
+  markOnboardingCompleted: (tenantId: string) => void;
+  reopenOnboarding: (tenantId: string) => void;
+  saveOnboardingProfileForTenant: (tenantId: string, partial: Partial<BrandProfile>) => void;
+  addFabricRecord: (fabric: Fabric) => void;
   recordAudit: (action: string, entity: string, details: string) => void;
 }
 
@@ -180,7 +186,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       apiKeys: DEMO_API_KEYS,
       webhooks: DEMO_WEBHOOKS,
       onboardingStep: 1,
-      onboardingCompletedIds: ['chk_profile', 'chk_logo', 'chk_product'],
+      onboardingCompletedIds: [],
+      onboardedTenantIds: [],
+      onboardingProfileDrafts: {},
 
       setLiveSync: (live) =>
         set({ isLiveBackend: live, lastSyncedAt: new Date().toLocaleTimeString() }),
@@ -429,6 +437,138 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             : [...s.onboardingCompletedIds, id],
         })),
 
+      markOnboardingCompleted: (tenantId) => {
+        const cleanTenantId = String(tenantId || '').trim() || get().profile.id || 'tenant_aura';
+        set((s) => ({
+          onboardedTenantIds: s.onboardedTenantIds.includes(cleanTenantId)
+            ? s.onboardedTenantIds
+            : [...s.onboardedTenantIds, cleanTenantId],
+          onboardingCompletedIds: Array.from(
+            new Set([
+              ...s.onboardingCompletedIds,
+              'chk_profile',
+              'chk_business',
+              'chk_identity',
+              'chk_product',
+              'chk_tryon',
+              'chk_launch',
+            ])
+          ),
+          onboardingStep: 5,
+        }));
+        get().recordAudit(
+          'ONBOARDING_COMPLETED',
+          cleanTenantId,
+          'Completed brand owner onboarding profile and workspace setup'
+        );
+      },
+
+      reopenOnboarding: (tenantId) => {
+        const cleanTenantId = String(tenantId || '').trim();
+        set((s) => ({
+          onboardedTenantIds: cleanTenantId
+            ? s.onboardedTenantIds.filter((id) => id !== cleanTenantId)
+            : s.onboardedTenantIds,
+          onboardingStep: 1,
+        }));
+      },
+
+      saveOnboardingProfileForTenant: (tenantId, partial) => {
+        const cleanTenantId = String(tenantId || '').trim() || get().profile.id || 'tenant_aura';
+        set((s) => {
+          const prevDraft = s.onboardingProfileDrafts[cleanTenantId] || {};
+          const mergedSeo = partial.seo
+            ? {
+                ...(s.profile.seo || {
+                  title: '',
+                  description: '',
+                  canonicalUrl: '',
+                  ogImage: '',
+                  allowIndexing: true,
+                }),
+                ...(prevDraft.seo || {}),
+                ...partial.seo,
+              }
+            : prevDraft.seo;
+          const mergedSocial = partial.socialLinks
+            ? { ...(s.profile.socialLinks || {}), ...(prevDraft.socialLinks || {}), ...partial.socialLinks }
+            : prevDraft.socialLinks;
+          const mergedSettings = partial.settings
+            ? {
+                ...(s.profile.settings || {
+                  timezone: 'UTC',
+                  dateFormat: 'YYYY-MM-DD',
+                  language: 'English',
+                  currency: 'USD',
+                  taxRatePercent: 0,
+                  taxInclusive: false,
+                  freeShippingThreshold: 150,
+                  defaultShippingFee: 12,
+                  emailNotifications: true,
+                  orderNotifications: true,
+                  inventoryNotifications: true,
+                  tryOnNotifications: true,
+                  billingNotifications: true,
+                  twoFactorEnabled: false,
+                }),
+                ...(prevDraft.settings || {}),
+                ...partial.settings,
+              }
+            : prevDraft.settings;
+
+          const nextDraft: Partial<BrandProfile> = {
+            ...prevDraft,
+            ...partial,
+            ...(mergedSeo ? { seo: mergedSeo } : {}),
+            ...(mergedSocial ? { socialLinks: mergedSocial } : {}),
+            ...(mergedSettings ? { settings: mergedSettings } : {}),
+          };
+
+          const updatedSections = partial.seo?.title || partial.slogan
+            ? s.storefrontSections.map((sec) =>
+                sec.type === 'hero'
+                  ? {
+                      ...sec,
+                      title: partial.seo?.title || partial.name || sec.title,
+                      subtitle: partial.slogan || partial.shortDescription || sec.subtitle,
+                      bannerImage: partial.banner || sec.bannerImage,
+                    }
+                  : sec
+              )
+            : s.storefrontSections;
+
+          return {
+            profile: {
+              ...s.profile,
+              ...partial,
+              ...(mergedSeo ? { seo: mergedSeo } : {}),
+              ...(mergedSocial ? { socialLinks: mergedSocial } : {}),
+              ...(mergedSettings ? { settings: mergedSettings } : {}),
+            },
+            storefrontSections: updatedSections,
+            onboardingProfileDrafts: {
+              ...s.onboardingProfileDrafts,
+              [cleanTenantId]: nextDraft,
+            },
+          };
+        });
+        get().recordAudit(
+          'BRAND_ONBOARDING_SAVED',
+          cleanTenantId,
+          'Saved brand profile, title, and starter onboarding details'
+        );
+      },
+
+      addFabricRecord: (fabric) =>
+        set((s) => ({
+          fabrics: [
+            fabric,
+            ...s.fabrics.filter(
+              (f) => f.id !== fabric.id && f.name.toLowerCase() !== fabric.name.toLowerCase()
+            ),
+          ],
+        })),
+
       recordAudit: (action, entity, details) =>
         set((s) => ({
           activityLogs: [
@@ -454,6 +594,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         openGroups: state.openGroups,
         onboardingStep: state.onboardingStep,
         onboardingCompletedIds: state.onboardingCompletedIds,
+        onboardedTenantIds: state.onboardedTenantIds,
+        onboardingProfileDrafts: state.onboardingProfileDrafts,
         storefrontSections: state.storefrontSections,
         storefrontPages: state.storefrontPages,
         navMenus: state.navMenus,

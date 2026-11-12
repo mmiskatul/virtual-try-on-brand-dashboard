@@ -1,7 +1,7 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Loader2, ArrowRight } from 'lucide-react';
@@ -9,13 +9,30 @@ import { brandRegisterSchema, BrandRegisterFormValues } from '../../lib/schemas'
 import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
 import { PasswordField } from '../../components/auth/PasswordField';
+import { GoogleAuthButton, formatBrandOAuthError } from '../../components/auth/GoogleAuthButton';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
+function sanitizeCallbackUrl(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw === '/' || raw.startsWith('/register')) {
+    return '/dashboard';
+  }
+  return raw;
+}
+
 function BrandRegisterContent() {
   const router = useRouter();
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const callbackUrl = sanitizeCallbackUrl(searchParams.get('callbackUrl'));
+  const oauthError = formatBrandOAuthError(searchParams.get('error'));
+  const [errorMsg, setErrorMsg] = useState<string | null>(oauthError);
   const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (oauthError) {
+      setErrorMsg(oauthError);
+    }
+  }, [oauthError]);
 
   const {
     register,
@@ -63,6 +80,16 @@ function BrandRegisterContent() {
       title="Create brand account"
       subtitle="Set up your brand workspace."
     >
+      <GoogleAuthButton mode="signup" callbackUrl={callbackUrl} disabled={isBusy} />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-stone-200" />
+        <span className="text-[10px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
+          or register with email
+        </span>
+        <div className="h-px flex-1 bg-stone-200" />
+      </div>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {errorMsg && (
           <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">

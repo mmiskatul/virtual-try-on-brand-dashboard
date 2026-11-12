@@ -1,8 +1,59 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SessionProvider } from 'next-auth/react';
+import { SessionProvider, signOut, useSession } from 'next-auth/react';
+import { brandApi } from '../lib/api';
+
+function SessionTokenSync() {
+  const { data: session, status } = useSession();
+  const syncedUserRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (localStorage.getItem('brand_token')) {
+      localStorage.removeItem('brand_token');
+    }
+
+    if (status === 'unauthenticated') {
+      syncedUserRef.current = null;
+      return;
+    }
+
+    if (status !== 'authenticated' || !session?.user?.id) return;
+    if (syncedUserRef.current === session.user.id) return;
+    syncedUserRef.current = session.user.id;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await brandApi.session();
+        if (s?.authenticated || cancelled) return;
+
+        const handoff = await fetch('/api/auth/cookie-handoff', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (cancelled) return;
+        if (handoff.status === 401) {
+          const data = await handoff.json().catch(() => ({}));
+          if (data?.needsReauth) {
+            await brandApi.logout().catch(() => {});
+            await signOut({ redirect: false });
+          }
+        }
+      } catch {
+        // Backend temporarily unreachable; keep current session state without wiping cookies
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id, status]);
+
+  return null;
+}
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,6 +72,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider>
+      <SessionTokenSync />
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </SessionProvider>
   );

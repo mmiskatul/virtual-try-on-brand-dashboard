@@ -178,6 +178,40 @@ export async function refreshBrandSessionFromBackend(cookieHeader: string): Prom
   }
 }
 
+export async function exchangeBrandOAuthCodeFromBackend(code: string): Promise<{
+  ok: boolean;
+  setCookies: string[];
+}> {
+  if (!code) {
+    return { ok: false, setCookies: [] };
+  }
+
+  try {
+    const res = await fetch(`${getBackendApiBaseUrl()}/api/v1/auth/oauth-exchange`, {
+      method: 'POST',
+      headers: {
+        'X-Auth-Portal': 'brand',
+        'X-Auth-Transport': 'cookie',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3500),
+    });
+
+    if (!res.ok) {
+      return { ok: false, setCookies: [] };
+    }
+
+    return {
+      ok: true,
+      setCookies: extractSetCookieHeaders(res.headers),
+    };
+  } catch {
+    return { ok: false, setCookies: [] };
+  }
+}
+
 export async function verifyBrandSessionWithBackend(
   cookieHeader: string,
   expectedUserId?: string,

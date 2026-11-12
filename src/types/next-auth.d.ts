@@ -19,6 +19,7 @@ declare module 'next-auth' {
     role?: string;
     tenantId?: string;
     emailVerified?: boolean;
+    oauthExchangeCode?: string;
   }
 }
 
@@ -28,6 +29,7 @@ declare module 'next-auth/jwt' {
     role?: string;
     tenantId?: string;
     emailVerified?: boolean;
+    oauthExchangeCode?: string;
   }
 }
 

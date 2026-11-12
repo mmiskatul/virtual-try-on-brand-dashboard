@@ -6,6 +6,7 @@ import {
   BRAND_REFRESH_COOKIE,
   BRAND_SESSION_COOKIE,
   buildBrandCookieHeader,
+  exchangeBrandOAuthCodeFromBackend,
   isAllowedBrandRole,
   isValidBrandAccessCookie,
   isValidBrandRefreshCookie,
@@ -53,7 +54,11 @@ function buildMergedCookieHeader(rawCookie: string | null, setCookies: string[])
     if (idx > 0) {
       const k = first.slice(0, idx).trim();
       const v = first.slice(idx + 1).trim();
-      if (k) cookieMap.set(k, v);
+      if (!v || /;\s*Max-Age=0\b/i.test(sc)) {
+        cookieMap.delete(k);
+      } else {
+        cookieMap.set(k, v);
+      }
     }
   }
   return Array.from(cookieMap.entries())
@@ -77,10 +82,9 @@ function createContentSecurityPolicy(nonce: string) {
     connect-src 'self' http://localhost:* ws://localhost:* https:;
     object-src 'none';
     base-uri 'self';
-    form-action 'self';
+    form-action 'self' https://accounts.google.com;
     frame-ancestors 'none';
-    block-all-mixed-content;
-    upgrade-insecure-requests;
+    ${isDev ? '' : 'block-all-mixed-content; upgrade-insecure-requests;'}
   `
     .replace(/\s{2,}/g, ' ')
     .trim();
@@ -314,6 +318,25 @@ export async function middleware(request: NextRequest) {
     } else if (refreshResult.revoked) {
       clearStaleAuthCookies = true;
       refreshedSetCookies = refreshResult.setCookies;
+    }
+  }
+
+  // Exchange single-use Google OAuth handoff code into HttpOnly cookies on the first post-callback navigation
+  if (
+    hasNextAuthBrand &&
+    !hasValidAccess &&
+    !refreshedOk &&
+    !request.headers.has('next-router-prefetch') &&
+    request.headers.get('purpose') !== 'prefetch' &&
+    request.headers.get('x-middleware-prefetch') !== '1' &&
+    typeof token?.oauthExchangeCode === 'string' &&
+    token.oauthExchangeCode
+  ) {
+    const exchangeResult = await exchangeBrandOAuthCodeFromBackend(token.oauthExchangeCode);
+    if (exchangeResult.ok && exchangeResult.setCookies.length > 0) {
+      refreshedOk = true;
+      clearStaleAuthCookies = false;
+      refreshedSetCookies = exchangeResult.setCookies;
     }
   }
 

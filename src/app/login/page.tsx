@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn, getProviders, getSession, useSession, signOut } from 'next-auth/react';
+import { signIn, getSession, useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, CheckCircle2, Loader2, MailCheck, ArrowRight } from 'lucide-react';
@@ -11,6 +11,7 @@ import { brandLoginSchema, BrandLoginFormValues } from '../../lib/schemas';
 import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
 import { PasswordField } from '../../components/auth/PasswordField';
+import { GoogleAuthButton, formatBrandOAuthError } from '../../components/auth/GoogleAuthButton';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
@@ -30,20 +31,18 @@ function BrandLoginContent() {
   const verifiedParam = searchParams.get('verified');
   const resetParam = searchParams.get('reset');
   const prefillEmail = searchParams.get('email') || '';
+  const oauthError = formatBrandOAuthError(searchParams.get('error'));
 
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(oauthError);
   const [needsVerificationEmail, setNeedsVerificationEmail] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
-  const [hasGoogle, setHasGoogle] = useState(false);
 
   useEffect(() => {
-    getProviders()
-      .then((providers) => {
-        if (providers?.google) setHasGoogle(true);
-      })
-      .catch(() => {});
-  }, []);
+    if (oauthError) {
+      setErrorMsg(oauthError);
+    }
+  }, [oauthError]);
 
   const {
     register,
@@ -168,30 +167,15 @@ function BrandLoginContent() {
         </div>
       )}
 
-      {hasGoogle && (
-        <>
-          <button
-            type="button"
-            onClick={() => signIn('google', { callbackUrl })}
-            className="w-full h-11 px-4 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-900 font-semibold text-xs flex items-center justify-center gap-2.5 shadow-sm transition-colors"
-          >
-            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.25-.96 2.31-2.04 3.02l3.3 2.56c1.92-1.77 3.03-4.38 3.03-7.48 0-.72-.06-1.41-.19-2.08H12z" />
-              <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.42l-3.3-2.56c-.91.61-2.08.98-3.31.98-2.54 0-4.69-1.71-5.46-4.02H3.13v2.64C4.77 19.87 8.13 22 12 22z" />
-              <path fill="#4A90E2" d="M6.54 13.98A5.99 5.99 0 0 1 6.23 12c0-.69.12-1.35.31-1.98V7.38H3.13A9.97 9.97 0 0 0 2 12c0 1.61.39 3.13 1.13 4.62l3.41-2.64z" />
-              <path fill="#FBBC05" d="M12 6.01c1.47 0 2.78.51 3.82 1.5l2.86-2.86C16.95 3.04 14.7 2 12 2 8.13 2 4.77 4.13 3.13 7.38l3.41 2.64C7.31 7.72 9.46 6.01 12 6.01z" />
-            </svg>
-            <span>Continue with Google</span>
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-stone-200" />
-            <span className="text-[10px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
-              or
-            </span>
-            <div className="h-px flex-1 bg-stone-200" />
-          </div>
-        </>
-      )}
+      <GoogleAuthButton mode="login" callbackUrl={callbackUrl} disabled={isSubmitting} />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-stone-200" />
+        <span className="text-[10px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
+          or log in with email
+        </span>
+        <div className="h-px flex-1 bg-stone-200" />
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errorMsg && (
