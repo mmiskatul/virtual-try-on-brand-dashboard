@@ -22,7 +22,16 @@ import {
   ServiceError,
   brandWorkspaceApi,
 } from '../../services';
-import { STOREFRONT_HEADER_STYLES, StorefrontHeaderStyle } from '../onboarding/onboardingPresets';
+import {
+  BRAND_COLOR_PRESETS,
+  STOREFRONT_HEADER_STYLES,
+  StorefrontHeaderStyle,
+} from '../onboarding/onboardingPresets';
+import {
+  DESIGN_LAYOUT_GUIDANCE,
+  FullShopLivePreview,
+  StorefrontDesignCarousel,
+} from '../../components/shared/StorefrontDesignShowcase';
 import {
   ErrorBanner,
   PageHeader,
@@ -145,11 +154,11 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
   const [dirty, setDirty] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savingSection, setSavingSection] = useState<'all' | 'profile' | 'identity' | null>(null);
+  const [savingSection, setSavingSection] = useState<'all' | 'profile' | 'identity' | 'media' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<BrandAssetKey | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [targetAssetKey, setTargetAssetKey] = useState<BrandAssetKey>('logo');
+  const targetAssetKeyRef = useRef<BrandAssetKey>('logo');
 
   const formatApiError = useCallback((err: unknown, fallback: string): string => {
     if (err instanceof ServiceError && err.issues && err.issues.length > 0) {
@@ -330,6 +339,34 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
     }
   };
 
+  const handleSaveMediaStudio = async () => {
+    setErrorMessage(null);
+    setSaving(true);
+    setSavingSection('media');
+    try {
+      await brandWorkspaceApi.updateBrandDetails({
+        slogan: form.slogan.trim(),
+        announcement: form.announcement.trim(),
+      });
+      const idRes = await brandWorkspaceApi.updateBrandIdentity({
+        storefrontTitle: form.storefrontTitle.trim() || form.name.trim() || profile.name,
+        primaryColor: form.primaryColor,
+        secondaryColor: form.secondaryColor,
+        accentColor: form.accentColor,
+        headerStyle: form.headerStyle,
+      });
+      applySavedProfileResult(
+        idRes.profile,
+        'Selected storefront UI design, copy & colors saved.'
+      );
+    } catch (err: unknown) {
+      setErrorMessage(formatApiError(err, 'Failed to save storefront UI design settings.'));
+    } finally {
+      setSaving(false);
+      setSavingSection(null);
+    }
+  };
+
   const handleSave = async () => {
     if (tab === 'profile') {
       await handleSaveDetails();
@@ -337,6 +374,10 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
     }
     if (tab === 'identity') {
       await handleSaveIdentity();
+      return;
+    }
+    if (tab === 'media') {
+      await handleSaveMediaStudio();
       return;
     }
 
@@ -417,18 +458,24 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
     if (verificationSummary) setVerification(verificationSummary);
   };
 
+  const triggerUploadForSlot = (assetKey: BrandAssetKey) => {
+    targetAssetKeyRef.current = assetKey;
+    fileRef.current?.click();
+  };
+
   const handleFileUpload = async (file: File) => {
+    const slotKey = targetAssetKeyRef.current;
     setErrorMessage(null);
-    setUploadingField(targetAssetKey);
-    const meta = ASSET_CARDS.find((c) => c.key === targetAssetKey);
+    setUploadingField(slotKey);
+    const meta = ASSET_CARDS.find((c) => c.key === slotKey);
     try {
       const uploadRes = await brandWorkspaceApi.uploadMediaFile(file);
       if (!uploadRes.ok || !uploadRes.url) {
         setErrorMessage(uploadRes.error || 'Image upload failed.');
         return;
       }
-      await persistAssetUrl(targetAssetKey, uploadRes.url);
-      notify(`Uploaded and saved ${meta?.label || targetAssetKey}.`);
+      await persistAssetUrl(slotKey, uploadRes.url);
+      notify(`Uploaded and saved ${meta?.label || slotKey}.`);
     } catch (err: unknown) {
       setErrorMessage(formatApiError(err, 'Failed to persist uploaded asset to backend.'));
     } finally {
@@ -976,10 +1023,7 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
         )}
 
         {(tab === 'hub' || tab === 'media') && (
-          <SectionCard
-            title="Brand Logos, Banner & Social Media Assets"
-            subtitle="All 4 media slots upload to Cloudinary via /api/v1/uploads and save immediately to PostgreSQL"
-          >
+          <div className="space-y-6">
             <input
               ref={fileRef}
               type="file"
@@ -992,84 +1036,300 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
               }}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {ASSET_CARDS.map(({ key: assetKey, label, dims, aspect }) => {
-                const src = getAssetUrl(assetKey);
-                const isBusy = uploadingField === assetKey;
-                return (
-                  <div
-                    key={assetKey}
-                    className="rounded-2xl border border-slate-200 p-4 space-y-3 bg-slate-50/70"
+            {/* Choose or Switch Active Storefront UI Design right inside /dashboard/brand/media */}
+            <SectionCard
+              title="Storefront UI Design & Media Workspace"
+              subtitle={`Active Design: ${
+                STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label || 'Editorial Split'
+              } — Switch layouts below and edit media directly inside your selected UI`}
+              right={
+                <PermissionGate module="brand" action="edit">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={saving}
+                    onClick={() => void handleSaveMediaStudio()}
+                    className="gap-1.5"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="font-bold text-slate-900">{label}</p>
-                        <p className="text-[11px] text-slate-500">{dims}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {src && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isBusy}
-                            onClick={() => void handleRemoveAsset(assetKey)}
-                            className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Remove
-                          </Button>
-                        )}
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={src ? 'outline' : 'default'}
-                          disabled={isBusy}
-                          onClick={() => {
-                            setTargetAssetKey(assetKey);
-                            fileRef.current?.click();
-                          }}
-                          className="gap-1.5"
-                        >
-                          {isBusy ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Upload className="w-3.5 h-3.5" />
-                          )}
-                          {isBusy ? 'Saving...' : src ? 'Replace' : 'Upload Photo'}
-                        </Button>
+                    {savingSection === 'media' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
+                    {savingSection === 'media' ? 'Saving UI...' : 'Save Selected UI & Copy'}
+                  </Button>
+                </PermissionGate>
+              }
+            >
+              <div className="space-y-5">
+                <StorefrontDesignCarousel
+                  selectedStyle={form.headerStyle}
+                  onSelectStyle={(styleId) => updateField('headerStyle', styleId)}
+                  brandName={form.name || profile.name}
+                  primaryColor={form.primaryColor}
+                  accentColor={form.accentColor}
+                  logoUrl={profile.logo || ''}
+                  bannerUrl={profile.banner || ''}
+                  headingText="Choose or Change Your Storefront UI Design (Swap Left ↔ Right Across All 8 UIs)"
+                />
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    <strong className="text-slate-950">
+                      {STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label}:
+                    </strong>{' '}
+                    {DESIGN_LAYOUT_GUIDANCE[form.headerStyle].summary}
+                  </span>
+                  <span className="font-mono text-[11px] text-slate-500">
+                    layout: {form.headerStyle}
+                  </span>
+                </div>
+
+                {/* Live Interactive Layout Preview + Relevant Controls tailored to selected UI */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+                  <div className="xl:col-span-8 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-bold text-slate-900">
+                        Interactive Preview — Update Assets Directly Inside This UI
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Click Upload / Replace inside the mockup header or hero frame
+                      </span>
+                    </div>
+                    <FullShopLivePreview
+                      styleId={form.headerStyle}
+                      brandName={form.name || profile.name}
+                      storefrontTitle={form.storefrontTitle || form.name || profile.name}
+                      slogan={form.slogan}
+                      announcement={form.announcement}
+                      primaryColor={form.primaryColor}
+                      secondaryColor={form.secondaryColor}
+                      accentColor={form.accentColor}
+                      backgroundColor={form.backgroundColor}
+                      textColor={form.textColor}
+                      headingFont={form.headingFont}
+                      bodyFont={form.bodyFont}
+                      buttonStyle={form.buttonStyle}
+                      logoUrl={profile.logo || ''}
+                      lightLogoUrl={profile.lightLogo || ''}
+                      bannerUrl={profile.banner || ''}
+                      uploadingSlot={uploadingField}
+                      onUploadSlot={(slot) => triggerUploadForSlot(slot)}
+                      onRemoveSlot={(slot) => void handleRemoveAsset(slot)}
+                    />
+                  </div>
+
+                  {/* Quick Relevant Copy & Color Controls beside the selected UI */}
+                  <div className="xl:col-span-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3.5 text-xs">
+                    <div>
+                      <p className="font-extrabold text-slate-950">Quick Edit for Selected UI</p>
+                      <p className="text-[11px] text-slate-500">
+                        Live text &amp; colors rendered in{' '}
+                        <strong>
+                          {STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label}
+                        </strong>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Storefront Headline</label>
+                      <input
+                        value={form.storefrontTitle}
+                        onChange={(e) => updateField('storefrontTitle', e.target.value)}
+                        placeholder={form.name || 'Your Brand Storefront'}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Hero Tagline / Slogan</label>
+                      <input
+                        value={form.slogan}
+                        onChange={(e) => updateField('slogan', e.target.value)}
+                        placeholder="Modern craftsmanship for everyday wear"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Top Announcement Banner</label>
+                      <input
+                        value={form.announcement}
+                        onChange={(e) => updateField('announcement', e.target.value)}
+                        placeholder="Free shipping across Dhaka on orders over ৳3,000"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block font-bold text-slate-700">Color Presets</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {BRAND_COLOR_PRESETS.map((preset) => {
+                          const active =
+                            form.primaryColor.toLowerCase() === preset.primaryColor.toLowerCase();
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                updateField('primaryColor', preset.primaryColor);
+                                updateField('accentColor', preset.accentColor);
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-colors ${
+                                active
+                                  ? 'border-slate-950 bg-slate-950 text-white'
+                                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                              }`}
+                            >
+                              <span
+                                className="w-2.5 h-2.5 rounded-full border border-white/40"
+                                style={{ backgroundColor: preset.primaryColor }}
+                              />
+                              {preset.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {src ? (
-                      <div
-                        className={`relative ${aspect} rounded-xl overflow-hidden bg-white border border-slate-200`}
-                      >
-                        <SafeImage src={src} alt={label} fill className="object-cover" />
-                        <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-white text-[10px] font-bold">
-                          Synced to Backend
-                        </span>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="p-2.5 rounded-xl border border-slate-200 bg-white">
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                          Primary
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={form.primaryColor}
+                            onChange={(e) => updateField('primaryColor', e.target.value)}
+                            className="w-8 h-7 rounded cursor-pointer border border-slate-200"
+                          />
+                          <span className="font-mono text-[11px]">{form.primaryColor}</span>
+                        </div>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => {
-                          setTargetAssetKey(assetKey);
-                          fileRef.current?.click();
-                        }}
-                        className={`w-full ${aspect} rounded-xl border-2 border-dashed border-slate-300 bg-white hover:border-slate-500 flex flex-col items-center justify-center gap-1.5 text-slate-500 transition-colors`}
-                      >
-                        <ImageIcon className="w-5 h-5 text-slate-400" />
-                        <span className="font-semibold text-slate-700">Click to upload {label}</span>
-                        <span className="text-[11px] text-slate-400">PNG, JPG, or WEBP up to 10MB</span>
-                      </button>
-                    )}
+                      <div className="p-2.5 rounded-xl border border-slate-200 bg-white">
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                          Accent
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={form.accentColor}
+                            onChange={(e) => updateField('accentColor', e.target.value)}
+                            className="w-8 h-7 rounded cursor-pointer border border-slate-200"
+                          />
+                          <span className="font-mono text-[11px]">{form.accentColor}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          </SectionCard>
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Media Slots prioritized by active Storefront UI */}
+            <SectionCard
+              title="Media Slots for Selected Storefront Design"
+              subtitle={`Ordered for ${
+                STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label || 'Editorial Split'
+              } — uploads persist to Cloudinary & backend media endpoints`}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                {DESIGN_LAYOUT_GUIDANCE[form.headerStyle].primarySlots.map((slotKey, idx) => {
+                  const meta = ASSET_CARDS.find((c) => c.key === slotKey);
+                  if (!meta) return null;
+                  const { key: assetKey, label, dims, aspect } = meta;
+                  const src = getAssetUrl(assetKey);
+                  const isBusy = uploadingField === assetKey;
+                  const isPrimaryForLayout =
+                    slotKey === 'logo' ||
+                    (slotKey === 'banner' && DESIGN_LAYOUT_GUIDANCE[form.headerStyle].heroUsesBanner) ||
+                    (slotKey === 'lightLogo' && DESIGN_LAYOUT_GUIDANCE[form.headerStyle].usesLightWatermark);
+
+                  return (
+                    <div
+                      key={assetKey}
+                      className={`rounded-2xl border p-4 space-y-3 ${
+                        isPrimaryForLayout
+                          ? 'border-slate-300 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
+                          : 'border-slate-200 bg-slate-50/70'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="font-bold text-slate-900">{label}</p>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isPrimaryForLayout
+                                  ? 'bg-slate-950 text-white'
+                                  : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {isPrimaryForLayout ? `Slot ${idx + 1} • Used in UI` : 'Optional / OG Share'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5">{dims}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {src && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isBusy}
+                              onClick={() => void handleRemoveAsset(assetKey)}
+                              className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Remove
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={src ? 'outline' : 'default'}
+                            disabled={isBusy}
+                            onClick={() => triggerUploadForSlot(assetKey)}
+                            className="gap-1.5"
+                          >
+                            {isBusy ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Upload className="w-3.5 h-3.5" />
+                            )}
+                            {isBusy ? 'Saving...' : src ? 'Replace' : 'Upload Photo'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {src ? (
+                        <div
+                          className={`relative ${aspect} rounded-xl overflow-hidden bg-white border border-slate-200`}
+                        >
+                          <SafeImage src={src} alt={label} fill className="object-cover" />
+                          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-white text-[10px] font-bold">
+                            Synced to Backend
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => triggerUploadForSlot(assetKey)}
+                          className={`w-full ${aspect} rounded-xl border-2 border-dashed border-slate-300 bg-white hover:border-slate-500 flex flex-col items-center justify-center gap-1.5 text-slate-500 transition-colors`}
+                        >
+                          <ImageIcon className="w-5 h-5 text-slate-400" />
+                          <span className="font-semibold text-slate-700">Click to upload {label}</span>
+                          <span className="text-[11px] text-slate-400">PNG, JPG, or WEBP up to 10MB</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          </div>
         )}
       </div>
     </PermissionGate>
