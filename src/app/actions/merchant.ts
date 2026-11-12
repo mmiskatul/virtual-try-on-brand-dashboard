@@ -1,6 +1,7 @@
 'use server';
 
 import { getTaintedMerchantRecord, sanitizeMerchantToDTO, PublicMerchantDTO } from '@/lib/server-merchant';
+import { requireBrandServerAction } from '@/lib/server-auth';
 
 /**
  * Server Action: Safely retrieve merchant tenant profile.
@@ -13,7 +14,9 @@ export async function fetchMerchantProfile(tenantId: string = 'tenant_aura'): Pr
   error?: string;
 }> {
   try {
-    const rawTaintedMerchant = await getTaintedMerchantRecord(tenantId);
+    const session = await requireBrandServerAction(tenantId);
+    const resolvedTenantId = session.tenantId || tenantId;
+    const rawTaintedMerchant = await getTaintedMerchantRecord(resolvedTenantId);
 
     // Secure DTO Sanitization: Strips apiKey, payoutIban, taxRegistrationNumber
     const publicProfile = sanitizeMerchantToDTO(rawTaintedMerchant);

@@ -150,7 +150,13 @@ export const brandApi = {
   },
 
   verifyEmail: (payload: { token?: string; email?: string; code?: string }) => {
-    return request<{ message: string; user: any }>(`${BRAND_API_URL}/api/v1/auth/verify-email`, {
+    return request<{
+      message: string;
+      user: any;
+      tenant?: any;
+      sessionId?: string;
+      session?: any;
+    }>(`${BRAND_API_URL}/api/v1/auth/verify-email`, {
       method: 'POST',
       body: JSON.stringify(payload)
     });

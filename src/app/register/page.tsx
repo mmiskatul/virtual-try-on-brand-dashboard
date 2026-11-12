@@ -1,10 +1,10 @@
 'use client';
 
 import React, { Suspense, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, CheckCircle2, Loader2, Mail, ArrowRight } from 'lucide-react';
+import { AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { brandRegisterSchema, BrandRegisterFormValues } from '../../lib/schemas';
 import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
@@ -13,11 +13,9 @@ import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
 function BrandRegisterContent() {
+  const router = useRouter();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
-  const [registeredSlug, setRegisteredSlug] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
-  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   const {
     register,
@@ -46,85 +44,18 @@ function BrandRegisterContent() {
         email: data.email,
         password: data.password,
       });
-      setRegisteredEmail(res.user.email);
-      setRegisteredSlug(res.tenant?.slug || null);
-      if (res.warning) {
-        setResendStatus(res.warning);
-      }
+      setRedirecting(true);
+      const slugParam = res.tenant?.slug ? `&slug=${encodeURIComponent(res.tenant.slug)}` : '';
+      const warningParam = res.warning ? `&warning=${encodeURIComponent(res.warning)}` : '';
+      router.push(
+        `/verify-email?email=${encodeURIComponent(res.user.email)}&from=register${slugParam}${warningParam}`
+      );
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to register brand account.');
     }
   };
 
-  const handleResend = async () => {
-    if (!registeredEmail) return;
-    setResending(true);
-    setResendStatus(null);
-    try {
-      const res = await brandApi.resendVerification(registeredEmail);
-      setResendStatus(res.message);
-    } catch (err: any) {
-      setResendStatus(err?.message || 'Unable to resend verification email right now.');
-    } finally {
-      setResending(false);
-    }
-  };
-
-  if (registeredEmail) {
-    return (
-      <AuthShell
-        title="Verify your brand email"
-        subtitle="Your storefront tenant is provisioned — verify your email to unlock your Brand Command Center."
-        badge="Check Your Inbox"
-        footer={
-          <p>
-            Already verified?{' '}
-            <Link href="/login" className="text-black hover:text-gray-700 font-semibold">
-              Sign in to workspace
-            </Link>
-          </p>
-        }
-      >
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2 text-xs">
-          <div className="flex items-center gap-2 text-emerald-700 font-bold">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Brand registered! Verification email sent</span>
-          </div>
-          <p className="text-gray-700 leading-relaxed">
-            Storefront <span className="font-mono text-black">/storefront/{registeredSlug}</span> is ready. Verify{' '}
-            <span className="font-semibold text-gray-900">{registeredEmail}</span> using the link or 6-digit code we sent.
-          </p>
-        </div>
-
-        {resendStatus && (
-          <div className="p-3 rounded-xl bg-gray-100 border border-gray-300 text-black text-xs">
-            {resendStatus}
-          </div>
-        )}
-
-        <div className="space-y-2.5">
-          <Link
-            href={`/verify-email?email=${encodeURIComponent(registeredEmail)}`}
-            className="w-full h-10 px-4 rounded-xl bg-black hover:bg-gray-800 text-white font-bold text-xs inline-flex items-center justify-center gap-2 shadow-lg shadow-black/10 transition-all"
-          >
-            <span>Enter 6-Digit Verification Code</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleResend}
-            disabled={resending}
-            className="w-full gap-2"
-          >
-            {resending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-            <span>Resend Verification Email</span>
-          </Button>
-        </div>
-      </AuthShell>
-    );
-  }
+  const isBusy = isSubmitting || redirecting;
 
   return (
     <AuthShell
@@ -193,8 +124,8 @@ function BrandRegisterContent() {
           {...register('confirmPassword')}
         />
 
-        <Button type="submit" disabled={isSubmitting} className="w-full h-11 font-bold gap-2">
-          {isSubmitting ? (
+        <Button type="submit" disabled={isBusy} className="w-full h-11 font-bold gap-2">
+          {isBusy ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Creating Brand Workspace...</span>

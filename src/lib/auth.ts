@@ -1,9 +1,11 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
+import { isAllowedBrandRole } from './portal-auth';
 
 const BACKEND_API_URL =
   process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
+const useSecureNextAuthCookies = Boolean(process.env.NEXTAUTH_URL?.startsWith('https://'));
 
 function readCookieHeader(req: any): string | undefined {
   const headers = req?.headers;
@@ -35,7 +37,7 @@ const providers: NextAuthOptions['providers'] = [
             cache: 'no-store',
           });
           const sessionData = await sessionRes.json().catch(() => ({}));
-          if (sessionRes.ok && sessionData?.authenticated && sessionData?.user) {
+          if (sessionRes.ok && sessionData?.authenticated && sessionData?.user && isAllowedBrandRole(sessionData.user.role)) {
             return {
               id: sessionData.user.id,
               name: sessionData.user.name,
@@ -84,7 +86,7 @@ const providers: NextAuthOptions['providers'] = [
         throw new Error(data?.message || 'Invalid email or password.');
       }
 
-      if (!data?.user) {
+      if (!data?.user || !isAllowedBrandRole(data.user.role)) {
         return null;
       }
 
@@ -118,6 +120,20 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
     maxAge: 7 * 24 * 60 * 60 // 7 days
+  },
+  useSecureCookies: useSecureNextAuthCookies,
+  cookies: {
+    sessionToken: {
+      name: useSecureNextAuthCookies
+        ? '__Secure-next-auth.session-token'
+        : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: useSecureNextAuthCookies,
+      },
+    },
   },
   callbacks: {
     async jwt({ token, user }) {

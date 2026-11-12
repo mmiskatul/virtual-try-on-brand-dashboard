@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn, getSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, AlertCircle, Loader2, Mail, ArrowRight } from 'lucide-react';
@@ -17,11 +18,19 @@ function BrandVerifyEmailContent() {
   const searchParams = useSearchParams();
   const urlToken = searchParams.get('token');
   const urlEmail = searchParams.get('email') || '';
+  const urlWarning = searchParams.get('warning');
+  const fromRegister = searchParams.get('from') === 'register';
 
   const [status, setStatus] = useState<'idle' | 'verifying' | 'verified' | 'error'>(
-    urlToken ? 'verifying' : 'idle'
+    urlToken ? 'verifying' : urlWarning ? 'error' : 'idle'
   );
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(
+    urlWarning ||
+      (fromRegister && urlEmail
+        ? `Verification code sent to ${urlEmail}.`
+        : null)
+  );
+  const [autoSignedIn, setAutoSignedIn] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const attemptedAutoToken = useRef(false);
@@ -30,6 +39,7 @@ function BrandVerifyEmailContent() {
     register,
     handleSubmit,
     getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<VerifyEmailFormValues>({
     resolver: zodResolver(verifyEmailSchema),
@@ -37,10 +47,51 @@ function BrandVerifyEmailContent() {
   });
 
   useEffect(() => {
+    if (urlEmail) {
+      setValue('email', urlEmail);
+    }
+  }, [urlEmail, setValue]);
+
+  useEffect(() => {
     if (cooldown <= 0) return;
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [cooldown]);
+
+  const completeAutoSignIn = async (sessionId?: string, verifiedEmail?: string) => {
+    const targetEmail = verifiedEmail || getValues('email') || urlEmail || '';
+    if (!sessionId) {
+      setAutoSignedIn(false);
+      setStatus('verified');
+      setTimeout(() => {
+        router.replace(`/login?verified=1${targetEmail ? `&email=${encodeURIComponent(targetEmail)}` : ''}`);
+      }, 600);
+      return;
+    }
+
+    const signInResult = await signIn('credentials', {
+      redirect: false,
+      email: targetEmail,
+    });
+
+    if (signInResult?.error) {
+      setStatus('error');
+      setMessage('Email verified, but automatic sign-in failed. Please log in to continue.');
+      return;
+    }
+
+    await getSession();
+    setAutoSignedIn(true);
+    setStatus('verified');
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        window.location.assign('/dashboard');
+      } else {
+        router.replace('/dashboard');
+        router.refresh();
+      }
+    }, 450);
+  };
 
   useEffect(() => {
     if (!urlToken || attemptedAutoToken.current) return;
@@ -49,29 +100,24 @@ function BrandVerifyEmailContent() {
 
     brandApi
       .verifyEmail({ token: urlToken })
-      .then((res) => {
-        setStatus('verified');
+      .then(async (res) => {
         setMessage(res.message);
-        setTimeout(() => {
-          router.replace(`/login?verified=1${urlEmail ? `&email=${encodeURIComponent(urlEmail)}` : ''}`);
-        }, 700);
+        await completeAutoSignIn(res.sessionId, res.user?.email || urlEmail);
       })
       .catch((err: any) => {
         setStatus('error');
         setMessage(err?.message || 'Verification link is invalid or has expired.');
       });
-  }, [urlToken, router, urlEmail]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlToken]);
 
   const onSubmitCode = async (data: VerifyEmailFormValues) => {
     setMessage(null);
     setStatus('verifying');
     try {
       const res = await brandApi.verifyEmail({ email: data.email, code: data.code });
-      setStatus('verified');
       setMessage(res.message);
-      setTimeout(() => {
-        router.replace(`/login?verified=1&email=${encodeURIComponent(data.email)}`);
-      }, 700);
+      await completeAutoSignIn(res.sessionId, res.user?.email || data.email);
     } catch (err: any) {
       setStatus('error');
       setMessage(err?.message || 'Invalid or expired verification code.');
@@ -92,6 +138,7 @@ function BrandVerifyEmailContent() {
       const res = await brandApi.resendVerification(email);
       setMessage(res.message);
       if (res.alreadyVerified) {
+        setAutoSignedIn(false);
         setStatus('verified');
       } else {
         setStatus('idle');
@@ -107,7 +154,7 @@ function BrandVerifyEmailContent() {
 
   if (status === 'verifying') {
     return (
-      <AuthShell title="Verifying merchant email..." subtitle="Please wait while we confirm your brand account." badge="Email Verification">
+      <AuthShell title="Verifying your email..." subtitle="Signing you in to your Brand Dashboard." badge="Email Verification">
         <div className="py-12 flex flex-col items-center justify-center gap-4 text-center">
           <div className="relative flex items-center justify-center w-16 h-16">
             <div className="absolute inset-0 rounded-full border-2 border-stone-200 border-t-stone-950 animate-spin" />
@@ -115,7 +162,7 @@ function BrandVerifyEmailContent() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-stone-900">Verifying code...</p>
-            <p className="text-xs text-stone-500">Preparing your Brand Workspace sign-in.</p>
+            <p className="text-xs text-stone-500">Redirecting to Brand Dashboard.</p>
           </div>
         </div>
       </AuthShell>
@@ -123,20 +170,29 @@ function BrandVerifyEmailContent() {
   }
 
   if (status === 'verified') {
+    const fallbackHref = autoSignedIn
+      ? '/dashboard'
+      : `/login?verified=1${urlEmail ? `&email=${encodeURIComponent(urlEmail)}` : ''}`;
+
     return (
-      <AuthShell title="Merchant email verified!" subtitle="Your brand workspace is ready for sign-in." badge="Verified Account">
-        <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 text-xs flex items-start gap-2.5">
-          <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-bold text-gray-900">Verification complete</p>
-            <p>{message || 'Your email has been verified successfully.'}</p>
+      <AuthShell
+        title="Brand account verified!"
+        subtitle={autoSignedIn ? 'Entering your Brand Dashboard...' : 'Your brand account is ready.'}
+        badge="Verified Account"
+      >
+        <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 text-xs flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
+          <div className="space-y-0.5 flex-1">
+            <p className="font-bold text-gray-900">{autoSignedIn ? 'Verified & signed in' : 'Verification complete'}</p>
+            <p>{message || (autoSignedIn ? 'Taking you to your Brand Dashboard...' : 'Your email has been verified successfully.')}</p>
           </div>
+          {autoSignedIn && <Loader2 className="w-4 h-4 animate-spin text-emerald-700 shrink-0" />}
         </div>
         <Link
-          href={`/login?verified=1${urlEmail ? `&email=${encodeURIComponent(urlEmail)}` : ''}`}
+          href={fallbackHref}
           className="w-full h-10 px-4 rounded-xl bg-black hover:bg-gray-800 text-white font-bold text-xs inline-flex items-center justify-center gap-2 shadow-lg shadow-black/10 transition-all"
         >
-          <span>Continue to Sign In</span>
+          <span>{autoSignedIn ? 'Open Brand Dashboard' : 'Continue to Sign In'}</span>
           <ArrowRight className="w-4 h-4" />
         </Link>
       </AuthShell>
@@ -146,7 +202,7 @@ function BrandVerifyEmailContent() {
   return (
     <AuthShell
       title="Verify your business email"
-      subtitle="Enter the 6-digit verification code sent to your inbox, or open the link from your email."
+      subtitle="Enter the 6-digit verification code sent to your inbox."
       badge="Email Verification"
       footer={
         <p>

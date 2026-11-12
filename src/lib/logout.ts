@@ -10,6 +10,10 @@ export async function logoutBrand(options: { callbackUrl?: string; redirect?: bo
     // Still clear NextAuth session cookie even if backend is temporarily unreachable
   }
 
+  if (typeof window !== 'undefined' && localStorage.getItem('brand_token')) {
+    localStorage.removeItem('brand_token');
+  }
+
   if (options.redirect === false) {
     await signOut({ redirect: false });
     return;

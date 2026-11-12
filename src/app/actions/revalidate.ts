@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidateTag, revalidatePath } from 'next/cache';
+import { requireBrandServerAction } from '@/lib/server-auth';
 
 /**
  * Server Action for Server-Driven Data Cache Invalidation
@@ -8,6 +9,7 @@ import { revalidateTag, revalidatePath } from 'next/cache';
  */
 export async function revalidateBrandCatalog(tag: string = 'brand-products') {
   try {
+    await requireBrandServerAction();
     revalidateTag(tag);
     revalidatePath('/');
     return {
