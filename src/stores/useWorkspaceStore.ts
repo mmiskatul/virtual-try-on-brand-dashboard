@@ -90,6 +90,8 @@ export interface WorkspaceState {
 
   setFabrics: (fabrics: Fabric[]) => void;
   addFabric: (fabric: Fabric) => void;
+  updateFabric: (id: string, updates: Partial<Fabric>) => void;
+  deleteFabric: (id: string) => void;
 
   addMarketplacePost: (post: MarketplacePost) => void;
   updateMarketplacePost: (id: string, updates: Partial<MarketplacePost>) => void;
@@ -293,6 +295,12 @@ const workspaceBoundActions = {
   },
   addFabricRecord: (fabric: Fabric) => {
     store.dispatch(workspaceActions.addFabricRecord(fabric));
+  },
+  updateFabric: (id: string, updates: Partial<Fabric>) => {
+    store.dispatch(workspaceActions.updateFabric({ id, updates }));
+  },
+  deleteFabric: (id: string) => {
+    store.dispatch(workspaceActions.deleteFabric(id));
   },
   recordAudit: (action: string, entity: string, details: string) => {
     store.dispatch(workspaceActions.recordAudit({ action, entity, details }));

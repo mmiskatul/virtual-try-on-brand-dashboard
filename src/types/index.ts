@@ -122,6 +122,7 @@ export interface Fabric {
   stretch: string;
   thickness: string;
   care: string;
+  careInstructions?: string;
   color?: string;
   weightGsm?: number;
 }

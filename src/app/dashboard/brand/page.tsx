@@ -1,5 +1,5 @@
-import { BrandManagementView } from '@/features/brand/BrandManagementView';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <BrandManagementView initialTab="hub" />;
+  redirect('/dashboard/brand/profile');
 }

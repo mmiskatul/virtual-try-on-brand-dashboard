@@ -263,9 +263,11 @@ export function EmptyState({
 export function ErrorBanner({
   message,
   onRetry,
+  onDismiss,
 }: {
   message: string;
   onRetry?: () => void;
+  onDismiss?: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 flex flex-wrap items-center justify-between gap-2.5 text-xs text-rose-800">
@@ -273,15 +275,26 @@ export function ErrorBanner({
         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
         <span className="break-words">{message}</span>
       </div>
-      {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="inline-flex items-center gap-1 font-bold underline shrink-0"
-        >
-          <RefreshCw className="w-3 h-3" /> Retry
-        </button>
-      )}
+      <div className="flex items-center gap-3 shrink-0">
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-1 font-bold underline"
+          >
+            <RefreshCw className="w-3 h-3" /> Retry
+          </button>
+        )}
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="font-bold text-rose-700 hover:text-rose-950"
+          >
+            Dismiss
+          </button>
+        )}
+      </div>
     </div>
   );
 }

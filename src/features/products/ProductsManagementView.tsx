@@ -1,31 +1,38 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Download,
-  ExternalLink,
   Layers,
+  Pencil,
   Plus,
   Search,
   Sparkles,
   Trash2,
   Upload,
 } from 'lucide-react';
-import { Product } from '../../types';
+import { Fabric, Product } from '../../types';
 import { canPerform } from '../../config/permissions';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
-import { brandWorkspaceApi } from '../../services';
+import {
+  BrandCategoryRecord,
+  BrandCollectionRecord,
+  brandWorkspaceApi,
+  ServiceError,
+} from '../../services';
 import {
   ConfirmDialog,
   EmptyState,
+  ErrorBanner,
   PageHeader,
   PermissionGate,
   SafeImage,
   SectionCard,
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
+import { ProductsNavTabs } from '../../components/shared/ProductsNavTabs';
 import { Button } from '../../components/ui/button';
 
 export type ProductsSubView =
@@ -36,8 +43,22 @@ export type ProductsSubView =
   | 'import'
   | 'export';
 
+function formatApiError(err: unknown, fallback: string): string {
+  if (err instanceof ServiceError) {
+    if (err.issues && err.issues.length > 0) {
+      return err.issues.map((i) => `${i.path}: ${i.message}`).join(' • ');
+    }
+    return err.message || fallback;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 export function ProductsManagementView({ initialView = 'list' }: { initialView?: ProductsSubView }) {
   const [view, setView] = useState<ProductsSubView>(initialView);
+  useEffect(() => {
+    setView(initialView);
+  }, [initialView]);
 
   const products = useWorkspaceStore((s) => s.products);
   const fabrics = useWorkspaceStore((s) => s.fabrics);
@@ -46,7 +67,10 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
   const updateProduct = useWorkspaceStore((s) => s.updateProduct);
   const deleteProduct = useWorkspaceStore((s) => s.deleteProduct);
   const addProduct = useWorkspaceStore((s) => s.addProduct);
+  const setFabrics = useWorkspaceStore((s) => s.setFabrics);
   const addFabric = useWorkspaceStore((s) => s.addFabric);
+  const updateFabric = useWorkspaceStore((s) => s.updateFabric);
+  const deleteFabric = useWorkspaceStore((s) => s.deleteFabric);
 
   const showToast = useUiStore((s) => s.showToast);
   const hideToast = useUiStore((s) => s.hideToast);
@@ -58,6 +82,28 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState(false);
+
+  // Categories backend state
+  const [apiCategories, setApiCategories] = useState<BrandCategoryRecord[]>([]);
+  const [catName, setCatName] = useState('');
+  const [catSeoTitle, setCatSeoTitle] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+
+  // Collections backend state
+  const [apiCollections, setApiCollections] = useState<BrandCollectionRecord[]>([]);
+  const [colTitle, setColTitle] = useState('');
+  const [colDesc, setColDesc] = useState('');
+  const [editingCollectionId, setEditingCollectionId] = useState<string | null>(null);
+
+  // Attributes & Fabrics state
+  const [fabName, setFabName] = useState('');
+  const [fabComp, setFabComp] = useState('');
+  const [fabStretch, setFabStretch] = useState<Fabric['stretch']>('LOW');
+  const [fabThickness, setFabThickness] = useState<Fabric['thickness']>('MEDIUM');
+  const [fabCare, setFabCare] = useState('');
+  const [editingFabricId, setEditingFabricId] = useState<string | null>(null);
 
   // Import CSV preview state
   const [csvRaw, setCsvRaw] = useState(
@@ -65,27 +111,70 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
   );
   const [importLog, setImportLog] = useState<string | null>(null);
 
-  // Attribute / Fabric composer
-  const [fabName, setFabName] = useState('');
-  const [fabComp, setFabComp] = useState('');
-
   const canPublish = canPerform(activeRole, 'products', 'publish', roleOverrides);
   const canDelete = canPerform(activeRole, 'products', 'delete', roleOverrides);
   const canEdit = canPerform(activeRole, 'products', 'edit', roleOverrides);
 
-  const notify = (msg: string) => {
-    showToast(msg);
-    setTimeout(hideToast, 3000);
-  };
+  const notify = useCallback(
+    (msg: string) => {
+      showToast(msg);
+      setTimeout(hideToast, 3000);
+    },
+    [hideToast, showToast]
+  );
+
+  // Load Categories, Collections & Fabrics when opening relevant tabs
+  useEffect(() => {
+    let active = true;
+    if (view === 'categories') {
+      brandWorkspaceApi
+        .getCategories()
+        .then((list) => {
+          if (active) setApiCategories(list);
+        })
+        .catch(() => {});
+    } else if (view === 'collections') {
+      brandWorkspaceApi
+        .getCollections()
+        .then((list) => {
+          if (active) setApiCollections(list);
+        })
+        .catch(() => {});
+    } else if (view === 'attributes') {
+      brandWorkspaceApi
+        .getFabrics()
+        .then((list) => {
+          if (active && list.length > 0) setFabrics(list);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [setFabrics, view]);
 
   const categories = useMemo(
-    () => ['All', ...Array.from(new Set(products.map((p) => p.category)))],
-    [products]
+    () => [
+      'All',
+      ...Array.from(
+        new Set([
+          ...products.map((p) => p.category),
+          ...apiCategories.map((c) => c.name),
+        ].filter(Boolean))
+      ),
+    ],
+    [apiCategories, products]
   );
 
   const collectionsList = useMemo(
-    () => Array.from(new Set(products.flatMap((p) => p.collections || []))),
-    [products]
+    () =>
+      Array.from(
+        new Set([
+          ...products.flatMap((p) => p.collections || []),
+          ...apiCollections.map((c) => c.title),
+        ].filter(Boolean))
+      ),
+    [apiCollections, products]
   );
 
   const filtered = useMemo(() => {
@@ -132,79 +221,266 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
       notify('Your role cannot modify product settings.');
       return;
     }
-    const nextVal = !p[field];
+    setErrorBanner(null);
+    const prevVal = p[field];
+    const nextVal = !prevVal;
     updateProduct(p.id, { [field]: nextVal });
 
-    if (field !== 'isTryOnEligible') {
-      try {
-        await brandWorkspaceApi.setPublication(p.id, field, nextVal);
-      } catch {
-        // Optimistic update preserved locally
-      }
+    try {
+      await brandWorkspaceApi.setPublication(p.id, field, nextVal);
+      notify(`Updated ${p.name} visibility.`);
+    } catch (err) {
+      updateProduct(p.id, { [field]: prevVal });
+      setErrorBanner(formatApiError(err, `Failed to update ${p.name} visibility.`));
     }
-    notify(`Updated ${p.name} visibility.`);
   };
 
-  const runBulkAction = (action: 'publish_mp' | 'unpublish_mp' | 'enable_tryon' | 'archive') => {
+  const runBulkAction = async (action: 'publish_mp' | 'unpublish_mp' | 'enable_tryon' | 'archive') => {
     if (selectedIds.length === 0) return;
-    selectedIds.forEach((id) => {
-      if (action === 'publish_mp') updateProduct(id, { marketplacePublished: true, catalogStatus: 'ACTIVE' });
-      if (action === 'unpublish_mp') updateProduct(id, { marketplacePublished: false });
-      if (action === 'enable_tryon') updateProduct(id, { isTryOnEligible: true });
-      if (action === 'archive') updateProduct(id, { catalogStatus: 'ARCHIVED', marketplacePublished: false, brandStorefrontPublished: false });
-    });
-    notify(`Applied bulk action to ${selectedIds.length} product(s).`);
-    setSelectedIds([]);
+    setErrorBanner(null);
+    setBusyAction(true);
+
+    const apiActionMap = {
+      publish_mp: 'PUBLISH_MARKETPLACE',
+      unpublish_mp: 'UNPUBLISH_MARKETPLACE',
+      enable_tryon: 'ENABLE_TRYON',
+      archive: 'ARCHIVE',
+    } as const;
+
+    try {
+      const res = await brandWorkspaceApi.bulkProductAction(selectedIds, apiActionMap[action]);
+      res.products.forEach((updated) => updateProduct(updated.id, updated));
+      if (res.errors.length > 0) {
+        setErrorBanner(res.errors.map((e) => `${e.productId}: ${e.message}`).join(' • '));
+      }
+      notify(res.message || `Applied bulk action to ${res.updatedCount} product(s).`);
+      setSelectedIds([]);
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Bulk catalog operation failed.'));
+    } finally {
+      setBusyAction(false);
+    }
   };
 
-  const handleExportCsv = () => {
-    const header = 'id,name,sku,category,price,stock,storefrontPublished,marketplacePublished,isTryOnEligible';
-    const rows = filtered.map(
-      (p) =>
-        `"${p.id}","${p.name.replace(/"/g, '""')}","${p.sku}","${p.category}",${p.price},${p.stock},${p.brandStorefrontPublished},${p.marketplacePublished},${p.isTryOnEligible}`
-    );
-    const csv = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'brand-catalog-export.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-    notify(`Exported ${filtered.length} products cleanly to CSV.`);
+  const handleExportCsv = async () => {
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      const csv = await brandWorkspaceApi.exportProductsCsv({
+        category: catFilter,
+        status: statusFilter,
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'brand-catalog-export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      notify('Exported tenant catalog cleanly to CSV.');
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to export catalog from backend.'));
+    } finally {
+      setBusyAction(false);
+    }
   };
 
   const parsedCsvRows = useMemo(() => {
-    const lines = csvRaw.trim().split(/\r?\n/);
+    const lines = csvRaw.trim().split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length < 2) return [];
+    const seenBatchSkus = new Set<string>();
     return lines.slice(1).map((line) => {
       const [name, sku, category, price, stock] = line.split(',').map((s) => s?.trim() || '');
-      const duplicateSku = products.some((p) => p.sku.toLowerCase() === sku.toLowerCase());
-      return { name, sku, category: category || 'Apparel', price: Number(price) || 0, stock: Number(stock) || 0, duplicateSku };
+      const skuLower = sku.toLowerCase();
+      const duplicateInCatalog = products.some((p) => p.sku.toLowerCase() === skuLower);
+      const duplicateInBatch = Boolean(skuLower && seenBatchSkus.has(skuLower));
+      if (skuLower) seenBatchSkus.add(skuLower);
+      return {
+        name,
+        sku,
+        category: category || 'Apparel',
+        price: Number(price) || 0,
+        stock: Number(stock) || 0,
+        duplicateSku: duplicateInCatalog || duplicateInBatch,
+      };
     });
   }, [csvRaw, products]);
 
-  const handleConfirmCsvImport = () => {
+  const handleConfirmCsvImport = async () => {
+    setErrorBanner(null);
+    setImportLog(null);
     const validRows = parsedCsvRows.filter((r) => r.name && r.sku && !r.duplicateSku);
-    validRows.forEach((r) => {
-      addProduct({
-        id: `prod_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
-        name: r.name,
-        slug: r.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        sku: r.sku,
-        category: r.category,
-        price: r.price,
-        stock: r.stock,
-        catalogStatus: 'DRAFT',
-        brandStorefrontPublished: true,
-        marketplacePublished: false,
-        isTryOnEligible: true,
-        tryOnCategory: 'tops',
-        image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
-      });
-    });
-    setImportLog(`Imported ${validRows.length} garment(s) cleanly. Skipped ${parsedCsvRows.length - validRows.length} duplicate/invalid row(s).`);
-    notify(`Imported ${validRows.length} products into tenant catalog.`);
+    if (validRows.length === 0) {
+      setErrorBanner('No valid non-duplicate CSV rows ready for import.');
+      return;
+    }
+
+    setBusyAction(true);
+    try {
+      const res = await brandWorkspaceApi.bulkImportProducts(
+        validRows.map((r) => ({
+          name: r.name,
+          sku: r.sku,
+          category: r.category,
+          price: r.price,
+          stock: r.stock,
+        })),
+        true
+      );
+      res.importedProducts.forEach((created) => addProduct(created));
+      setImportLog(res.message);
+      notify(`Imported ${res.importedCount} product(s) into tenant catalog.`);
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Bulk CSV import failed.'));
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catName.trim()) return;
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      if (editingCategoryId) {
+        const updated = await brandWorkspaceApi.updateCategory(editingCategoryId, {
+          name: catName.trim(),
+          seoTitle: catSeoTitle.trim() || undefined,
+        });
+        setApiCategories((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        setEditingCategoryId(null);
+        notify(`Category "${updated.name}" updated.`);
+      } else {
+        const created = await brandWorkspaceApi.createCategory({
+          name: catName.trim(),
+          seoTitle: catSeoTitle.trim() || undefined,
+          sortOrder: apiCategories.length + 1,
+        });
+        setApiCategories((prev) => [...prev.filter((c) => c.id !== created.id), created]);
+        notify(`Category "${created.name}" created.`);
+      }
+      setCatName('');
+      setCatSeoTitle('');
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to save category.'));
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      await brandWorkspaceApi.deleteCategory(id);
+      setApiCategories((prev) => prev.filter((c) => c.id !== id));
+      notify('Category removed.');
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to remove category.'));
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleSaveCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!colTitle.trim()) return;
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      if (editingCollectionId) {
+        const updated = await brandWorkspaceApi.updateCollection(editingCollectionId, {
+          title: colTitle.trim(),
+          description: colDesc.trim() || undefined,
+        });
+        setApiCollections((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        setEditingCollectionId(null);
+        notify(`Collection "${updated.title}" updated.`);
+      } else {
+        const created = await brandWorkspaceApi.createCollection({
+          title: colTitle.trim(),
+          description: colDesc.trim() || undefined,
+        });
+        setApiCollections((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+        notify(`Collection "${created.title}" created.`);
+      }
+      setColTitle('');
+      setColDesc('');
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to save collection.'));
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleDeleteCollection = async (id: string) => {
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      await brandWorkspaceApi.deleteCollection(id);
+      setApiCollections((prev) => prev.filter((c) => c.id !== id));
+      notify('Collection deleted.');
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to delete collection.'));
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleSaveFabric = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fabName.trim() || !fabComp.trim()) {
+      setErrorBanner('Fabric name and composition are required.');
+      return;
+    }
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      if (editingFabricId) {
+        const res = await brandWorkspaceApi.updateFabric(editingFabricId, {
+          name: fabName.trim(),
+          composition: fabComp.trim(),
+          stretch: fabStretch,
+          thickness: fabThickness,
+          careInstructions: fabCare.trim() || 'Dry clean recommended.',
+        } as any);
+        updateFabric(editingFabricId, res.fabric);
+        setEditingFabricId(null);
+        notify(`Fabric "${res.fabric.name}" updated.`);
+      } else {
+        const res = await brandWorkspaceApi.createFabric({
+          name: fabName.trim(),
+          composition: fabComp.trim(),
+          stretch: fabStretch,
+          thickness: fabThickness,
+          careInstructions: fabCare.trim() || 'Gentle wash',
+        } as any);
+        addFabric(res.fabric);
+        notify(`Fabric "${res.fabric.name}" added to library.`);
+      }
+      setFabName('');
+      setFabComp('');
+      setFabCare('');
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to save fabric specification.'));
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleDeleteFabric = async (id: string) => {
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      await brandWorkspaceApi.deleteFabric(id);
+      deleteFabric(id);
+      notify('Fabric deleted.');
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to delete fabric.'));
+    } finally {
+      setBusyAction(false);
+    }
   };
 
   return (
@@ -216,10 +492,10 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
           subtitle="Private catalog items require explicit Storefront or Marketplace publication before customers can see them."
           actions={
             <>
-              <Button variant="outline" size="sm" onClick={handleExportCsv} className="gap-1.5">
+              <Button variant="outline" size="sm" disabled={busyAction} onClick={handleExportCsv} className="gap-1.5">
                 <Download className="w-3.5 h-3.5" /> Export CSV
               </Button>
-              <Link href="/dashboard/products/create">
+              <Link href="/dashboard/products/addproduct">
                 <Button size="sm" className="gap-1.5">
                   <Plus className="w-3.5 h-3.5" /> Add Product
                 </Button>
@@ -228,30 +504,9 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
           }
         />
 
-        {/* Sub-view tabs */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-bold">
-          {(
-            [
-              ['list', `All Products (${products.length})`],
-              ['categories', 'Categories'],
-              ['collections', 'Collections'],
-              ['attributes', 'Attributes & Fabrics'],
-              ['import', 'Bulk CSV Import'],
-              ['export', 'Export Catalog'],
-            ] as Array<[ProductsSubView, string]>
-          ).map(([k, lbl]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setView(k)}
-              className={`px-3.5 py-2 rounded-xl border whitespace-nowrap ${
-                view === k ? 'bg-slate-950 text-white border-slate-950' : 'bg-white text-slate-600 border-slate-200'
-              }`}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
+        <ProductsNavTabs activeTab={view} />
+
+        {errorBanner && <ErrorBanner message={errorBanner} onDismiss={() => setErrorBanner(null)} />}
 
         {view === 'list' && (
           <SectionCard>
@@ -292,18 +547,18 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                 <div className="flex flex-wrap gap-2">
                   {canPublish && (
                     <>
-                      <button type="button" onClick={() => runBulkAction('publish_mp')} className="px-2.5 py-1 rounded bg-white text-slate-950 font-bold">
+                      <button type="button" disabled={busyAction} onClick={() => runBulkAction('publish_mp')} className="px-2.5 py-1 rounded bg-white text-slate-950 font-bold disabled:opacity-60">
                         Publish to Marketplace
                       </button>
-                      <button type="button" onClick={() => runBulkAction('unpublish_mp')} className="px-2.5 py-1 rounded bg-slate-700 font-bold">
+                      <button type="button" disabled={busyAction} onClick={() => runBulkAction('unpublish_mp')} className="px-2.5 py-1 rounded bg-slate-700 font-bold disabled:opacity-60">
                         Unpublish
                       </button>
                     </>
                   )}
-                  <button type="button" onClick={() => runBulkAction('enable_tryon')} className="px-2.5 py-1 rounded bg-amber-400 text-slate-950 font-bold">
+                  <button type="button" disabled={busyAction} onClick={() => runBulkAction('enable_tryon')} className="px-2.5 py-1 rounded bg-amber-400 text-slate-950 font-bold disabled:opacity-60">
                     Enable Try-On
                   </button>
-                  <button type="button" onClick={() => runBulkAction('archive')} className="px-2.5 py-1 rounded bg-rose-600 font-bold">
+                  <button type="button" disabled={busyAction} onClick={() => runBulkAction('archive')} className="px-2.5 py-1 rounded bg-rose-600 font-bold disabled:opacity-60">
                     Archive
                   </button>
                 </div>
@@ -529,36 +784,170 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
         )}
 
         {view === 'categories' && (
-          <SectionCard title="Product Categories Breakdown" subtitle="Organize your brand-exclusive taxonomy">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <SectionCard title="Product Categories Breakdown" subtitle="Manage your brand taxonomy persisted with PostgreSQL & tenant catalog">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
               {categories.filter((c) => c !== 'All').map((c) => {
                 const count = products.filter((p) => p.category === c).length;
+                const record = apiCategories.find((item) => item.name.toLowerCase() === c.toLowerCase());
                 return (
-                  <div key={c} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1">
-                    <p className="font-bold text-slate-900">{c}</p>
-                    <p className="text-slate-500">{count} product(s)</p>
+                  <div key={c} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-bold text-slate-900">{c}</p>
+                        {record && record.tenantId && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCategoryId(record.id);
+                                setCatName(record.name);
+                                setCatSeoTitle(record.seoTitle || '');
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-900"
+                              aria-label={`Edit category ${c}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(record.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600"
+                              aria-label={`Delete category ${c}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-slate-500">{count} product(s)</p>
+                      {record?.seoTitle && (
+                        <p className="text-[11px] text-slate-400 mt-1 truncate">SEO: {record.seoTitle}</p>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
+            {canEdit && (
+              <form onSubmit={handleSaveCategory} className="flex flex-col sm:flex-row flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100 text-xs">
+                <input
+                  value={catName}
+                  onChange={(e) => setCatName(e.target.value)}
+                  placeholder="Category name (e.g. Evening Silk)"
+                  className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-slate-200"
+                />
+                <input
+                  value={catSeoTitle}
+                  onChange={(e) => setCatSeoTitle(e.target.value)}
+                  placeholder="SEO Title (optional)"
+                  className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-slate-200"
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={busyAction || !catName.trim()}>
+                    {editingCategoryId ? 'Update Category' : 'Add Category'}
+                  </Button>
+                  {editingCategoryId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingCategoryId(null);
+                        setCatName('');
+                        setCatSeoTitle('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </form>
+            )}
           </SectionCard>
         )}
 
         {view === 'collections' && (
           <SectionCard title="Brand Collections" subtitle="Group seasonal garments across storefront & marketplace">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              {collectionsList.map((col) => (
-                <div key={col} className="p-5 rounded-2xl border border-slate-200 bg-white space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-slate-950">{col}</span>
-                    <Layers className="w-4 h-4 text-slate-500" />
+              {collectionsList.map((col) => {
+                const record = apiCollections.find((c) => c.title.toLowerCase() === col.toLowerCase());
+                return (
+                  <div key={col} className="p-5 rounded-2xl border border-slate-200 bg-white space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-slate-950 truncate">{col}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {record && record.tenantId && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCollectionId(record.id);
+                                setColTitle(record.title);
+                                setColDesc(record.description || '');
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-900"
+                              aria-label={`Edit collection ${col}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCollection(record.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600"
+                              aria-label={`Delete collection ${col}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                        <Layers className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
+                    <p className="text-slate-500">
+                      {products.filter((p) => (p.collections || []).includes(col)).length} assigned garment(s)
+                    </p>
+                    {record?.description && (
+                      <p className="text-[11px] text-slate-400 line-clamp-2">{record.description}</p>
+                    )}
                   </div>
-                  <p className="text-slate-500">
-                    {products.filter((p) => (p.collections || []).includes(col)).length} assigned garment(s)
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            {canEdit && (
+              <form onSubmit={handleSaveCollection} className="flex flex-col sm:flex-row flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100 text-xs">
+                <input
+                  value={colTitle}
+                  onChange={(e) => setColTitle(e.target.value)}
+                  placeholder="Collection title (e.g. Atelier Autumn 2026)"
+                  className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-slate-200"
+                />
+                <input
+                  value={colDesc}
+                  onChange={(e) => setColDesc(e.target.value)}
+                  placeholder="Short description (optional)"
+                  className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-slate-200"
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={busyAction || !colTitle.trim()}>
+                    {editingCollectionId ? 'Update Collection' : 'Create Collection'}
+                  </Button>
+                  {editingCollectionId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingCollectionId(null);
+                        setColTitle('');
+                        setColDesc('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </form>
+            )}
           </SectionCard>
         )}
 
@@ -567,34 +956,84 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {fabrics.map((f) => (
                 <div key={f.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-1">
-                  <p className="font-bold text-slate-900">{f.name}</p>
-                  <p className="text-slate-600">{f.composition} • {f.thickness} • Stretch: {f.stretch}</p>
-                  <p className="text-[11px] text-slate-500">{f.care}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-bold text-slate-900">{f.name}</p>
+                    {canEdit && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingFabricId(f.id);
+                            setFabName(f.name);
+                            setFabComp(f.composition);
+                            setFabStretch(f.stretch || 'LOW');
+                            setFabThickness(f.thickness || 'MEDIUM');
+                            setFabCare(f.careInstructions || f.care || '');
+                          }}
+                          className="p-1 text-slate-400 hover:text-slate-900"
+                          aria-label={`Edit fabric ${f.name}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteFabric(f.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600"
+                          aria-label={`Delete fabric ${f.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-slate-600">{f.composition} • {f.thickness || 'MEDIUM'} • Stretch: {f.stretch || 'NONE'}</p>
+                  <p className="text-[11px] text-slate-500">{f.careInstructions || f.care || 'Standard care'}</p>
                 </div>
               ))}
             </div>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-slate-100 text-xs">
-              <input value={fabName} onChange={(e) => setFabName(e.target.value)} placeholder="Fabric name (e.g. Organic Poplin)" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
-              <input value={fabComp} onChange={(e) => setFabComp(e.target.value)} placeholder="Composition" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
-              <Button
-                size="sm"
-                onClick={async () => {
-                  if (!fabName.trim()) return;
-                  const next = { id: `fab_${Date.now()}`, name: fabName.trim(), composition: fabComp || '100% Natural Fiber', stretch: 'LOW', thickness: 'MEDIUM', care: 'Gentle wash' };
-                  addFabric(next);
-                  try { await brandWorkspaceApi.createFabric(next); } catch {}
-                  setFabName(''); setFabComp('');
-                  notify('Fabric added to library.');
-                }}
-              >
-                Add Fabric
-              </Button>
-            </div>
+            {canEdit && (
+              <form onSubmit={handleSaveFabric} className="flex flex-col sm:flex-row flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100 text-xs">
+                <input value={fabName} onChange={(e) => setFabName(e.target.value)} placeholder="Fabric name (e.g. Organic Poplin)" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
+                <input value={fabComp} onChange={(e) => setFabComp(e.target.value)} placeholder="Composition (e.g. 100% Cotton)" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
+                <select value={fabStretch} onChange={(e) => setFabStretch(e.target.value as Fabric['stretch'])} className="px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                  <option value="NONE">Stretch: None</option>
+                  <option value="LOW">Stretch: Low</option>
+                  <option value="MEDIUM">Stretch: Medium</option>
+                  <option value="HIGH">Stretch: High</option>
+                </select>
+                <select value={fabThickness} onChange={(e) => setFabThickness(e.target.value as Fabric['thickness'])} className="px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                  <option value="LIGHT">Weight: Light</option>
+                  <option value="MEDIUM">Weight: Medium</option>
+                  <option value="HEAVY">Weight: Heavy</option>
+                </select>
+                <input value={fabCare} onChange={(e) => setFabCare(e.target.value)} placeholder="Care instructions" className="w-full sm:w-44 px-3 py-2 rounded-xl border border-slate-200" />
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={busyAction || !fabName.trim()}>
+                    {editingFabricId ? 'Update Fabric' : 'Add Fabric'}
+                  </Button>
+                  {editingFabricId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingFabricId(null);
+                        setFabName('');
+                        setFabComp('');
+                        setFabCare('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </form>
+            )}
           </SectionCard>
         )}
 
         {view === 'import' && (
-          <SectionCard title="Bulk CSV Product Import" subtitle="Preview parsed columns and duplicate SKU checks before adding to tenant catalog">
+          <SectionCard title="Bulk CSV Product Import" subtitle="Preview parsed columns and duplicate SKU checks before persisting to tenant catalog">
             <div className="space-y-4 text-xs">
               <textarea rows={4} value={csvRaw} onChange={(e) => setCsvRaw(e.target.value)} className="w-full p-3 rounded-xl border border-slate-200 font-mono text-[11px]" />
               <div className="sm:hidden space-y-2 text-xs">
@@ -635,8 +1074,8 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                 </table>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <Button size="sm" onClick={handleConfirmCsvImport} className="gap-1.5">
-                  <Upload className="w-3.5 h-3.5" /> Import Valid Rows
+                <Button size="sm" disabled={busyAction} onClick={handleConfirmCsvImport} className="gap-1.5">
+                  <Upload className="w-3.5 h-3.5" /> {busyAction ? 'Importing...' : 'Import Valid Rows'}
                 </Button>
                 {importLog && <span className="font-semibold text-emerald-700">{importLog}</span>}
               </div>
@@ -645,9 +1084,9 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
         )}
 
         {view === 'export' && (
-          <SectionCard title="Export Catalog Dataset" subtitle="Download your tenant's full product catalog including visibility states">
-            <Button size="sm" onClick={handleExportCsv} className="gap-1.5">
-              <Download className="w-4 h-4" /> Download Full CSV ({products.length} SKUs)
+          <SectionCard title="Export Catalog Dataset" subtitle="Download your tenant's live product catalog directly from the backend API">
+            <Button size="sm" disabled={busyAction} onClick={handleExportCsv} className="gap-1.5">
+              <Download className="w-4 h-4" /> {busyAction ? 'Exporting...' : `Download Full CSV (${products.length} SKUs)`}
             </Button>
           </SectionCard>
         )}
@@ -660,15 +1099,19 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
         confirmLabel="Delete Product"
         onCancel={() => setConfirmDeleteId(null)}
         onConfirm={async () => {
-          if (confirmDeleteId) {
-            deleteProduct(confirmDeleteId);
-            try { await brandWorkspaceApi.deleteProduct(confirmDeleteId); } catch {}
+          if (!confirmDeleteId) return;
+          setErrorBanner(null);
+          const targetId = confirmDeleteId;
+          setConfirmDeleteId(null);
+          try {
+            await brandWorkspaceApi.deleteProduct(targetId);
+            deleteProduct(targetId);
             notify('Product deleted.');
-            setConfirmDeleteId(null);
+          } catch (err) {
+            setErrorBanner(formatApiError(err, 'Failed to delete product from backend catalog.'));
           }
         }}
       />
     </PermissionGate>
   );
 }
-

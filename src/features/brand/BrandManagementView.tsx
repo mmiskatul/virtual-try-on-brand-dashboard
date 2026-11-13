@@ -42,7 +42,7 @@ import {
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
 
-export type BrandManagementTab = 'hub' | 'profile' | 'identity' | 'media';
+export type BrandManagementTab = 'profile' | 'identity' | 'media';
 export type BrandAssetKey = 'logo' | 'banner' | 'lightLogo' | 'socialImage';
 
 const FONT_OPTIONS = [
@@ -54,7 +54,6 @@ const FONT_OPTIONS = [
 ] as const;
 
 const TAB_ROUTES: Array<{ key: BrandManagementTab; label: string; href: string }> = [
-  { key: 'hub', label: 'All Brand Workspace', href: '/dashboard/brand' },
   { key: 'profile', label: 'Profile & Verification', href: '/dashboard/brand/profile' },
   { key: 'identity', label: 'Theme & Identity', href: '/dashboard/brand/identity' },
   { key: 'media', label: 'Logos & Brand Media', href: '/dashboard/brand/media' },
@@ -138,7 +137,7 @@ function buildFormFromProfile(profile: ReturnType<typeof useWorkspaceStore.getSt
   };
 }
 
-export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: BrandManagementTab }) {
+export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: BrandManagementTab }) {
   const [tab, setTab] = useState<BrandManagementTab>(initialTab);
   const profile = useWorkspaceStore((s) => s.profile);
   const isLiveBackend = useWorkspaceStore((s) => s.isLiveBackend);
@@ -154,7 +153,7 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
   const [dirty, setDirty] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savingSection, setSavingSection] = useState<'all' | 'profile' | 'identity' | 'media' | null>(null);
+  const [savingSection, setSavingSection] = useState<'profile' | 'identity' | 'media' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<BrandAssetKey | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -376,76 +375,7 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
       await handleSaveIdentity();
       return;
     }
-    if (tab === 'media') {
-      await handleSaveMediaStudio();
-      return;
-    }
-
-    setErrorMessage(null);
-    const validationError = validateProfileInputs();
-    if (validationError) {
-      setErrorMessage(validationError);
-      return;
-    }
-
-    const trimmedName = form.name.trim();
-    const trimmedEmail = form.contactEmail.trim();
-    const normalizedWebsite = validateWebsiteInput(form.website);
-
-    setSaving(true);
-    setSavingSection('all');
-    try {
-      const res = await brandWorkspaceApi.updateProfile({
-        name: trimmedName,
-        description: form.description.trim(),
-        ...(trimmedEmail ? { contactEmail: trimmedEmail } : {}),
-        storefrontSettings: {
-          ownerName: form.owner.trim(),
-          legalName: form.legalName.trim(),
-          businessType: form.businessType.trim(),
-          registrationNumber: form.registrationNumber.trim(),
-          establishedYear: form.establishedYear.trim(),
-          phone: form.phone.trim(),
-          city: form.city.trim(),
-          country: form.country.trim(),
-          address: form.address.trim(),
-          categoryFocus: form.categoryFocus.trim(),
-          slogan: form.slogan.trim(),
-          shortDescription: form.shortDescription.trim(),
-          aboutText: form.description.trim(),
-          announcement: form.announcement.trim(),
-          storefrontTitle: form.storefrontTitle.trim() || trimmedName,
-          primaryColor: form.primaryColor,
-          secondaryColor: form.secondaryColor,
-          accentColor: form.accentColor,
-          backgroundColor: form.backgroundColor,
-          textColor: form.textColor,
-          headingFont: form.headingFont,
-          bodyFont: form.bodyFont,
-          buttonStyle: form.buttonStyle,
-          headerStyle: form.headerStyle,
-          lightLogoUrl: profile.lightLogo || '',
-          socialImageUrl: profile.socialImage || '',
-          socialLinks: {
-            instagram: form.instagram.trim(),
-            facebook: form.facebook.trim(),
-            website: normalizedWebsite,
-          },
-        },
-      });
-
-      const verificationSummary = await brandWorkspaceApi.getVerification().catch(() => null);
-      if (verificationSummary) setVerification(verificationSummary);
-      applySavedProfileResult(
-        res.profile,
-        'Brand profile, theme identity & assets saved to backend.'
-      );
-    } catch (err: unknown) {
-      setErrorMessage(formatApiError(err, 'Failed to save brand settings to backend.'));
-    } finally {
-      setSaving(false);
-      setSavingSection(null);
-    }
+    await handleSaveMediaStudio();
   };
 
   const persistAssetUrl = async (assetKey: BrandAssetKey, nextUrl: string) => {
@@ -593,7 +523,7 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
           ))}
         </div>
 
-        {(tab === 'hub' || tab === 'profile') && (
+        {tab === 'profile' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <SectionCard
               title="Core Brand, Business & Social Details"
@@ -850,7 +780,7 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
           </div>
         )}
 
-        {(tab === 'hub' || tab === 'identity') && (
+        {tab === 'identity' && (
           <SectionCard
             title="Storefront Theme Colors, Typography & Layout Tokens"
             subtitle="Changes save directly to your storefrontSettings via PATCH /api/v1/brand/identity"
@@ -1022,7 +952,7 @@ export function BrandManagementView({ initialTab = 'hub' }: { initialTab?: Brand
           </SectionCard>
         )}
 
-        {(tab === 'hub' || tab === 'media') && (
+        {tab === 'media' && (
           <div className="space-y-6">
             <input
               ref={fileRef}

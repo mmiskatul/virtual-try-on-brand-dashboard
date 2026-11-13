@@ -45,11 +45,11 @@ import {
 import { Button } from '../../components/ui/button';
 
 const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: string }> = [
-  { id: 'chk_profile', label: 'Complete brand profile & story', href: '/dashboard/getting-started' },
-  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/getting-started' },
-  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/getting-started' },
-  { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/getting-started' },
-  { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/create' },
+  { id: 'chk_profile', label: 'Complete brand profile & story', href: '/dashboard/brand/profile' },
+  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/brand/media' },
+  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/brand/media' },
+  { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/brand/profile' },
+  { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/addproduct' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },
   { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/brand' },
   { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on/configuration' },
@@ -307,7 +307,7 @@ export function DashboardOverviewView() {
                 <ExternalLink className="w-3 h-3 shrink-0" />
               </Button>
             </Link>
-            <Link href="/dashboard/products/create" className="w-full sm:w-auto">
+            <Link href="/dashboard/products/addproduct" className="w-full sm:w-auto">
               <Button size="sm" className="gap-1.5 w-full sm:w-auto justify-center text-xs">
                 <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Add Product</span>
@@ -373,7 +373,7 @@ export function DashboardOverviewView() {
               <span className="truncate">Try-On Studio</span>
             </Button>
           </Link>
-          <Link href="/dashboard/brand" className="w-full lg:w-auto">
+          <Link href="/dashboard/brand/profile" className="w-full lg:w-auto">
             <Button variant="outline" size="sm" className="gap-1.5 w-full lg:w-auto justify-center text-xs">
               <Palette className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Brand & Theme</span>
@@ -671,7 +671,7 @@ export function DashboardOverviewView() {
           {bestSellingProducts.length === 0 ? (
             <div className="p-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-center space-y-2 text-xs text-slate-500">
               <p>No garments in your catalog yet.</p>
-              <Link href="/dashboard/products/create" className="inline-block font-bold text-slate-900 underline">
+              <Link href="/dashboard/products/addproduct" className="inline-block font-bold text-slate-900 underline">
                 Create your first product &rarr;
               </Link>
             </div>
@@ -703,11 +703,11 @@ export function DashboardOverviewView() {
 
         <SectionCard
           className="lg:col-span-6"
-          title={`Getting Started Checklist (${checklistPct}%)`}
+          title={`Brand Readiness Checklist (${checklistPct}%)`}
           subtitle="Auto-synced with workspace setup plus manual milestone tracking"
           right={
-            <Link href="/dashboard/getting-started" className="text-xs font-bold underline whitespace-nowrap">
-              Launch Wizard &rarr;
+            <Link href="/dashboard/brand/profile" className="text-xs font-bold underline whitespace-nowrap">
+              Manage Brand &rarr;
             </Link>
           }
         >

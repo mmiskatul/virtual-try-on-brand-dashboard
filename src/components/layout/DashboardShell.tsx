@@ -467,7 +467,7 @@ export function DashboardShell({
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
         {/* Workspace Identity */}
         <div className="flex items-center justify-between px-2 pb-3 border-b border-slate-100">
-          <Link href={isOnboardingGateActive ? '/dashboard/getting-started' : '/dashboard'} className="flex items-center gap-2.5 min-w-0">
+          <Link href={isOnboardingGateActive ? '/dashboard/brand' : '/dashboard'} className="flex items-center gap-2.5 min-w-0">
             <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
               <SafeImage src={profile.logo} alt={profile.name} fill className="object-cover" />
             </div>
@@ -515,8 +515,22 @@ export function DashboardShell({
               if (href === '/dashboard') {
                 return pathname === '/dashboard' || pathname === '/dashboard/overview';
               }
-              if (href === '/dashboard/brand') {
+              if (href.startsWith('/dashboard/brand')) {
                 return pathname === '/dashboard/brand' || pathname.startsWith('/dashboard/brand/');
+              }
+              if (href === '/dashboard/products') {
+                const subRoutes = [
+                  '/dashboard/products/categories',
+                  '/dashboard/products/collections',
+                  '/dashboard/products/attributes',
+                  '/dashboard/products/import',
+                  '/dashboard/products/export',
+                ];
+                return (
+                  pathname === '/dashboard/products' ||
+                  (pathname.startsWith('/dashboard/products/') &&
+                    !subRoutes.some((sub) => pathname === sub || pathname.startsWith(`${sub}/`)))
+                );
               }
               return pathname === href;
             };
@@ -529,7 +543,7 @@ export function DashboardShell({
                   type="button"
                   onClick={() => {
                     if (sidebarCollapsed && !isMobile) {
-                      router.push(isOnboardingGateActive ? '/dashboard/getting-started' : visibleItems[0].href);
+                      router.push(isOnboardingGateActive ? '/dashboard/brand' : visibleItems[0].href);
                     } else {
                       toggleNavGroup(group.id);
                     }
@@ -552,7 +566,7 @@ export function DashboardShell({
                       const active = pendingHref ? isNavMatch(item.href) && pendingHref === item.href || pendingHref === item.href : isNavMatch(item.href);
                       const isNavigatingToThis = Boolean(pendingHref && pendingHref === item.href && pathname !== item.href);
                       const lockedByOnboarding =
-                        isOnboardingGateActive && !item.href.startsWith('/dashboard/getting-started');
+                        isOnboardingGateActive && !item.href.startsWith('/dashboard/brand');
                       const badgeVal = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
 
                       if (lockedByOnboarding) {
@@ -564,8 +578,8 @@ export function DashboardShell({
                               showToast('Complete Brand Onboarding first to access other workspace modules.');
                               setTimeout(hideToast, 3000);
                               if (isMobile) setMobileMenuOpen(false);
-                              setPendingHref('/dashboard/getting-started');
-                              router.push('/dashboard/getting-started');
+                              setPendingHref('/dashboard/brand');
+                              router.push('/dashboard/brand');
                             }}
                             className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-100/60 font-medium cursor-not-allowed text-left"
                           >
@@ -743,7 +757,7 @@ export function DashboardShell({
             </button>
 
             <Link
-              href={isOnboardingGateActive ? '/dashboard/getting-started' : '/dashboard'}
+              href={isOnboardingGateActive ? '/dashboard/brand' : '/dashboard'}
               className="md:hidden font-extrabold text-xs sm:text-sm text-slate-950 truncate max-w-[120px] sm:max-w-[180px]"
             >
               {profile.name}
@@ -871,7 +885,7 @@ export function DashboardShell({
               </button>
               {quickCreateOpen && (
                 <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-50 text-xs">
-                  <Link href="/dashboard/products/create" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
+                  <Link href="/dashboard/products/addproduct" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
                     + Add Garment Product
                   </Link>
                   <Link href="/dashboard/marketplace/create" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">

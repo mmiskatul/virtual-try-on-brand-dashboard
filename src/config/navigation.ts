@@ -43,8 +43,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     label: 'BRAND & STOREFRONT',
     icon: 'Palette',
     items: [
-      { label: 'Getting Started', href: '/dashboard/getting-started', module: 'overview' },
-      { label: 'Brand Verification & Assets', href: '/dashboard/brand', module: 'brand' },
+      { label: 'Brand Verification & Assets', href: '/dashboard/brand/profile', module: 'brand' },
     ],
   },
   {
@@ -53,7 +52,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'ShoppingBag',
     items: [
       { label: 'All Products', href: '/dashboard/products', module: 'products' },
-      { label: 'Add Product', href: '/dashboard/products/create', module: 'products' },
       { label: 'Product Categories', href: '/dashboard/products/categories', module: 'products' },
       { label: 'Collections', href: '/dashboard/products/collections', module: 'products' },
       { label: 'Attributes & Fabrics', href: '/dashboard/products/attributes', module: 'products' },

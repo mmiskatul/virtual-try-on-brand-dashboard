@@ -317,6 +317,13 @@ export const workspaceSlice = createSlice({
         ),
       ];
     },
+    updateFabric: (state, action: PayloadAction<{ id: string; updates: Partial<Fabric> }>) => {
+      const { id, updates } = action.payload;
+      state.fabrics = state.fabrics.map((f) => (f.id === id ? { ...f, ...updates } : f));
+    },
+    deleteFabric: (state, action: PayloadAction<string>) => {
+      state.fabrics = state.fabrics.filter((f) => f.id !== action.payload);
+    },
 
     addMarketplacePost: (state, action: PayloadAction<MarketplacePost>) => {
       const post = action.payload;

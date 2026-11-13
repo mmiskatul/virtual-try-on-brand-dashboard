@@ -304,10 +304,30 @@ export const brandWorkspaceApi = {
     return list.map(normalizeBackendProduct);
   },
 
+  getProductFormOptions: () =>
+    apiFetch<AddProductFormOptions>('/api/v1/products/form-options'),
+
+  checkProductSku: (sku: string, excludeProductId?: string) => {
+    const params = new URLSearchParams({ sku });
+    if (excludeProductId) params.set('excludeProductId', excludeProductId);
+    return apiFetch<{ sku: string; available: boolean; message: string }>(
+      `/api/v1/products/check-sku?${params.toString()}`
+    );
+  },
+
   createProduct: async (payload: any): Promise<Product> => {
     const res = await apiFetch<{ product: any }>('/api/v1/products', {
       method: 'POST',
       headers: { 'Idempotency-Key': `prod_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` },
+      body: JSON.stringify(payload),
+    });
+    return normalizeBackendProduct(res.product);
+  },
+
+  addProduct: async (payload: any): Promise<Product> => {
+    const res = await apiFetch<{ product: any }>('/api/v1/products/addproduct', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': `addprod_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` },
       body: JSON.stringify(payload),
     });
     return normalizeBackendProduct(res.product);
@@ -323,7 +343,7 @@ export const brandWorkspaceApi = {
 
   setPublication: (
     productId: string,
-    channel: 'brandStorefrontPublished' | 'marketplacePublished',
+    channel: 'brandStorefrontPublished' | 'marketplacePublished' | 'isTryOnEligible',
     published: boolean
   ) =>
     apiFetch<any>(`/api/v1/products/${encodeURIComponent(productId)}/publish`, {
@@ -331,32 +351,154 @@ export const brandWorkspaceApi = {
       body: JSON.stringify({ channel, published }),
     }),
 
+  bulkProductAction: async (
+    productIds: string[],
+    action:
+      | 'PUBLISH_MARKETPLACE'
+      | 'UNPUBLISH_MARKETPLACE'
+      | 'SHOW_STOREFRONT'
+      | 'HIDE_STOREFRONT'
+      | 'ENABLE_TRYON'
+      | 'DISABLE_TRYON'
+      | 'ARCHIVE'
+  ) => {
+    const res = await apiFetch<{
+      message: string;
+      action: string;
+      updatedCount: number;
+      skippedCount: number;
+      products: any[];
+      errors: Array<{ productId: string; code: string; message: string }>;
+    }>('/api/v1/products/bulk', {
+      method: 'PATCH',
+      body: JSON.stringify({ productIds, action }),
+    });
+    return {
+      ...res,
+      products: (res.products || []).map(normalizeBackendProduct),
+    };
+  },
+
+  bulkImportProducts: async (
+    rows: Array<{
+      name: string;
+      sku: string;
+      category?: string;
+      price: number;
+      stock?: number;
+      collection?: string;
+      description?: string;
+      tryOnCategory?: string;
+    }>,
+    skipDuplicateSkus = true
+  ) => {
+    const res = await apiFetch<{
+      message: string;
+      importedCount: number;
+      skippedCount: number;
+      importedProducts: any[];
+      skipped: Array<{ rowNumber: number; sku: string; reason: string }>;
+    }>('/api/v1/products/bulk-import', {
+      method: 'POST',
+      body: JSON.stringify({ rows, skipDuplicateSkus }),
+    });
+    return {
+      ...res,
+      importedProducts: (res.importedProducts || []).map(normalizeBackendProduct),
+    };
+  },
+
+  exportProductsCsv: async (params?: { category?: string; status?: string }): Promise<string> => {
+    const search = new URLSearchParams({ format: 'csv' });
+    if (params?.category && params.category !== 'All') search.set('category', params.category);
+    if (params?.status && params.status !== 'All') search.set('status', params.status);
+    const res = await brandFetch(`${API_BASE}/api/v1/products/export?${search.toString()}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new ServiceError(
+        res.status,
+        errJson?.message || `Export failed (${res.status})`,
+        errJson?.code || errJson?.error,
+        Array.isArray(errJson?.issues) ? errJson.issues : undefined,
+        errJson?.correlationId
+      );
+    }
+    return res.text();
+  },
+
   deleteProduct: (id: string) =>
     apiFetch<{ message: string }>(`/api/v1/products/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
 
   // Brand Categories, Collections & SKU Variants (Phase 3 Enterprise Catalog)
-  getCategories: async () => {
+  getCategories: async (): Promise<BrandCategoryRecord[]> => {
     const res = await apiFetch<any>('/api/v1/brand/categories');
     return res?.data?.categories || res?.categories || [];
   },
 
-  createCategory: (payload: { name: string; slug?: string; sortOrder?: number; seoTitle?: string }) =>
-    apiFetch<any>('/api/v1/brand/categories', {
+  createCategory: async (payload: {
+    name: string;
+    slug?: string;
+    sortOrder?: number;
+    seoTitle?: string;
+  }): Promise<BrandCategoryRecord> => {
+    const res = await apiFetch<any>('/api/v1/brand/categories', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+    return res?.data?.category || res?.category;
+  },
+
+  updateCategory: async (
+    id: string,
+    payload: { name?: string; slug?: string; sortOrder?: number; seoTitle?: string }
+  ): Promise<BrandCategoryRecord> => {
+    const res = await apiFetch<any>(`/api/v1/brand/categories/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return res?.data?.category || res?.category;
+  },
+
+  deleteCategory: (id: string) =>
+    apiFetch<any>(`/api/v1/brand/categories/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
     }),
 
-  getCollections: async () => {
+  getCollections: async (): Promise<BrandCollectionRecord[]> => {
     const res = await apiFetch<any>('/api/v1/brand/collections');
     return res?.data?.collections || res?.collections || [];
   },
 
-  createCollection: (payload: { title: string; slug?: string; description?: string }) =>
-    apiFetch<any>('/api/v1/brand/collections', {
+  createCollection: async (payload: {
+    title: string;
+    slug?: string;
+    description?: string;
+  }): Promise<BrandCollectionRecord> => {
+    const res = await apiFetch<any>('/api/v1/brand/collections', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+    return res?.data?.collection || res?.collection;
+  },
+
+  updateCollection: async (
+    id: string,
+    payload: { title?: string; slug?: string; description?: string }
+  ): Promise<BrandCollectionRecord> => {
+    const res = await apiFetch<any>(`/api/v1/brand/collections/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return res?.data?.collection || res?.collection;
+  },
+
+  deleteCollection: (id: string) =>
+    apiFetch<any>(`/api/v1/brand/collections/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
     }),
 
   upsertVariant: (
@@ -368,6 +510,11 @@ export const brandWorkspaceApi = {
       body: JSON.stringify(payload),
     }),
 
+  deleteVariant: (productId: string, variantId: string) =>
+    apiFetch<any>(`/api/v1/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}`, {
+      method: 'DELETE',
+    }),
+
   // Fabrics
   getFabrics: async (): Promise<Fabric[]> => {
     const res = await apiFetch<{ fabrics: Fabric[] } | Fabric[]>('/api/v1/fabrics');
@@ -375,9 +522,20 @@ export const brandWorkspaceApi = {
   },
 
   createFabric: (fabric: Partial<Fabric>) =>
-    apiFetch<{ fabric: Fabric }>('/api/v1/fabrics', {
+    apiFetch<{ message?: string; fabric: Fabric }>('/api/v1/fabrics', {
       method: 'POST',
       body: JSON.stringify(fabric),
+    }),
+
+  updateFabric: (id: string, fabric: Partial<Fabric>) =>
+    apiFetch<{ message?: string; fabric: Fabric }>(`/api/v1/fabrics/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(fabric),
+    }),
+
+  deleteFabric: (id: string) =>
+    apiFetch<{ message: string }>(`/api/v1/fabrics/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
     }),
 
   // Inventory
@@ -794,6 +952,41 @@ export interface BrandIdentityPatchPayload {
   bodyFont?: string;
   buttonStyle?: 'pill' | 'rounded' | 'square';
   headerStyle?: string;
+}
+
+export interface AddProductFormOptions {
+  categories: string[];
+  collections: string[];
+  fabrics: Array<{ id: string; name: string; composition: string }>;
+  tryOnCategories: Array<'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all'>;
+  defaultCurrency: 'BDT';
+  suggestedSkuPrefix: string;
+  quota: {
+    plan: string;
+    used: number;
+    limit: number;
+    remaining: number;
+  };
+}
+
+export interface BrandCategoryRecord {
+  id: string;
+  tenantId: string | null;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  active: boolean;
+  seoTitle?: string;
+}
+
+export interface BrandCollectionRecord {
+  id: string;
+  tenantId: string | null;
+  title: string;
+  slug: string;
+  description?: string;
+  active: boolean;
+  sponsored: boolean;
 }
 
 export interface BrandVerificationCheck {
