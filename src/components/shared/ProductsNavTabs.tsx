@@ -16,7 +16,7 @@ export function ProductsNavTabs({
   activeTab,
   editingProductName,
 }: {
-  activeTab?: ProductNavTab['key'] | 'addproduct' | 'edit';
+  activeTab?: ProductNavTab['key'] | 'addproduct' | 'addcategory' | 'edit';
   editingProductName?: string;
 }) {
   const pathname = usePathname();
@@ -53,7 +53,15 @@ export function ProductsNavTabs({
       className="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-bold"
     >
       {tabs.map((tab) => {
-        const isActive = activeTab ? activeTab === tab.key : pathname === tab.href;
+        const isCategoriesActive =
+          tab.key === 'categories' &&
+          (activeTab === 'categories' ||
+            activeTab === 'addcategory' ||
+            pathname === '/dashboard/products/categories' ||
+            pathname.startsWith('/dashboard/products/categories/'));
+        const isActive = activeTab
+          ? activeTab === tab.key || isCategoriesActive
+          : pathname === tab.href || isCategoriesActive;
         return (
           <Link
             key={tab.href}

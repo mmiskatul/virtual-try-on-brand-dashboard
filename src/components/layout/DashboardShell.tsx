@@ -518,6 +518,12 @@ export function DashboardShell({
               if (href.startsWith('/dashboard/brand')) {
                 return pathname === '/dashboard/brand' || pathname.startsWith('/dashboard/brand/');
               }
+              if (href === '/dashboard/products/categories') {
+                return (
+                  pathname === '/dashboard/products/categories' ||
+                  pathname.startsWith('/dashboard/products/categories/')
+                );
+              }
               if (href === '/dashboard/products') {
                 const subRoutes = [
                   '/dashboard/products/categories',

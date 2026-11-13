@@ -298,8 +298,19 @@ export const brandWorkspaceApi = {
   getAnalytics: () => apiFetch<any>('/api/v1/brand/analytics'),
 
   // Products & Dual Publication
-  getProducts: async (): Promise<Product[]> => {
-    const res = await apiFetch<{ products: any[] } | any[]>('/api/v1/products');
+  getProducts: async (params?: {
+    search?: string;
+    category?: string;
+    status?: string;
+    sortBy?: string;
+  }): Promise<Product[]> => {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.category && params.category !== 'All') query.set('category', params.category);
+    if (params?.status && params.status !== 'All') query.set('status', params.status);
+    if (params?.sortBy) query.set('sortBy', params.sortBy);
+    const qs = query.toString();
+    const res = await apiFetch<{ products: any[] } | any[]>(`/api/v1/products${qs ? `?${qs}` : ''}`);
     const list = Array.isArray(res) ? res : res?.products || [];
     return list.map(normalizeBackendProduct);
   },
@@ -439,12 +450,39 @@ export const brandWorkspaceApi = {
     return res?.data?.categories || res?.categories || [];
   },
 
-  createCategory: async (payload: {
-    name: string;
-    slug?: string;
-    sortOrder?: number;
-    seoTitle?: string;
-  }): Promise<BrandCategoryRecord> => {
+  getCategoryFormOptions: async (): Promise<CategoryFormOptions> => {
+    const res = await apiFetch<any>('/api/v1/brand/categories/form-options');
+    return (
+      res?.data ||
+      res || {
+        presets: [],
+        tryOnClasses: ['tops', 'bottoms', 'dresses', 'outerwear', 'all', 'none'],
+        existingCategories: [],
+        existingCount: 0,
+        defaultSortOrder: 10,
+      }
+    );
+  },
+
+  checkCategorySlug: async (
+    slug: string,
+    name?: string
+  ): Promise<CheckCategorySlugResult> => {
+    const params = new URLSearchParams();
+    if (slug) params.set('slug', slug);
+    if (name) params.set('name', name);
+    const res = await apiFetch<any>(`/api/v1/brand/categories/check-slug?${params.toString()}`);
+    return (
+      res?.data ||
+      res || {
+        available: true,
+        slug: slug.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        message: 'Slug available',
+      }
+    );
+  },
+
+  createCategory: async (payload: CreateCategoryPayload): Promise<BrandCategoryRecord> => {
     const res = await apiFetch<any>('/api/v1/brand/categories', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -452,9 +490,31 @@ export const brandWorkspaceApi = {
     return res?.data?.category || res?.category;
   },
 
+  addCategory: async (payload: CreateCategoryPayload): Promise<BrandCategoryRecord> => {
+    const res = await apiFetch<any>('/api/v1/brand/categories/add', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res?.data?.category || res?.category;
+  },
+
+  getCategoryById: async (id: string): Promise<BrandCategoryRecord> => {
+    const res = await apiFetch<any>(`/api/v1/brand/categories/${encodeURIComponent(id)}`);
+    return res?.data?.category || res?.category;
+  },
+
   updateCategory: async (
     id: string,
-    payload: { name?: string; slug?: string; sortOrder?: number; seoTitle?: string }
+    payload: {
+      name?: string;
+      slug?: string;
+      sortOrder?: number;
+      seoTitle?: string;
+      description?: string;
+      parentCategory?: string;
+      tryOnCategory?: 'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all' | 'none';
+      active?: boolean;
+    }
   ): Promise<BrandCategoryRecord> => {
     const res = await apiFetch<any>(`/api/v1/brand/categories/${encodeURIComponent(id)}`, {
       method: 'PUT',
@@ -977,6 +1037,36 @@ export interface BrandCategoryRecord {
   sortOrder: number;
   active: boolean;
   seoTitle?: string;
+  description?: string;
+  parentCategory?: string;
+  tryOnCategory?: 'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all' | 'none';
+  productCount?: number;
+}
+
+export interface CategoryFormOptions {
+  presets: string[];
+  tryOnClasses: Array<'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all' | 'none'>;
+  existingCategories: string[];
+  existingCount: number;
+  defaultSortOrder: number;
+}
+
+export interface CheckCategorySlugResult {
+  available: boolean;
+  slug: string;
+  suggestedSlug?: string;
+  message: string;
+}
+
+export interface CreateCategoryPayload {
+  name: string;
+  slug?: string;
+  sortOrder?: number;
+  seoTitle?: string;
+  description?: string;
+  parentCategory?: string;
+  tryOnCategory?: 'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all' | 'none';
+  active?: boolean;
 }
 
 export interface BrandCollectionRecord {

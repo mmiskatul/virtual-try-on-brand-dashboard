@@ -5,8 +5,10 @@ import Link from 'next/link';
 import {
   Download,
   Layers,
+  Loader2,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   Sparkles,
   Trash2,
@@ -61,6 +63,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
   }, [initialView]);
 
   const products = useWorkspaceStore((s) => s.products);
+  const setProducts = useWorkspaceStore((s) => s.setProducts);
   const fabrics = useWorkspaceStore((s) => s.fabrics);
   const activeRole = useWorkspaceStore((s) => s.activeRole);
   const roleOverrides = useWorkspaceStore((s) => s.roleOverrides);
@@ -74,6 +77,9 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
 
   const showToast = useUiStore((s) => s.showToast);
   const hideToast = useUiStore((s) => s.hideToast);
+
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('All');
@@ -122,6 +128,25 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
     },
     [hideToast, showToast]
   );
+
+  const fetchLiveProducts = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
+    setErrorBanner(null);
+    try {
+      const liveList = await brandWorkspaceApi.getProducts();
+      setProducts(liveList);
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to fetch products from backend catalog.'));
+    } finally {
+      setLoadingProducts(false);
+      if (isManualRefresh) setIsRefreshing(false);
+    }
+  }, [setProducts]);
+
+  // Initial live products fetch from backend
+  useEffect(() => {
+    fetchLiveProducts();
+  }, [fetchLiveProducts]);
 
   // Load Categories, Collections & Fabrics when opening relevant tabs
   useEffect(() => {
@@ -255,6 +280,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
       }
       notify(res.message || `Applied bulk action to ${res.updatedCount} product(s).`);
       setSelectedIds([]);
+      fetchLiveProducts();
     } catch (err) {
       setErrorBanner(formatApiError(err, 'Bulk catalog operation failed.'));
     } finally {
@@ -492,6 +518,16 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
           subtitle="Private catalog items require explicit Storefront or Marketplace publication before customers can see them."
           actions={
             <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isRefreshing}
+                onClick={() => fetchLiveProducts(true)}
+                className="gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing…' : 'Refresh'}
+              </Button>
               <Button variant="outline" size="sm" disabled={busyAction} onClick={handleExportCsv} className="gap-1.5">
                 <Download className="w-3.5 h-3.5" /> Export CSV
               </Button>
@@ -510,6 +546,13 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
 
         {view === 'list' && (
           <SectionCard>
+            {loadingProducts && products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <span className="text-sm font-medium">Loading products from catalog…</span>
+              </div>
+            ) : null}
+
             {/* Filters & Bulk Actions */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
@@ -784,7 +827,19 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
         )}
 
         {view === 'categories' && (
-          <SectionCard title="Product Categories Breakdown" subtitle="Manage your brand taxonomy persisted with PostgreSQL & tenant catalog">
+          <SectionCard
+            title="Product Categories Breakdown"
+            subtitle="Manage your brand taxonomy persisted with PostgreSQL & tenant catalog"
+            right={
+              canEdit && (
+                <Link href="/dashboard/products/categories/addcategory">
+                  <Button size="sm" className="gap-1.5">
+                    <Plus className="w-3.5 h-3.5" /> Add Category
+                  </Button>
+                </Link>
+              )
+            }
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
               {categories.filter((c) => c !== 'All').map((c) => {
                 const count = products.filter((p) => p.category === c).length;
@@ -793,33 +848,45 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                   <div key={c} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2 flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-bold text-slate-900">{c}</p>
-                        {record && record.tenantId && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCategoryId(record.id);
-                                setCatName(record.name);
-                                setCatSeoTitle(record.seoTitle || '');
-                              }}
-                              className="p-1 text-slate-400 hover:text-slate-900"
-                              aria-label={`Edit category ${c}`}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCategory(record.id)}
-                              className="p-1 text-slate-400 hover:text-rose-600"
-                              aria-label={`Delete category ${c}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
+                        <div>
+                          <p className="font-bold text-slate-900">{c}</p>
+                          {record?.slug && (
+                            <p className="text-[10px] text-slate-400 font-mono truncate">/{record.slug}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {record?.tryOnCategory && record.tryOnCategory !== 'none' && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-200/80 text-slate-700 font-bold uppercase">
+                              {record.tryOnCategory}
+                            </span>
+                          )}
+                          {record && record.tenantId && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingCategoryId(record.id);
+                                  setCatName(record.name);
+                                  setCatSeoTitle(record.seoTitle || '');
+                                }}
+                                className="p-1 text-slate-400 hover:text-slate-900"
+                                aria-label={`Edit category ${c}`}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCategory(record.id)}
+                                className="p-1 text-slate-400 hover:text-rose-600"
+                                aria-label={`Delete category ${c}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-slate-500">{count} product(s)</p>
+                      <p className="text-slate-500 mt-1">{record?.productCount ?? count} product(s)</p>
                       {record?.seoTitle && (
                         <p className="text-[11px] text-slate-400 mt-1 truncate">SEO: {record.seoTitle}</p>
                       )}
@@ -1107,6 +1174,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
             await brandWorkspaceApi.deleteProduct(targetId);
             deleteProduct(targetId);
             notify('Product deleted.');
+            fetchLiveProducts();
           } catch (err) {
             setErrorBanner(formatApiError(err, 'Failed to delete product from backend catalog.'));
           }
