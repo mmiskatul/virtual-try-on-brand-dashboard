@@ -8,6 +8,7 @@ import { signOut, useSession } from 'next-auth/react';
 import {
   BarChart3,
   Bell,
+  MessageSquare,
   Boxes,
   ChevronDown,
   ChevronRight,
@@ -39,6 +40,7 @@ import {
   X,
 } from 'lucide-react';
 import { SIDEBAR_NAV_GROUPS } from '../../config/navigation';
+import { brandWorkspaceApi, type AppNotification } from '../../services/brandService';
 import { canPerform, ROLE_LABELS } from '../../config/permissions';
 import { StaffRole } from '../../types';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
@@ -84,6 +86,7 @@ const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   PackageCheck,
   Boxes,
   Users,
+  MessageSquare,
   Megaphone,
   BarChart3,
   UserCog,
@@ -687,6 +690,33 @@ export function DashboardShell({
 
   const shellBlocked = isOnboardingGateActive || isCheckingOnboardingGate;
 
+  // Server notifications (new orders, new reviews). Polled gently; nothing runs while onboarding blocks the shell.
+  const [serverNotifs, setServerNotifs] = useState<AppNotification[]>([]);
+  const loadNotifs = useCallback(async () => {
+    try {
+      setServerNotifs(await brandWorkspaceApi.getNotifications());
+    } catch {
+      /* the bell simply keeps showing local alerts */
+    }
+  }, []);
+  useEffect(() => {
+    if (!isAuthenticated || shellBlocked) return;
+    void loadNotifs();
+    const timer = setInterval(() => void loadNotifs(), 60_000);
+    return () => clearInterval(timer);
+  }, [isAuthenticated, shellBlocked, loadNotifs]);
+  const unreadNotifs = serverNotifs.filter((n) => !n.readAt);
+  const openNotification = async (n: AppNotification) => {
+    setNotifOpen(false);
+    if (n.readAt) return;
+    setServerNotifs((list) => list.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)));
+    try {
+      await brandWorkspaceApi.markNotificationRead(n.id);
+    } catch {
+      void loadNotifs();
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 overflow-x-clip">
       <ToastNotification message={toastMessage} />
@@ -890,29 +920,51 @@ export function DashboardShell({
             <div ref={notifWrapperRef} className="relative">
               <button
                 type="button"
-                onClick={() => setNotifOpen((o) => !o)}
-                aria-label="Notifications"
+                onClick={() => {
+                  setNotifOpen((o) => !o);
+                  void loadNotifs();
+                }}
+                aria-label={`Notifications${unreadNotifs.length ? `, ${unreadNotifs.length} unread` : ''}`}
+                aria-expanded={notifOpen}
                 className="relative p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600"
               >
                 <Bell className="w-4 h-4" />
-                {(lowStockCount > 0 || pendingOrdersCount > 0) && (
+                {(unreadNotifs.length > 0 || lowStockCount > 0 || pendingOrdersCount > 0) && (
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" />
                 )}
               </button>
               {notifOpen && (
-                <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-3.5 z-50 space-y-2 text-xs">
-                  <p className="font-bold text-slate-900 border-b border-slate-100 pb-2">
-                    Workspace Alerts
-                  </p>
-                  {lowStockCount > 0 && (
-                    <Link href="/dashboard/inventory" onClick={() => setNotifOpen(false)} className="block p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
-                      {lowStockCount} product(s) below safety stock threshold
+                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white border border-slate-200 rounded-2xl shadow-xl p-3.5 z-50 space-y-2 text-xs">
+                  <p className="font-bold text-slate-900 border-b border-slate-100 pb-2 text-sm">Notifications</p>
+                  {pendingOrdersCount > 0 && (
+                    <Link href="/dashboard/orders" onClick={() => setNotifOpen(false)} className="block p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800">
+                      {pendingOrdersCount} order{pendingOrdersCount === 1 ? '' : 's'} waiting to be processed
                     </Link>
                   )}
-                  {pendingOrdersCount > 0 && (
-                    <Link href="/dashboard/orders" onClick={() => setNotifOpen(false)} className="block p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800">
-                      {pendingOrdersCount} order(s) awaiting fulfillment
+                  {lowStockCount > 0 && (
+                    <Link href="/dashboard/inventory" onClick={() => setNotifOpen(false)} className="block p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
+                      {lowStockCount} product{lowStockCount === 1 ? '' : 's'} running low on stock
                     </Link>
+                  )}
+                  {serverNotifs.slice(0, 8).map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => void openNotification(n)}
+                      className={`w-full text-left p-2.5 rounded-xl border ${n.readAt ? 'border-slate-100 text-slate-500' : 'border-slate-200 bg-white text-slate-900'}`}
+                    >
+                      <span className="flex items-start gap-2">
+                        {!n.readAt && <span className="mt-1 w-2 h-2 rounded-full bg-sky-500 shrink-0" />}
+                        <span className="min-w-0">
+                          <span className="block font-semibold">{n.title}</span>
+                          <span className="block text-[11px] text-slate-500 leading-snug">{n.body}</span>
+                          <span className="block text-[10px] text-slate-400 mt-0.5">{new Date(n.createdAt).toLocaleString()}</span>
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                  {serverNotifs.length === 0 && pendingOrdersCount === 0 && lowStockCount === 0 && (
+                    <p className="py-4 text-center text-slate-500">You are all caught up.</p>
                   )}
                 </div>
               )}
@@ -1171,16 +1223,27 @@ export function DashboardShell({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
+            <div className="space-y-3 text-sm text-slate-600 leading-relaxed">
               <p>
-                <strong>Dual Publishing Model:</strong> Every product lives in your private tenant catalog first. Enable <em>Storefront Visibility</em> to show it on your dedicated boutique (<code>/brands/{profile.slug}</code>), or explicitly create a <em>Marketplace Post</em> to publish into global discovery.
+                <strong className="text-slate-900">Your store:</strong> products you publish to your storefront show on{' '}
+                <code>/brands/{profile.slug}</code>. Publish a product to the marketplace to reach more shoppers.
               </p>
               <p>
-                <strong>Dedicated Try-On Experience:</strong> Your public try-on URL (<code>/try/{profile.slug}</code>) displays strictly garments belonging to your brand tenant and uses platform AI generation jobs.
+                <strong className="text-slate-900">Virtual try-on:</strong> customers can try your garments on at{' '}
+                <code>/try/{profile.slug}</code>. Change how that page looks under Virtual Try-On.
               </p>
               <p>
-                <strong>Role-Based Access:</strong> Test permissions live via the Top Header Role switcher (`Owner`, `Product Manager`, `Marketing Manager`, etc.).
+                <strong className="text-slate-900">Need a hand?</strong> Send us a request and we will reply by email.
               </p>
+              <div className="flex gap-2 pt-1">
+                <Link
+                  href="/dashboard/support"
+                  onClick={() => setHelpOpen(false)}
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800"
+                >
+                  Contact support
+                </Link>
+              </div>
             </div>
           </div>
         </div>

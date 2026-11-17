@@ -22,6 +22,7 @@ export interface NavGroup {
     | 'PackageCheck'
     | 'Boxes'
     | 'Users'
+    | 'MessageSquare'
     | 'Megaphone'
     | 'BarChart3'
     | 'UserCog'
@@ -104,6 +105,12 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
   },
   // Hidden from the sidebar until the backend for this module exists (pages stay reachable by URL).
   {
+    id: 'reviews',
+    label: 'REVIEWS',
+    icon: 'MessageSquare',
+    items: [{ label: 'Reviews', href: '/dashboard/reviews', module: 'customers' }],
+  },
+  {
     id: 'customers',
     label: 'CUSTOMERS',
     icon: 'Users',
@@ -182,6 +189,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'Settings',
     items: [
       { label: 'Settings', href: '/dashboard/settings', module: 'settings' },
+      { label: 'Support', href: '/dashboard/support', module: 'settings', hidden: true },
       { label: 'Onboarding: Brand Profile & Assets', href: '/dashboard/settings/onboarding', module: 'brand', hidden: true },
       { label: 'Onboarding: Theme & Identity', href: '/dashboard/settings/onboarding/identity', module: 'brand', hidden: true },
       { label: 'Onboarding: Logos & Brand Media', href: '/dashboard/settings/onboarding/media', module: 'brand', hidden: true },

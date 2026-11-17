@@ -1,5 +1,7 @@
 'use client';
 
+import { SecurityPanel } from './SecurityPanel';
+
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -141,9 +143,11 @@ export function SettingsCenterView({
           title="Brand Settings & Configuration"
           subtitle="Configure domain routing, checkout taxes, shipping thresholds, privacy retention, and security."
           actions={
+            tab === 'security' || tab === 'onboarding' ? undefined : (
             <Button size="sm" disabled={!canManage || saving} onClick={() => handleSave()} className="gap-1.5">
               <Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save Changes'}
             </Button>
+            )
           }
         />
 
@@ -566,31 +570,7 @@ export function SettingsCenterView({
               </SectionCard>
             )}
 
-            {tab === 'security' && (
-              <SectionCard title="Account Security & Session Protection" subtitle="Tenant isolation, JWT cookie verification, and MFA configuration.">
-                <div className="space-y-3 text-xs">
-                  <label className="flex items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 cursor-pointer">
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900">Require Two-Factor Verification (Policy Toggle)</p>
-                      <p className="text-slate-500">Enforce authenticator OTP during merchant login when identity provider supports MFA.</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={settingsData.twoFactorEnabled}
-                      onChange={(e) => patchSettings({ twoFactorEnabled: e.target.checked })}
-                      className="mt-1 sm:mt-0 shrink-0"
-                    />
-                  </label>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600">
-                    <p className="font-bold text-slate-900 mb-1">Active Session Boundary</p>
-                    <p>
-                      Middleware validates signed NextAuth / merchant JWT tokens with role{' '}
-                      <code>BRAND_OWNER</code> or <code>STORE_MANAGER</code> before admitting requests to <code>/dashboard/*</code>.
-                    </p>
-                  </div>
-                </div>
-              </SectionCard>
-            )}
+            {tab === 'security' && <SecurityPanel />}
 
             {tab === 'account' && (
               <SectionCard title="Owner Account Summary" subtitle="Primary tenant administrator record.">

@@ -23,6 +23,78 @@ export class ServiceError extends Error {
   }
 }
 
+export interface ServerTryOnConfig {
+  enabled: boolean;
+  publicPageActive: boolean;
+  requireConsent: boolean;
+  retentionDays: number;
+  privacyPolicyUrl: string;
+  termsUrl: string;
+  dataProcessingNotice: string;
+  appearance: {
+    pageTitle: string;
+    pageDescription: string;
+    uploadInstructions: string;
+    primaryBtnText: string;
+    uploadBtnText: string;
+    generateBtnText: string;
+    retryBtnText: string;
+    loadingText: string;
+    successText: string;
+    errorText: string;
+    accentColor: string;
+    backgroundColor: string;
+    gridStyle: '3-col' | '4-col' | 'editorial';
+    previewLayout: 'split' | 'centered';
+    showPrices: boolean;
+    showRatings: boolean;
+  };
+}
+
+export type TryOnConfigPatch = Partial<Omit<ServerTryOnConfig, 'appearance'>> & {
+  appearance?: Partial<ServerTryOnConfig['appearance']>;
+};
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface BrandReview {
+  id: string;
+  productId: string;
+  productName: string;
+  authorName: string;
+  rating: number;
+  comment: string;
+  verifiedBuy: boolean;
+  brandReply?: string;
+  createdAt: string;
+}
+
+export interface SessionInfo {
+  id: string;
+  deviceLabel: string;
+  ipMasked: string;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+}
+
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  category: string;
+  priority: string;
+  status: string;
+  createdAt?: string | number;
+  updatedAt?: string | number;
+  messages?: Array<{ id: string; body?: string; message?: string; authorName?: string; createdAt?: string | number }>;
+}
+
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutMs = init.body instanceof FormData ? 25000 : 8000;
@@ -732,6 +804,66 @@ export const brandWorkspaceApi = {
       body: JSON.stringify(payload),
     });
     return res?.data || res;
+  },
+
+  // --- Try-on experience settings (saved per brand, read by the public try-on page) ---
+  getTryOnConfig: async (): Promise<ServerTryOnConfig> => {
+    const res = await apiFetch<any>('/api/v1/brand/try-on-config');
+    return res.config;
+  },
+
+  saveTryOnConfig: async (patch: TryOnConfigPatch): Promise<ServerTryOnConfig> => {
+    const res = await apiFetch<any>('/api/v1/brand/try-on-config', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    });
+    return res.config;
+  },
+
+  getPublicTryOnConfig: async (slug: string): Promise<ServerTryOnConfig> => {
+    const res = await apiFetch<any>(`/api/v1/brands/${encodeURIComponent(slug)}/try-on-config`);
+    return res.config;
+  },
+
+  // --- Notifications ---
+  getNotifications: async (): Promise<AppNotification[]> => {
+    const res = await apiFetch<any>('/api/v1/notifications');
+    return res?.data?.notifications || [];
+  },
+
+  markNotificationRead: async (id: string) => {
+    await apiFetch<any>(`/api/v1/notifications/${encodeURIComponent(id)}/read`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  },
+
+  // --- Reviews inbox ---
+  getBrandReviews: async (): Promise<BrandReview[]> => {
+    const res = await apiFetch<any>('/api/v1/brand/reviews');
+    return res?.data?.reviews || [];
+  },
+
+  // --- Account security ---
+  getSessions: async (): Promise<{ currentSessionId: string | null; sessions: SessionInfo[] }> => {
+    const res = await apiFetch<any>('/api/v1/auth/sessions');
+    const data = res?.data || res;
+    return { currentSessionId: data.currentSessionId || null, sessions: data.sessions || [] };
+  },
+
+  revokeSession: async (id: string) => {
+    await apiFetch<any>(`/api/v1/auth/sessions/${encodeURIComponent(id)}/revoke`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const res = await apiFetch<any>('/api/v1/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    return (res?.data || res) as { changed: boolean; revokedOtherSessions: number };
   },
 
   executeTryOn: async (params: {

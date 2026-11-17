@@ -33,7 +33,23 @@ export default function DedicatedBrandPublicTryOnPage() {
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
   const [notFoundFlag, setNotFoundFlag] = useState(false);
 
-  const appearance = DEFAULT_TRYON_CONFIG.appearance;
+  // The brand's saved try-on settings (look, consent text, on/off). Defaults apply until they load.
+  const [tryOnCfg, setTryOnCfg] = useState(DEFAULT_TRYON_CONFIG);
+  const appearance = tryOnCfg.appearance;
+  useEffect(() => {
+    let cancelled = false;
+    brandWorkspaceApi
+      .getPublicTryOnConfig(brandSlug)
+      .then((cfg) => {
+        if (!cancelled) setTryOnCfg((prev) => ({ ...prev, ...cfg, appearance: { ...prev.appearance, ...cfg.appearance } }));
+      })
+      .catch(() => {
+        /* keep defaults */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [brandSlug]);
 
   useEffect(() => {
     async function loadBrandScope() {
@@ -71,10 +87,24 @@ export default function DedicatedBrandPublicTryOnPage() {
     );
   }
 
+  if (!tryOnCfg.enabled || !tryOnCfg.publicPageActive) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center space-y-3 bg-white">
+        <h1 className="text-2xl font-bold text-slate-900">Virtual try-on is not available right now</h1>
+        <p className="text-sm text-slate-500 max-w-md">
+          {brandName || 'This brand'} has paused its virtual fitting room. Please check back later.
+        </p>
+        <Link href={`/brands/${brandSlug}`} className="text-sm font-bold underline">
+          Back to the store
+        </Link>
+      </div>
+    );
+  }
+
   const activeGarment = eligibleGarments.find((p) => p.id === selectedId) || eligibleGarments[0];
 
   const handleGenerate = async () => {
-    if (!consent) {
+    if (tryOnCfg.requireConsent && !consent) {
       setStatusNotice('Please accept privacy terms before generating your look.');
       return;
     }
@@ -119,20 +149,23 @@ export default function DedicatedBrandPublicTryOnPage() {
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-8 w-full flex-1 space-y-5 sm:space-y-6">
         <div className="space-y-1">
-          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-950">{brandName} Virtual Fitting Room</h1>
-          <p className="text-xs sm:text-sm text-slate-600">
-            Browse and try on {eligibleGarments.length} eligible garments belonging exclusively to {brandName}.
-          </p>
+          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-950">{appearance.pageTitle}</h1>
+          <p className="text-xs sm:text-sm text-slate-600">{appearance.pageDescription}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
           {/* Left: Photo & Consent */}
           <div className="lg:col-span-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 space-y-4">
-            <h2 className="font-bold text-sm text-slate-900">1. Upload Customer Photo</h2>
-            <label className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer">
-              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 rounded accent-slate-950" />
-              <span>{DEFAULT_TRYON_CONFIG.dataProcessingNotice}</span>
-            </label>
+            <h2 className="font-bold text-sm text-slate-900">1. Upload your photo</h2>
+            <p className="text-xs text-slate-500">{appearance.uploadInstructions}</p>
+            {tryOnCfg.requireConsent ? (
+              <label className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 rounded accent-slate-950" />
+                <span>{tryOnCfg.dataProcessingNotice}</span>
+              </label>
+            ) : (
+              <p className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">{tryOnCfg.dataProcessingNotice}</p>
+            )}
             <input
               ref={fileRef}
               type="file"
@@ -174,12 +207,18 @@ export default function DedicatedBrandPublicTryOnPage() {
                 <p className="text-xs font-bold text-emerald-700 flex items-center gap-1">
                   <CheckCircle className="w-3.5 h-3.5" /> {appearance.successText}
                 </p>
+                <Button size="sm" variant="outline" onClick={() => { setPhase('ready'); setStatusNotice(null); }}>
+                  {appearance.retryBtnText}
+                </Button>
               </div>
             ) : phase === 'error' ? (
               <div className="aspect-[3/4] rounded-2xl bg-rose-50/50 border border-rose-200 p-6 flex flex-col items-center justify-center text-center space-y-2 text-xs">
                 <AlertTriangle className="w-8 h-8 text-rose-600" />
-                <p className="font-bold text-slate-900">Could Not Complete Live Generation</p>
-                <p className="text-slate-600">{statusNotice}</p>
+                <p className="font-bold text-slate-900">{appearance.errorText}</p>
+                {statusNotice && <p className="text-slate-500">{statusNotice}</p>}
+                <Button size="sm" variant="outline" onClick={() => { setPhase('ready'); setStatusNotice(null); }}>
+                  {appearance.retryBtnText}
+                </Button>
               </div>
             ) : (
               <div className="aspect-[3/4] rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center p-6 text-center text-xs text-slate-500">
@@ -222,7 +261,7 @@ export default function DedicatedBrandPublicTryOnPage() {
             <button
               type="button"
               onClick={handleGenerate}
-              style={{ backgroundColor: accentColor }}
+              style={{ backgroundColor: appearance.accentColor }}
               className="w-full py-3 rounded-full text-white text-xs font-bold flex items-center justify-center gap-2 shadow"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />

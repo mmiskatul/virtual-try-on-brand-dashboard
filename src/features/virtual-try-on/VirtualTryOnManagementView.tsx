@@ -15,6 +15,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { TryOnCategory } from '../../types';
+import type { TryOnConfigPatch } from '../../services/brandService';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { brandWorkspaceApi } from '../../services';
@@ -95,6 +96,42 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
   const notify = (msg: string) => {
     showToast(msg);
     setTimeout(hideToast, 3000);
+  };
+
+  // Settings live on the server: load them once, save them with a real request.
+  const [serverReady, setServerReady] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    brandWorkspaceApi
+      .getTryOnConfig()
+      .then((cfg) => {
+        if (cancelled) return;
+        updateTryOnConfig(cfg);
+        setAppearance(cfg.appearance);
+        setServerReady(true);
+      })
+      .catch(() => {
+        /* keep the defaults; saving will report the real error */
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const persistConfig = async (patch: TryOnConfigPatch, okMessage: string) => {
+    setSavingConfig(true);
+    try {
+      const saved = await brandWorkspaceApi.saveTryOnConfig(patch);
+      updateTryOnConfig(saved);
+      setAppearance(saved.appearance);
+      notify(okMessage);
+    } catch (err: any) {
+      notify(err?.message || 'Could not save your settings.');
+    } finally {
+      setSavingConfig(false);
+    }
   };
 
   const publicTryOnUrl =
@@ -504,13 +541,11 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                   <div><label className="block font-bold mb-1">Try-On Button Text</label><input value={appearance.primaryBtnText} onChange={(e) => setAppearance({ ...appearance, primaryBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                   <div><label className="block font-bold mb-1">Generate Button Text</label><input value={appearance.generateBtnText} onChange={(e) => setAppearance({ ...appearance, generateBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
                   <div><label className="block font-bold mb-1">Accent Color</label><input type="color" value={appearance.accentColor} onChange={(e) => setAppearance({ ...appearance, accentColor: e.target.value })} className="w-16 h-8 rounded border border-slate-200" /></div>
-                  <div><label className="block font-bold mb-1">Grid Style</label><select value={appearance.gridStyle} onChange={(e) => setAppearance({ ...appearance, gridStyle: e.target.value as any })} className="w-full px-3 py-2 rounded-xl border border-slate-200"><option value="3-col">3 Columns</option><option value="4-col">4 Columns</option><option value="editorial">Editorial</option></select></div>
                 </div>
                 <div className="flex flex-wrap gap-3 sm:gap-4 pt-1">
                   <label className="flex items-center gap-2"><input type="checkbox" checked={appearance.showPrices} onChange={(e) => setAppearance({ ...appearance, showPrices: e.target.checked })} /> Display Prices</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={appearance.showRatings} onChange={(e) => setAppearance({ ...appearance, showRatings: e.target.checked })} /> Display Ratings</label>
                 </div>
-                <Button size="sm" onClick={() => { updateTryOnConfig({ appearance }); notify('Saved public try-on appearance.'); }}>
+                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance }, 'Saved. Your public try-on page now uses this look.')}>
                   Save Appearance
                 </Button>
               </div>
@@ -545,91 +580,72 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
         )}
 
         {tab === 'configuration' && (
-          <SectionCard title="Generation Pipeline Configuration" subtitle="Settings governed by your subscription plan entitlements">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs max-w-3xl">
-              <div>
-                <label className="block font-bold mb-1">Generation Quality Preset</label>
-                <select value={tryOnConfig.mode} onChange={(e) => updateTryOnConfig({ mode: e.target.value as any })} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                  <option value="balanced">Balanced (Plan Default)</option>
-                  <option value="high_fidelity">High Fidelity ({profile.plan})</option>
-                  <option value="fast_preview">Fast Studio Preview</option>
-                </select>
+          <div className="space-y-6">
+            <SectionCard title="Availability" subtitle="Turn the try-on experience on or off for your shoppers.">
+              <div className="space-y-3 text-sm max-w-xl">
+                {([
+                  ['enabled', 'Virtual try-on is on', 'When off, shoppers cannot generate try-ons for any of your products.'],
+                  ['publicPageActive', 'Public try-on page is visible', `Your page at /try/${profile.slug}. When off, it shows an "unavailable" message.`],
+                ] as const).map(([key, title, help]) => (
+                  <label key={key} className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-200 cursor-pointer">
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-slate-950">{title}</span>
+                      <span className="block text-xs text-slate-500 mt-0.5">{help}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={tryOnConfig[key]}
+                      disabled={savingConfig || !serverReady}
+                      onChange={(e) => void persistConfig({ [key]: e.target.checked }, e.target.checked ? 'Turned on.' : 'Turned off.')}
+                      className="mt-1 h-4 w-4 accent-slate-950 shrink-0"
+                    />
+                  </label>
+                ))}
               </div>
-              <div>
-                <label className="block font-bold mb-1">Output Resolution</label>
-                <select value={tryOnConfig.resolution} onChange={(e) => updateTryOnConfig({ resolution: e.target.value as any })} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                  <option value="768x1024">768 × 1024 px</option>
-                  <option value="1024x1366">1024 × 1366 px HD</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold mb-1">Max Upload File Size (MB)</label>
-                <input type="number" min={2} max={10} value={tryOnConfig.maxUploadMb} onChange={(e) => updateTryOnConfig({ maxUploadMb: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-              </div>
-              <div>
-                <label className="block font-bold mb-1">Plan Concurrency Cap</label>
-                <input readOnly value={`${tryOnConfig.concurrencyLimit} parallel jobs (${profile.plan} Plan)`} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-600" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block font-bold mb-1">Supported Garment Categories</label>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {(['tops', 'bottoms', 'dresses', 'outerwear'] as TryOnCategory[]).map((c) => {
-                    const active = tryOnConfig.supportedCategories.includes(c);
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() =>
-                          updateTryOnConfig({
-                            supportedCategories: active
-                              ? tryOnConfig.supportedCategories.filter((x) => x !== c)
-                              : [...tryOnConfig.supportedCategories, c],
-                          })
-                        }
-                        className={`px-3 py-1.5 rounded-full font-bold border ${
-                          active ? 'bg-slate-950 text-white border-slate-950' : 'bg-white text-slate-600 border-slate-200'
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </SectionCard>
+            </SectionCard>
+
+            <SectionCard title="Quality and limits" subtitle="Set by your plan and the platform. You cannot change these here.">
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm max-w-2xl">
+                {[
+                  ['Plan', profile.plan],
+                  ['Quality', 'Chosen automatically for your plan'],
+                  ['Photo size limit', 'Up to 10 MB per photo'],
+                  ['Garment types', 'Tops, bottoms, dresses and outerwear'],
+                ].map(([k, v]) => (
+                  <div key={String(k)} className="rounded-xl bg-slate-50 border border-slate-200/70 p-3.5">
+                    <dt className="text-xs text-slate-500">{k}</dt>
+                    <dd className="font-semibold text-slate-950 mt-0.5">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </SectionCard>
+          </div>
         )}
 
         {tab === 'embedding' && (
-          <SectionCard title="Public URL, Embed Widget & Domain Allowlist">
-            <div className="space-y-4 text-xs max-w-3xl">
+          <SectionCard title="Share your try-on page" subtitle="Link to it from your website, Instagram bio or product pages.">
+            <div className="space-y-5 text-sm max-w-2xl">
               <div>
-                <p className="font-bold text-slate-800 mb-1 flex items-center gap-1.5"><Code2 className="w-4 h-4" /> Shopify / Custom Store Embed Script</p>
-                <pre className="p-3.5 rounded-xl bg-slate-950 text-slate-100 overflow-x-auto font-mono text-[11px]">{embedSnippet}</pre>
-              </div>
-              <div className="space-y-2">
-                <p className="font-bold text-slate-800">Allowed Embed Domains</p>
-                <div className="flex flex-wrap gap-2">
-                  {tryOnConfig.domainAllowlist.map((d) => (
-                    <span key={d} className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 font-mono">
-                      {d}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input value={allowlistDomain} onChange={(e) => setAllowlistDomain(e.target.value)} placeholder="store.yourdomain.com" className="px-3 py-2 rounded-xl border border-slate-200 w-full sm:flex-1 sm:max-w-xs" />
+                <p className="font-semibold text-slate-900 mb-1.5">Your public link</p>
+                <div className="flex items-center gap-2">
+                  <input readOnly value={publicTryOnUrl} className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs" />
                   <Button
                     size="sm"
+                    variant="outline"
+                    className="h-10"
                     onClick={() => {
-                      if (!allowlistDomain.trim()) return;
-                      updateTryOnConfig({ domainAllowlist: [...tryOnConfig.domainAllowlist, allowlistDomain.trim()] });
-                      setAllowlistDomain('');
-                      notify('Domain added to widget allowlist.');
+                      void navigator.clipboard?.writeText(publicTryOnUrl);
+                      setCopiedUrl(true);
+                      setTimeout(() => setCopiedUrl(false), 2000);
                     }}
                   >
-                    Allow Domain
+                    {copiedUrl ? 'Copied' : 'Copy'}
                   </Button>
                 </div>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900 mb-1.5 flex items-center gap-1.5"><Code2 className="w-4 h-4" /> Add a button to your own website</p>
+                <pre className="p-3.5 rounded-xl bg-slate-950 text-slate-100 overflow-x-auto font-mono text-[11px] leading-relaxed">{`<a href="${publicTryOnUrl}" target="_blank" rel="noopener">${appearance.primaryBtnText}</a>`}</pre>
               </div>
             </div>
           </SectionCard>
@@ -724,7 +740,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                 <label className="block font-bold mb-1">Customer Data Processing Notice</label>
                 <textarea rows={2} value={tryOnConfig.dataProcessingNotice} onChange={(e) => updateTryOnConfig({ dataProcessingNotice: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
               </div>
-              <Button size="sm" onClick={() => notify('Privacy settings saved.')}>Save Privacy Policy</Button>
+              <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ requireConsent: tryOnConfig.requireConsent, retentionDays: tryOnConfig.retentionDays, dataProcessingNotice: tryOnConfig.dataProcessingNotice }, 'Privacy settings saved.')}>Save privacy settings</Button>
             </div>
           </SectionCard>
         )}
