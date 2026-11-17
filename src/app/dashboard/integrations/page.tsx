@@ -1,5 +1,5 @@
-import { IntegrationsDeveloperView } from '@/features/integrations/IntegrationsDeveloperView';
+import { DeveloperView } from '@/features/developer/DeveloperView';
 
 export default function Page() {
-  return <IntegrationsDeveloperView initialTab="overview" />;
+  return <DeveloperView />;
 }

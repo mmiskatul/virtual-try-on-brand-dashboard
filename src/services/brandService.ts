@@ -171,6 +171,46 @@ export interface TeamRoleInfo {
   permissions: string[];
 }
 
+export type ApiScope = 'products:read' | 'products:write' | 'orders:read' | 'orders:write';
+
+export interface ApiKeyInfo {
+  id: string;
+  name: string;
+  display: string;
+  last4: string;
+  scopes: ApiScope[];
+  createdAt: number;
+  expiresAt: number | null;
+  lastUsedAt: number | null;
+  status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
+}
+
+export type WebhookEvent = 'order.created' | 'order.status_changed' | 'inventory.low_stock';
+
+export interface WebhookInfo {
+  id: string;
+  url: string;
+  description?: string;
+  events: WebhookEvent[];
+  active: boolean;
+  createdAt: number;
+  consecutiveFailures: number;
+  lastDeliveryAt: number | null;
+  lastStatus: 'SUCCESS' | 'FAILED' | null;
+  disabledReason?: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  type: string;
+  attempt: number;
+  ok: boolean;
+  httpStatus: number | null;
+  durationMs: number;
+  error?: string;
+  at: number;
+}
+
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutMs = init.body instanceof FormData ? 25000 : 8000;
@@ -1013,6 +1053,40 @@ export const brandWorkspaceApi = {
       method: 'POST',
       body: JSON.stringify({ token, name, password }),
     });
+  },
+
+  // --- Developers: API keys ---
+  getApiKeys: async () => apiFetch<{ keys: ApiKeyInfo[]; scopes: ApiScope[] }>('/api/v1/brand/api-keys'),
+
+  createApiKey: async (input: { name: string; scopes: ApiScope[]; expiresInDays?: number | null }) =>
+    apiFetch<{ key: string; record: ApiKeyInfo }>('/api/v1/brand/api-keys', { method: 'POST', body: JSON.stringify(input) }),
+
+  revokeApiKey: async (id: string) => {
+    await apiFetch<any>(`/api/v1/brand/api-keys/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  // --- Developers: webhooks ---
+  getWebhooks: async () => apiFetch<{ webhooks: WebhookInfo[]; events: WebhookEvent[] }>('/api/v1/brand/webhooks'),
+
+  createWebhook: async (input: { url: string; events: WebhookEvent[]; description?: string }) =>
+    apiFetch<{ webhook: WebhookInfo; secret: string }>('/api/v1/brand/webhooks', { method: 'POST', body: JSON.stringify(input) }),
+
+  updateWebhook: async (id: string, patch: { active?: boolean; events?: WebhookEvent[]; url?: string; description?: string }) =>
+    apiFetch<{ webhook: WebhookInfo }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  deleteWebhook: async (id: string) => {
+    await apiFetch<any>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  rotateWebhookSecret: async (id: string) =>
+    apiFetch<{ secret: string }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}/rotate-secret`, { method: 'POST', body: JSON.stringify({}) }),
+
+  testWebhook: async (id: string) =>
+    apiFetch<{ delivery: WebhookDelivery }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}/test`, { method: 'POST', body: JSON.stringify({}) }),
+
+  getWebhookDeliveries: async (id: string) => {
+    const res = await apiFetch<{ deliveries: WebhookDelivery[] }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}/deliveries`);
+    return res.deliveries;
   },
 
   executeTryOn: async (params: {

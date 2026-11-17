@@ -153,19 +153,11 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
       { label: 'Payment Methods', href: '/dashboard/billing/payment-methods', module: 'billing', hidden: true },
     ],
   },
-  // Hidden from the sidebar until the backend for this module exists (pages stay reachable by URL).
   {
     id: 'integrations',
-    label: 'INTEGRATIONS & API',
+    label: 'DEVELOPERS',
     icon: 'Plug',
-    items: [
-      { label: 'Integrations & API', href: '/dashboard/integrations', module: 'integrations', hidden: true },
-      { label: 'Payment Gateways', href: '/dashboard/integrations/payments', module: 'integrations', hidden: true },
-      { label: 'Shipping Providers', href: '/dashboard/integrations/shipping', module: 'integrations', hidden: true },
-      { label: 'Analytics Integrations', href: '/dashboard/integrations/analytics', module: 'integrations', hidden: true },
-      { label: 'API Credentials', href: '/dashboard/developer/api', module: 'integrations', hidden: true },
-      { label: 'Webhooks', href: '/dashboard/developer/webhooks', module: 'integrations', hidden: true },
-    ],
+    items: [{ label: 'Developers', href: '/dashboard/integrations', module: 'integrations' }],
   },
   {
     id: 'settings',

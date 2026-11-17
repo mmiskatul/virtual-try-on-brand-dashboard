@@ -1,5 +1,5 @@
-import { IntegrationsDeveloperView } from '@/features/integrations/IntegrationsDeveloperView';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <IntegrationsDeveloperView initialTab="shipping" />;
+  redirect('/dashboard/integrations');
 }
