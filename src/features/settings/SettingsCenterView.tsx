@@ -33,6 +33,7 @@ import { Button } from '../../components/ui/button';
 
 export type SettingsTab =
   | 'overview'
+  | 'onboarding'
   | 'general'
   | 'business'
   | 'store'
@@ -48,6 +49,7 @@ export type SettingsTab =
 
 const SETTINGS_NAV: Array<{ id: SettingsTab; label: string; href: string }> = [
   { id: 'overview', label: 'All Settings', href: '/dashboard/settings' },
+  { id: 'onboarding', label: 'Onboarding', href: '/dashboard/settings/onboarding' },
   { id: 'general', label: 'General', href: '/dashboard/settings/general' },
   { id: 'business', label: 'Business Info', href: '/dashboard/settings/business' },
   { id: 'store', label: 'Store Availability', href: '/dashboard/settings/store' },
@@ -152,7 +154,10 @@ export function SettingsCenterView({
               <Link
                 key={n.id}
                 href={n.href}
-                onClick={() => setTab(n.id)}
+                onClick={() => {
+                  // 'onboarding' is its own page (brand profile & assets), not an in-page tab.
+                  if (n.id !== 'onboarding') setTab(n.id);
+                }}
                 className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
                   tab === n.id
                     ? 'bg-slate-950 text-white'
@@ -169,6 +174,7 @@ export function SettingsCenterView({
             {tab === 'overview' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
+                  { id: 'onboarding', title: 'Onboarding', desc: 'Brand profile, verification, theme & assets from setup', icon: Palette },
                   { id: 'general', title: 'General Profile', desc: 'Brand display name, slogan, support contact', icon: Settings },
                   { id: 'business', title: 'Business & Legal', desc: 'Trade license, legal entity, headquarters', icon: Building2 },
                   { id: 'store', title: 'Store Availability', desc: 'Public boutique & marketplace status', icon: Store },
@@ -182,7 +188,9 @@ export function SettingsCenterView({
                     <Link
                       key={card.id}
                       href={targetHref}
-                      onClick={() => setTab(card.id as SettingsTab)}
+                      onClick={() => {
+                        if (card.id !== 'onboarding') setTab(card.id as SettingsTab);
+                      }}
                       className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-400 transition-colors"
                     >
                       <Icon className="w-5 h-5 text-slate-900" />

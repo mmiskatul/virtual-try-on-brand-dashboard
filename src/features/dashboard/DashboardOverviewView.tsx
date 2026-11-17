@@ -45,13 +45,13 @@ import {
 import { Button } from '../../components/ui/button';
 
 const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: string }> = [
-  { id: 'chk_profile', label: 'Complete brand profile & story', href: '/dashboard/brand/profile' },
-  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/brand/media' },
-  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/brand/media' },
-  { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/brand/profile' },
+  { id: 'chk_profile', label: 'Complete brand profile & story', href: '/dashboard/settings/onboarding' },
+  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/settings/onboarding/media' },
+  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/settings/onboarding/media' },
+  { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/settings/onboarding' },
   { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/addproduct' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },
-  { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/brand' },
+  { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/settings/onboarding' },
   { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on/configuration' },
   { id: 'chk_publish', label: 'Publish first product to global marketplace', href: '/dashboard/marketplace/create' },
   { id: 'chk_test_tryon', label: 'Test public Virtual Try-On studio', href: '/dashboard/virtual-try-on/studio' },
@@ -373,7 +373,7 @@ export function DashboardOverviewView() {
               <span className="truncate">Try-On Studio</span>
             </Button>
           </Link>
-          <Link href="/dashboard/brand/profile" className="w-full lg:w-auto">
+          <Link href="/dashboard/settings/onboarding" className="w-full lg:w-auto">
             <Button variant="outline" size="sm" className="gap-1.5 w-full lg:w-auto justify-center text-xs">
               <Palette className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Brand & Theme</span>
@@ -706,7 +706,7 @@ export function DashboardOverviewView() {
           title={`Brand Readiness Checklist (${checklistPct}%)`}
           subtitle="Auto-synced with workspace setup plus manual milestone tracking"
           right={
-            <Link href="/dashboard/brand/profile" className="text-xs font-bold underline whitespace-nowrap">
+            <Link href="/dashboard/settings/onboarding" className="text-xs font-bold underline whitespace-nowrap">
               Manage Brand &rarr;
             </Link>
           }

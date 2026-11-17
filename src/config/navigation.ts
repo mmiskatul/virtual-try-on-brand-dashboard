@@ -41,14 +41,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: 'brand',
-    label: 'BRAND & STOREFRONT',
-    icon: 'Palette',
-    items: [
-      { label: 'Brand Profile & Assets', href: '/dashboard/brand/profile', module: 'brand' },
-    ],
-  },
-  {
     id: 'products',
     label: 'PRODUCT MANAGEMENT',
     icon: 'ShoppingBag',
@@ -186,6 +178,9 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'Settings',
     items: [
       { label: 'Settings', href: '/dashboard/settings', module: 'settings' },
+      { label: 'Onboarding: Brand Profile & Assets', href: '/dashboard/settings/onboarding', module: 'brand', hidden: true },
+      { label: 'Onboarding: Theme & Identity', href: '/dashboard/settings/onboarding/identity', module: 'brand', hidden: true },
+      { label: 'Onboarding: Logos & Brand Media', href: '/dashboard/settings/onboarding/media', module: 'brand', hidden: true },
       { label: 'General', href: '/dashboard/settings/general', module: 'settings', hidden: true },
       { label: 'Business Information', href: '/dashboard/settings/business', module: 'settings', hidden: true },
       { label: 'Store Availability', href: '/dashboard/settings/store', module: 'settings', hidden: true },

@@ -17,8 +17,11 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/dashboard/overview', destination: '/dashboard', permanent: true },
-      { source: '/dashboard/brand', destination: '/dashboard/brand/profile', permanent: true },
-      { source: '/dashboard/settings/brand', destination: '/dashboard/brand/identity', permanent: true },
+      { source: '/dashboard/brand', destination: '/dashboard/settings/onboarding', permanent: true },
+      { source: '/dashboard/brand/profile', destination: '/dashboard/settings/onboarding', permanent: true },
+      { source: '/dashboard/brand/identity', destination: '/dashboard/settings/onboarding/identity', permanent: true },
+      { source: '/dashboard/brand/media', destination: '/dashboard/settings/onboarding/media', permanent: true },
+      { source: '/dashboard/settings/brand', destination: '/dashboard/settings/onboarding/identity', permanent: true },
       { source: '/dashboard/products/create', destination: '/dashboard/products/addproduct', permanent: true },
       { source: '/dashboard/products/categories/add', destination: '/dashboard/products/categories/addcategory', permanent: true },
       { source: '/dashboard/products/categories/create', destination: '/dashboard/products/categories/addcategory', permanent: true },
