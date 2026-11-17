@@ -38,7 +38,6 @@ export type TryOnTab =
   | 'appearance'
   | 'embedding'
   | 'history'
-  | 'analytics'
   | 'privacy';
 
 const SAMPLE_STUDIO_MODELS = [
@@ -220,7 +219,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
               ['configuration', 'AI Configuration'],
               ['embedding', 'Widget & Embed'],
               ['history', 'Generation History'],
-              ['analytics', 'Try-On Analytics'],
               ['privacy', 'Privacy Controls'],
             ] as Array<[TryOnTab, string]>
           ).map(([k, lbl]) => (
@@ -706,28 +704,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
               </>
             )}
           </SectionCard>
-        )}
-
-        {tab === 'analytics' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <KpiCard label="Sessions Recorded" value={sessions.length} />
-              <KpiCard label="Success Rate" value={successRate} />
-              <KpiCard label="Avg Duration" value={`${avgDurationSec}s`} />
-              <KpiCard label="Attributed Orders" value={sessions.filter((s) => s.attributedOrderId).length} />
-            </div>
-            <SectionCard title="Daily Try-On Sessions by Garment Category">
-              <SvgBarChart
-                data={[
-                  { label: 'Dresses', count: sessions.filter((s) => s.category === 'dresses').length },
-                  { label: 'Outerwear', count: sessions.filter((s) => s.category === 'outerwear').length },
-                  { label: 'Bottoms', count: sessions.filter((s) => s.category === 'bottoms').length },
-                  { label: 'Tops', count: sessions.filter((s) => s.category === 'tops').length },
-                ]}
-                valueKey="count"
-              />
-            </SectionCard>
-          </div>
         )}
 
         {tab === 'privacy' && (

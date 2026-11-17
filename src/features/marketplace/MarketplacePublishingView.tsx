@@ -18,7 +18,7 @@ import {
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
 
-export type MarketplaceTab = 'overview' | 'posts' | 'create' | 'drafts' | 'scheduled' | 'analytics';
+export type MarketplaceTab = 'overview' | 'posts' | 'create' | 'drafts' | 'scheduled';
 
 export function MarketplacePublishingView({ initialTab = 'overview' }: { initialTab?: MarketplaceTab }) {
   const [tab, setTab] = useState<MarketplaceTab>(initialTab);
@@ -119,6 +119,7 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
     <PermissionGate module="marketplace" action="view">
       <div className="space-y-6">
         <PageHeader
+          preview
           eyebrow="Global Marketplace Channel"
           title="Marketplace Publishing & Posts"
           subtitle="Explicitly promote selected catalog items to the public marketplace without creating duplicate SKUs."
@@ -138,7 +139,6 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
               ['posts', 'Published'],
               ['drafts', 'Drafts & Unpublished'],
               ['scheduled', 'Scheduled'],
-              ['analytics', 'Publication Analytics'],
               ['create', '+ Create Post'],
             ] as Array<[MarketplaceTab, string]>
           ).map(([k, lbl]) => (
@@ -154,15 +154,6 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
             </button>
           ))}
         </div>
-
-        {tab === 'analytics' && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <KpiCard label="Total Impressions" value={totalImpressions.toLocaleString()} icon={<Eye className="w-4 h-4" />} />
-            <KpiCard label="Product Clicks" value={totalClicks.toLocaleString()} change={`${ctr}% CTR`} icon={<MousePointerClick className="w-4 h-4" />} />
-            <KpiCard label="Attributed Orders" value={posts.reduce((s, p) => s + p.orders, 0)} icon={<ShoppingBag className="w-4 h-4" />} />
-            <KpiCard label="Marketplace Revenue" value={`৳${totalRev.toLocaleString()}`} icon={<Globe className="w-4 h-4" />} />
-          </div>
-        )}
 
         {tab === 'create' ? (
           <SectionCard title="Create Marketplace Post from Existing Product" subtitle="Links directly to your original catalog item rather than duplicating it">

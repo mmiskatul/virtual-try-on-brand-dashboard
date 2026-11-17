@@ -83,6 +83,7 @@ export function CustomersManagementView({
       <PermissionGate module="customers" action="view">
         <div className="space-y-6">
           <PageHeader
+          preview
             eyebrow="Customer Intelligence"
             title={customer ? customer.name : `Customer ${customerId}`}
             subtitle="Purchase summary, order history, and privacy-safe contact profile for this tenant."
@@ -225,6 +226,7 @@ export function CustomersManagementView({
     <PermissionGate module="customers" action="view">
       <div className="space-y-6">
         <PageHeader
+          preview
           eyebrow="Customer Intelligence"
           title="Customers, Segments & Reviews"
           subtitle="Understand repeat brand patrons, customer groups, and moderate verified purchase reviews."

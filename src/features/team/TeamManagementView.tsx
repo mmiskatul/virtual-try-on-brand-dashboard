@@ -124,6 +124,7 @@ export function TeamManagementView({ initialTab = 'overview' }: { initialTab?: T
     <PermissionGate module="team" action="view">
       <div className="space-y-6">
         <PageHeader
+          preview
           eyebrow="Workspace Access Control"
           title="Team Members, RBAC Roles & Audit Trail"
           subtitle="Manage tenant staff accounts, enforce granular module permissions, and audit every configuration change."

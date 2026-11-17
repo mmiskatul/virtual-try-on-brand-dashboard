@@ -126,6 +126,7 @@ export function IntegrationsDeveloperView({
     <PermissionGate module="integrations" action="view">
       <div className="space-y-6">
         <PageHeader
+          preview
           eyebrow="Ecosystem & Developer API"
           title="Integrations, API Keys & Webhooks"
           subtitle="Connect merchant payment gateways, courier providers, pixel tracking, and scoped API credentials."

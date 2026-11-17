@@ -28,7 +28,7 @@ const PUBLIC_AUTH_FLOW_PREFIXES = [
   '/forget-password',
   '/reset-password',
 ];
-const PUBLIC_STOREFRONT_PREFIXES = ['/storefront', '/brands', '/try', '/api/edge/storefront'];
+const PUBLIC_STOREFRONT_PREFIXES = ['/brands', '/try'];
 const PUBLIC_META_PREFIXES = [
   '/api/auth',
   '/api/telemetry',

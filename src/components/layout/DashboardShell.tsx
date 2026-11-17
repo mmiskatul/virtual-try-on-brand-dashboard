@@ -506,14 +506,14 @@ export function DashboardShell({
         <nav className="space-y-1.5" aria-label="Brand Dashboard Navigation">
           {SIDEBAR_NAV_GROUPS.map((group) => {
             const Icon = GROUP_ICONS[group.icon] || LayoutDashboard;
-            const visibleItems = group.items.filter((item) =>
-              canPerform(activeRole, item.module, 'view', roleOverrides)
+            const visibleItems = group.items.filter(
+              (item) => !item.hidden && canPerform(activeRole, item.module, 'view', roleOverrides)
             );
             if (visibleItems.length === 0) return null;
 
             const isNavMatch = (href: string) => {
               if (href === '/dashboard') {
-                return pathname === '/dashboard' || pathname === '/dashboard/overview';
+                return pathname === '/dashboard';
               }
               if (href.startsWith('/dashboard/brand')) {
                 return pathname === '/dashboard/brand' || pathname.startsWith('/dashboard/brand/');
@@ -1157,7 +1157,7 @@ export function DashboardShell({
           className="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(15,23,42,0.06)]"
         >
           {[
-            { label: 'Overview', href: '/dashboard', icon: LayoutDashboard, match: (p: string) => p === '/dashboard' || p === '/dashboard/overview' },
+            { label: 'Overview', href: '/dashboard', icon: LayoutDashboard, match: (p: string) => p === '/dashboard' },
             { label: 'Products', href: '/dashboard/products', icon: ShoppingBag, match: (p: string) => p.startsWith('/dashboard/products') },
             { label: 'Orders', href: '/dashboard/orders', icon: PackageCheck, match: (p: string) => p.startsWith('/dashboard/orders') },
             { label: 'Try-On', href: '/dashboard/virtual-try-on', icon: Sparkles, match: (p: string) => p.startsWith('/dashboard/virtual-try-on') },

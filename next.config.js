@@ -13,6 +13,22 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', '@tanstack/react-query', 'zod'],
   },
   poweredByHeader: false,
+  // Old / duplicate URLs keep working (bookmarks, emails) by redirecting to the canonical page.
+  async redirects() {
+    return [
+      { source: '/dashboard/overview', destination: '/dashboard', permanent: true },
+      { source: '/dashboard/brand', destination: '/dashboard/brand/profile', permanent: true },
+      { source: '/dashboard/settings/brand', destination: '/dashboard/brand/identity', permanent: true },
+      { source: '/dashboard/products/create', destination: '/dashboard/products/addproduct', permanent: true },
+      { source: '/dashboard/products/categories/add', destination: '/dashboard/products/categories/addcategory', permanent: true },
+      { source: '/dashboard/products/categories/create', destination: '/dashboard/products/categories/addcategory', permanent: true },
+      { source: '/dashboard/marketing/coupons', destination: '/dashboard/marketing/discounts', permanent: true },
+      { source: '/dashboard/marketplace/analytics', destination: '/dashboard/analytics/marketplace', permanent: true },
+      { source: '/dashboard/virtual-try-on/analytics', destination: '/dashboard/analytics/virtual-try-on', permanent: true },
+      { source: '/forget-password', destination: '/forgot-password', permanent: true },
+      { source: '/storefront/:slug', destination: '/brands/:slug', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

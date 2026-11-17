@@ -125,6 +125,7 @@ export function BillingCreditsView({
     <PermissionGate module="billing" action="view">
       <div className="space-y-6">
         <PageHeader
+          preview
           eyebrow="SaaS Plan & Metering"
           title="Subscription, Billing & AI Try-On Credits"
           subtitle="Monitor monthly virtual try-on compute consumption, plan entitlements, and billing invoices."

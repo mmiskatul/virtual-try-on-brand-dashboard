@@ -36,7 +36,6 @@ export type SettingsTab =
   | 'general'
   | 'business'
   | 'store'
-  | 'brand'
   | 'domains'
   | 'seo'
   | 'localization'
@@ -52,7 +51,6 @@ const SETTINGS_NAV: Array<{ id: SettingsTab; label: string; href: string }> = [
   { id: 'general', label: 'General', href: '/dashboard/settings/general' },
   { id: 'business', label: 'Business Info', href: '/dashboard/settings/business' },
   { id: 'store', label: 'Store Availability', href: '/dashboard/settings/store' },
-  { id: 'brand', label: 'Brand Shortcut', href: '/dashboard/settings/brand' },
   { id: 'domains', label: 'Domains & SSL', href: '/dashboard/settings/domains' },
   { id: 'seo', label: 'SEO Metadata', href: '/dashboard/settings/seo' },
   { id: 'localization', label: 'Localization', href: '/dashboard/settings/localization' },
@@ -320,34 +318,6 @@ export function SettingsCenterView({
                       <option value="PAUSED">PAUSED</option>
                     </select>
                   </div>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'brand' && (
-              <SectionCard title="Visual Identity Shortcut" subtitle="Primary visual theme controls or jump to the full Brand Identity Hub.">
-                <div className="flex flex-wrap items-center justify-between gap-4 text-xs">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="w-8 h-8 rounded-lg border border-slate-300"
-                      style={{ backgroundColor: form.primaryColor }}
-                    />
-                    <span
-                      className="w-8 h-8 rounded-lg border border-slate-300"
-                      style={{ backgroundColor: form.accentColor || '#d4a373' }}
-                    />
-                    <div>
-                      <p className="font-bold text-slate-900">Active Brand Palette & Fonts</p>
-                      <p className="text-slate-500">
-                        {form.headingFont || 'Cormorant Garamond'} / {form.bodyFont || 'Plus Jakarta Sans'}
-                      </p>
-                    </div>
-                  </div>
-                  <Link href="/dashboard/brand/identity">
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      <Palette className="w-3.5 h-3.5" /> Open Full Visual Identity Studio
-                    </Button>
-                  </Link>
                 </div>
               </SectionCard>
             )}

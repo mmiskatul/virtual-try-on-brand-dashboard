@@ -9,7 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const publicSlugs: string[] = [];
 
   return publicSlugs.map((slug) => ({
-    url: `${siteUrl}/storefront/${slug}`,
+    url: `${siteUrl}/brands/${slug}`,
     lastModified: now,
     changeFrequency: 'weekly',
     priority: 0.9,

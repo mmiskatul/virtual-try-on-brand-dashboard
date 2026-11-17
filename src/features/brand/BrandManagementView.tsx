@@ -783,7 +783,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
         {tab === 'identity' && (
           <SectionCard
             title="Storefront Theme Colors, Typography & Layout Tokens"
-            subtitle="Changes save directly to your storefrontSettings via PATCH /api/v1/brand/identity"
+            subtitle="Changes are saved to your storefront theme."
             right={
               <PermissionGate module="brand" action="edit">
                 <Button

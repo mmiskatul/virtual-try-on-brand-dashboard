@@ -65,13 +65,17 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  preview,
 }: {
   eyebrow?: string;
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  /** Shows an honest notice on pages whose data is not yet synced to the server. */
+  preview?: boolean;
 }) {
   return (
+    <>
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-3.5 sm:gap-4 pb-3 border-b border-slate-200/80">
       <div className="space-y-1 min-w-0">
         {eyebrow && (
@@ -92,6 +96,19 @@ export function PageHeader({
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">{actions}</div>
       )}
     </div>
+    {preview && (
+      <div
+        role="status"
+        className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900"
+      >
+        <span className="font-bold">Preview</span>
+        <span>
+          This section is not connected to the server yet. What you enter here is kept in this browser only and
+          is not shared with your team or your storefront.
+        </span>
+      </div>
+    )}
+    </>
   );
 }
 

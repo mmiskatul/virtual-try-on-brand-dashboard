@@ -27,13 +27,12 @@ import { Button } from '../../components/ui/button';
 import { canPerform } from '../../config/permissions';
 import { DiscountCode } from '../../types';
 
-export type MarketingTab = 'overview' | 'campaigns' | 'discounts' | 'coupons' | 'newsletter';
+export type MarketingTab = 'overview' | 'campaigns' | 'discounts' | 'newsletter';
 
 const MKT_TABS: Array<{ id: MarketingTab; label: string; href: string }> = [
   { id: 'overview', label: 'Marketing Overview', href: '/dashboard/marketing' },
   { id: 'campaigns', label: 'Campaigns', href: '/dashboard/marketing/campaigns' },
-  { id: 'discounts', label: 'Discounts', href: '/dashboard/marketing/discounts' },
-  { id: 'coupons', label: 'Coupons', href: '/dashboard/marketing/coupons' },
+  { id: 'discounts', label: 'Discounts & Coupons', href: '/dashboard/marketing/discounts' },
   { id: 'newsletter', label: 'Newsletter', href: '/dashboard/marketing/newsletter' },
 ];
 
@@ -122,6 +121,7 @@ export function MarketingManagementView({
     <PermissionGate module="marketing" action="view">
       <div className="space-y-6">
         <PageHeader
+          preview
           eyebrow="Growth & Promotions"
           title="Marketing, Promo Codes & Campaigns"
           subtitle="Launch seasonal drops, configure cart discounts, and review opt-in audience segments."
@@ -237,11 +237,11 @@ export function MarketingManagementView({
           </div>
         )}
 
-        {(tab === 'overview' || tab === 'discounts' || tab === 'coupons') && (
+        {(tab === 'overview' || tab === 'discounts') && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <SectionCard
               className="lg:col-span-7"
-              title={tab === 'coupons' ? 'Promo Coupons' : 'Discounts & Promo Codes'}
+              title="Discounts & Coupons"
               subtitle="Percentage and fixed cart discounts scoped to your brand storefront."
             >
               {safeDiscounts.length === 0 ? (
