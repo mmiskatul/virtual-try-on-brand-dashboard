@@ -69,6 +69,11 @@ export interface VerifiedBrandShellUser {
   onboardingCompleted?: boolean;
 }
 
+/** Extra URL prefixes that belong to a module whose root link lives elsewhere. */
+const NAV_EXTRA_PREFIXES: Record<string, string[]> = {
+  '/dashboard/integrations': ['/dashboard/developer'],
+};
+
 const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
   Palette,
@@ -502,132 +507,94 @@ export function DashboardShell({
           </div>
         )}
 
-        {/* Collapsible Navigation Groups */}
-        <nav className="space-y-1.5" aria-label="Brand Dashboard Navigation">
+        {/* Flat navigation: one icon + one link per module (sub-pages live in each page's tab bar) */}
+        <nav className="space-y-1" aria-label="Brand Dashboard Navigation">
           {SIDEBAR_NAV_GROUPS.map((group) => {
             const Icon = GROUP_ICONS[group.icon] || LayoutDashboard;
-            const visibleItems = group.items.filter(
-              (item) => !item.hidden && canPerform(activeRole, item.module, 'view', roleOverrides)
+            const item = group.items.find(
+              (i) => !i.hidden && canPerform(activeRole, i.module, 'view', roleOverrides)
             );
-            if (visibleItems.length === 0) return null;
+            if (!item) return null;
 
-            const isNavMatch = (href: string) => {
-              if (href === '/dashboard') {
-                return pathname === '/dashboard';
-              }
-              if (href === '/dashboard/products/categories') {
-                return (
-                  pathname === '/dashboard/products/categories' ||
-                  pathname.startsWith('/dashboard/products/categories/')
-                );
-              }
-              if (href === '/dashboard/products') {
-                const subRoutes = [
-                  '/dashboard/products/categories',
-                  '/dashboard/products/collections',
-                  '/dashboard/products/attributes',
-                  '/dashboard/products/import',
-                  '/dashboard/products/export',
-                ];
-                return (
-                  pathname === '/dashboard/products' ||
-                  (pathname.startsWith('/dashboard/products/') &&
-                    !subRoutes.some((sub) => pathname === sub || pathname.startsWith(`${sub}/`)))
-                );
-              }
-              return pathname === href;
-            };
+            const collapsed = sidebarCollapsed && !isMobile;
+            // A module stays highlighted on all of its sub-pages.
+            const isCurrentModule =
+              item.href === '/dashboard'
+                ? pathname === '/dashboard'
+                : [item.href, ...(NAV_EXTRA_PREFIXES[item.href] || [])].some(
+                    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+                  );
+            const active = pendingHref ? pendingHref === item.href : isCurrentModule;
+            const isNavigatingToThis = Boolean(pendingHref && pendingHref === item.href && pathname !== item.href);
+            const lockedByOnboarding = isOnboardingGateActive && !item.href.startsWith('/dashboard/settings/onboarding');
+            const badgeVal = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
 
-            const groupExpanded = openGroups.includes(group.id) || visibleItems.some((i) => isNavMatch(i.href));
+            const baseClass = `flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13px] transition-colors ${
+              collapsed ? 'justify-center' : ''
+            }`;
 
-            return (
-              <div key={group.id} className="space-y-0.5">
+            if (lockedByOnboarding) {
+              return (
                 <button
+                  key={group.id}
                   type="button"
+                  title={item.label}
                   onClick={() => {
-                    if (sidebarCollapsed && !isMobile) {
-                      router.push(isOnboardingGateActive ? '/dashboard/settings/onboarding' : visibleItems[0].href);
-                    } else {
-                      toggleNavGroup(group.id);
-                    }
+                    showToast('Complete Brand Onboarding first to access other workspace modules.');
+                    setTimeout(hideToast, 3000);
+                    if (isMobile) setMobileMenuOpen(false);
+                    setPendingHref('/dashboard/settings/onboarding');
+                    router.push('/dashboard/settings/onboarding');
                   }}
-                  title={group.label}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
+                  className={`${baseClass} w-full text-slate-400 hover:bg-slate-100/60 font-medium cursor-not-allowed text-left`}
                 >
-                  <span className="flex items-center gap-2.5 min-w-0">
-                    <Icon className="w-4 h-4 shrink-0 text-slate-700" />
-                    {(!sidebarCollapsed || isMobile) && <span className="truncate">{group.label}</span>}
-                  </span>
-                  {(!sidebarCollapsed || isMobile) && (
-                    groupExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+                  {!collapsed && (
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 shrink-0">
+                      Setup
+                    </span>
                   )}
                 </button>
+              );
+            }
 
-                {groupExpanded && (!sidebarCollapsed || isMobile) && (
-                  <div className="pl-7 pr-1 space-y-0.5">
-                    {visibleItems.map((item) => {
-                      const active = pendingHref ? isNavMatch(item.href) && pendingHref === item.href || pendingHref === item.href : isNavMatch(item.href);
-                      const isNavigatingToThis = Boolean(pendingHref && pendingHref === item.href && pathname !== item.href);
-                      const lockedByOnboarding =
-                        isOnboardingGateActive && !item.href.startsWith('/dashboard/settings/onboarding');
-                      const badgeVal = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
-
-                      if (lockedByOnboarding) {
-                        return (
-                          <button
-                            key={item.href}
-                            type="button"
-                            onClick={() => {
-                              showToast('Complete Brand Onboarding first to access other workspace modules.');
-                              setTimeout(hideToast, 3000);
-                              if (isMobile) setMobileMenuOpen(false);
-                              setPendingHref('/dashboard/settings/onboarding');
-                              router.push('/dashboard/settings/onboarding');
-                            }}
-                            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-100/60 font-medium cursor-not-allowed text-left"
-                          >
-                            <span className="truncate">{item.label}</span>
-                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 shrink-0">
-                              Setup
-                            </span>
-                          </button>
-                        );
-                      }
-
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onMouseEnter={() => prefetchRoute(item.href)}
-                          onFocus={() => prefetchRoute(item.href)}
-                          onClick={() => {
-                            if (pathname !== item.href) setPendingHref(item.href);
-                            if (isMobile) setMobileMenuOpen(false);
-                          }}
-                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                            active
-                              ? 'bg-slate-950 text-white font-bold shadow-sm'
-                              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100 font-medium'
-                          }`}
-                        >
-                          <span className="truncate">{item.label}</span>
-                          {isNavigatingToThis ? (
-                            <span className="w-2.5 h-2.5 rounded-full border-2 border-white/40 border-t-white animate-spin shrink-0" />
-                          ) : badgeVal > 0 ? (
-                            <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                active ? 'bg-white text-slate-950' : 'bg-slate-200 text-slate-800'
-                              }`}
-                            >
-                              {badgeVal}
-                            </span>
-                          ) : null}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+            return (
+              <Link
+                key={group.id}
+                href={item.href}
+                title={item.label}
+                aria-current={active ? 'page' : undefined}
+                onMouseEnter={() => prefetchRoute(item.href)}
+                onFocus={() => prefetchRoute(item.href)}
+                onClick={() => {
+                  if (pathname !== item.href) setPendingHref(item.href);
+                  if (isMobile) setMobileMenuOpen(false);
+                }}
+                className={`${baseClass} relative ${
+                  active
+                    ? 'bg-slate-950 text-white font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100 font-semibold'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-700'}`} />
+                {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+                {isNavigatingToThis ? (
+                  <span className="w-2.5 h-2.5 rounded-full border-2 border-white/40 border-t-white animate-spin shrink-0" />
+                ) : badgeVal > 0 ? (
+                  collapsed ? (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500" />
+                  ) : (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        active ? 'bg-white text-slate-950' : 'bg-slate-200 text-slate-800'
+                      }`}
+                    >
+                      {badgeVal}
+                    </span>
+                  )
+                ) : null}
+              </Link>
             );
           })}
         </nav>
