@@ -10,7 +10,7 @@ import { requireBrandServerAction } from '@/lib/server-auth';
 export async function revalidateBrandCatalog(tag: string = 'brand-products') {
   try {
     await requireBrandServerAction();
-    revalidateTag(tag);
+    revalidateTag(tag, 'max');
     revalidatePath('/');
     return {
       success: true,

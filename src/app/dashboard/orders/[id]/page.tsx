@@ -1,10 +1,11 @@
 import { OrdersCommerceView } from '@/features/orders/OrdersCommerceView';
 
-export default function OrderDetailPage({
+export default async function OrderDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  return <OrdersCommerceView orderId={decodeURIComponent(params.id)} />;
+  const { id } = await params;
+  return <OrdersCommerceView orderId={decodeURIComponent(id)} />;
 }
 

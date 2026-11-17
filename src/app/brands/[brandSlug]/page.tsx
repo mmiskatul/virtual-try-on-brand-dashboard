@@ -4,13 +4,14 @@ import { fetchPublicStorefront } from '@/lib/public-storefront';
 import BrandStorefrontClient from './BrandStorefrontClient';
 
 interface Props {
-  params: { brandSlug: string };
+  params: Promise<{ brandSlug: string }>;
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://shop.brand.vtrystudio.com';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const store = await fetchPublicStorefront(params.brandSlug);
+  const { brandSlug } = await params;
+  const store = await fetchPublicStorefront(brandSlug);
   if (!store) {
     return { title: 'Storefront Not Found | V-TRY Studio', robots: { index: false, follow: false } };
   }
@@ -31,7 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BrandStorefrontPage({ params }: Props) {
-  const store = await fetchPublicStorefront(params.brandSlug);
+  const { brandSlug } = await params;
+  const store = await fetchPublicStorefront(brandSlug);
   // A real 404 status for unknown brands (good for SEO).
   if (!store) notFound();
 

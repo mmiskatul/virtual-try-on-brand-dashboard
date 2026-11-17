@@ -9,7 +9,6 @@ const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   experimental: {
     taint: true,
-    instrumentationHook: true,
     optimizePackageImports: ['lucide-react', '@tanstack/react-query', 'zod'],
   },
   poweredByHeader: false,

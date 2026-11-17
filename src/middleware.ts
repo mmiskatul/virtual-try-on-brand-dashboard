@@ -219,7 +219,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/forgot-password', request.url));
   }
   const origin = request.headers.get('origin');
-  const clientIp = request.ip || request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
 
   // 1. Edge-Level Strict CORS Preflight & Origin Verification
   if (pathname.startsWith('/api/')) {

@@ -35,7 +35,7 @@ export async function getVerifiedBrandSession(): Promise<VerifiedBrandSession | 
     return null;
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const accessToken = cookieStore.get(BRAND_ACCESS_COOKIE)?.value;
   const refreshToken = cookieStore.get(BRAND_REFRESH_COOKIE)?.value;
   const sessionCookie = cookieStore.get(BRAND_SESSION_COOKIE)?.value;
