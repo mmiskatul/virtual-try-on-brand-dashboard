@@ -1151,7 +1151,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
         )}
 
         {view === 'export' && (
-          <SectionCard title="Export Catalog Dataset" subtitle="Download your tenant's live product catalog directly from the backend API">
+          <SectionCard title="Export Catalog Dataset" subtitle="Download your product catalog as a spreadsheet file.">
             <Button size="sm" disabled={busyAction} onClick={handleExportCsv} className="gap-1.5">
               <Download className="w-4 h-4" /> {busyAction ? 'Exporting...' : `Download Full CSV (${products.length} SKUs)`}
             </Button>

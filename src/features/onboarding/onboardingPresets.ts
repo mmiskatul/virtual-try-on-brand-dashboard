@@ -316,7 +316,7 @@ export function createInitialOnboardingForm(params: {
   const rawBanner = savedDraft?.banner ?? (allowLiveProfileFallback ? profile.banner || '' : '');
 
   return {
-    brandName: pick('name', ''),
+    brandName: pick('name', '') || (liveMatchesTenant ? String(profile.name || '') : ''),
     storefrontTitle:
       savedDraft?.seo?.title ||
       (allowLiveProfileFallback ? profile.seo?.title || '' : ''),
@@ -326,7 +326,7 @@ export function createInitialOnboardingForm(params: {
     categories: initialCategories,
     shortDescription: pick('shortDescription', ''),
     brandStory: cleanBrandStory,
-    ownerName: pick('owner', ''),
+    ownerName: pick('owner', '') || (liveMatchesTenant ? String(profile.owner || '') : ''),
     legalName: pick('legalName', ''),
     businessType: normalizeBusinessType(pick('businessType', '')),
     bizEmail:

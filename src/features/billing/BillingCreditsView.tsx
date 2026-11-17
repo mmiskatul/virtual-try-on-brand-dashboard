@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -15,7 +15,7 @@ import {
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { useMounted } from '../../hooks/useMounted';
-import { BrandProfile } from '../../types';
+import { brandWorkspaceApi } from '../../services/brandService';
 import {
   ConfirmDialog,
   KpiCard,
@@ -37,42 +37,42 @@ const BILLING_TABS: Array<{ id: BillingTab; label: string; href: string }> = [
   { id: 'payment-methods', label: 'Payment Methods', href: '/dashboard/billing/payment-methods' },
 ];
 
-const PLANS: Array<{
-  id: BrandProfile['plan'];
+interface PlanCard {
+  id: string;
+  name: string;
   priceMonthly: number;
   quotaMax: number;
   seats: string;
   features: string[];
-}> = [
-  {
-    id: 'FREE',
-    priceMonthly: 0,
-    quotaMax: 150,
-    seats: '1 Staff Seat',
-    features: ['Subdomain storefront', 'Up to 25 catalog SKUs', 'Standard try-on queue'],
-  },
-  {
-    id: 'STARTER',
-    priceMonthly: 39,
-    quotaMax: 1000,
-    seats: '3 Staff Seats',
-    features: ['Custom domain support', 'Up to 200 catalog SKUs', 'Global Marketplace publishing'],
-  },
-  {
-    id: 'PRO',
-    priceMonthly: 99,
-    quotaMax: 5000,
-    seats: '10 Staff Seats',
-    features: ['Unlimited SKUs', 'High-fidelity 1024px AI try-on', 'REST API & Webhooks'],
-  },
-  {
-    id: 'ENTERPRISE',
-    priceMonthly: 299,
-    quotaMax: 25000,
-    seats: 'Unlimited Seats',
-    features: ['Dedicated GPU concurrency', 'SLA & priority model warm-up', 'Custom embed SDK branding'],
-  },
-];
+}
+
+const FEATURE_LABELS: Record<string, string> = {
+  max_products: 'products',
+  monthly_tryons: 'AI try-ons per month',
+  high_fidelity_vton: 'High-fidelity try-on model',
+  api_webhooks: 'API & webhooks',
+};
+
+/** Turn a plan from the backend into a card. Prices and limits are never hard-coded here. */
+function toPlanCard(plan: any): PlanCard {
+  const entitlements: any[] = Array.isArray(plan?.entitlements) ? plan.entitlements : [];
+  const quota = entitlements.find((e) => e.featureKey === 'monthly_tryons')?.limitValue ?? 0;
+  const features = entitlements
+    .filter((e) => e.state !== 'DISABLED')
+    .map((e) =>
+      e.state === 'LIMIT'
+        ? `${Number(e.limitValue).toLocaleString()} ${FEATURE_LABELS[e.featureKey] || e.featureKey}`
+        : FEATURE_LABELS[e.featureKey] || e.featureKey
+    );
+  return {
+    id: String(plan?.slug || plan?.id || ''),
+    name: String(plan?.name || plan?.slug || ''),
+    priceMonthly: Number(plan?.monthlyPrice) || 0,
+    quotaMax: Number(quota) || 0,
+    seats: plan?.description || '',
+    features,
+  };
+}
 
 export function BillingCreditsView({
   initialTab = 'overview',
@@ -88,14 +88,41 @@ export function BillingCreditsView({
   const showToast = useUiStore((s) => s.showToast);
 
   const [tab, setTab] = useState<BillingTab>(initialTab);
-  const [confirmPlan, setConfirmPlan] = useState<typeof PLANS[number] | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<PlanCard | null>(null);
+  const [billing, setBilling] = useState<any | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!mounted) return;
+    let cancelled = false;
+    brandWorkspaceApi
+      .getBillingSummary()
+      .then((res) => {
+        if (!cancelled) setBilling(res);
+      })
+      .catch((err: any) => {
+        if (!cancelled) setBillingError(err?.message || 'Could not load billing details.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mounted]);
+
+  const plans = useMemo<PlanCard[]>(
+    () => (Array.isArray(billing?.availablePlans) ? billing.availablePlans.map(toPlanCard) : []),
+    [billing]
+  );
 
   const canManageBilling = canPerform(activeRole, 'billing', 'manage_settings', roleOverrides);
-  const safeInvoices = mounted ? invoices : [];
+  const safeInvoices = (mounted && Array.isArray(billing?.invoices) && billing.invoices.length > 0 ? billing.invoices : mounted ? invoices : []) as typeof invoices;
   const safeSessions = mounted ? tryOnSessions : [];
 
-  const remaining = Math.max(0, profile.quotaMax - profile.quotaUsed);
-  const pct = Math.min(100, Math.round((profile.quotaUsed / Math.max(1, profile.quotaMax)) * 100));
+  const currentPlan: string = billing?.subscription?.plan || profile.plan;
+  const quotaMax: number = billing?.subscription?.tryOnMonthlyQuota ?? profile.quotaMax;
+  const quotaUsed: number = billing?.subscription?.tryOnUsed ?? profile.quotaUsed;
+  const remaining: number = billing?.credits?.availableCredits ?? Math.max(0, quotaMax - quotaUsed);
+  const productLimit: number | null = billing?.subscription?.productLimit ?? null;
+  const pct = Math.min(100, Math.round((quotaUsed / Math.max(1, quotaMax)) * 100));
   const completedCredits = safeSessions
     .filter((s) => s.status === 'COMPLETED')
     .reduce((sum, s) => sum + s.creditsUsed, 0);
@@ -125,11 +152,16 @@ export function BillingCreditsView({
     <PermissionGate module="billing" action="view">
       <div className="space-y-6">
         <PageHeader
-          preview
-          eyebrow="SaaS Plan & Metering"
-          title="Subscription, Billing & AI Try-On Credits"
-          subtitle="Monitor monthly virtual try-on compute consumption, plan entitlements, and billing invoices."
+          eyebrow="Billing"
+          title="Plan & AI credits"
+          subtitle="Your current plan, monthly try-on allowance and credits left."
         />
+
+        {billingError && (
+          <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-800">
+            {billingError}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {BILLING_TABS.map((t) => (
@@ -149,16 +181,16 @@ export function BillingCreditsView({
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard label="Current Plan" value={profile.plan} icon={<Zap className="w-4 h-4 text-amber-600" />} />
-          <KpiCard label="Credits Consumed" value={profile.quotaUsed.toLocaleString()} icon={<Sparkles className="w-4 h-4" />} />
-          <KpiCard label="Credits Remaining" value={remaining.toLocaleString()} icon={<Coins className="w-4 h-4" />} />
-          <KpiCard label="Failed Runs (0 Credit Charge)" value={failedRuns} icon={<FileText className="w-4 h-4" />} />
+          <KpiCard label="Current plan" value={currentPlan} icon={<Zap className="w-4 h-4 text-amber-600" />} />
+          <KpiCard label="Credits used this month" value={quotaUsed.toLocaleString()} icon={<Sparkles className="w-4 h-4" />} />
+          <KpiCard label="Credits left" value={remaining.toLocaleString()} icon={<Coins className="w-4 h-4" />} />
+          <KpiCard label="Product limit" value={productLimit === null ? '-' : productLimit.toLocaleString()} icon={<FileText className="w-4 h-4" />} />
         </div>
 
         {(tab === 'overview' || tab === 'usage') && (
           <SectionCard
             title="Monthly AI Compute Quota"
-            subtitle={`${profile.quotaUsed.toLocaleString()} of ${profile.quotaMax.toLocaleString()} credits utilized (${pct}%)`}
+            subtitle={`${quotaUsed.toLocaleString()} of ${quotaMax.toLocaleString()} credits used (${pct}%)`}
             right={<StatusBadge status={pct > 85 ? 'PENDING' : 'ACTIVE'} />}
           >
             <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
@@ -224,18 +256,21 @@ export function BillingCreditsView({
         {(tab === 'overview' || tab === 'plan') && (
           <SectionCard
             title="Subscription Tiers"
-            subtitle="Compare monthly SaaS allowances for catalogs, staff seats, and Virtual Try-On compute."
+            subtitle="Compare what each plan includes."
           >
             <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
               <p>
-                Live card charging requires connecting Stripe Billing / SSLCommerz SaaS checkout webhooks via the platform super-admin gateway. Selecting a plan here updates your workspace preview tier.
+                Online payment is not enabled yet. To change your plan, please contact support and we will switch it for you.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {PLANS.map((pl) => {
-                const active = profile.plan === pl.id;
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {plans.length === 0 && (
+                <p className="col-span-full text-sm text-slate-500 py-4">Plans are not available right now.</p>
+              )}
+              {plans.map((pl) => {
+                const active = currentPlan === pl.id;
                 return (
                   <div
                     key={pl.id}
@@ -246,7 +281,7 @@ export function BillingCreditsView({
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                          {pl.id}
+                          {pl.name}
                         </span>
                         {active && <StatusBadge status="ACTIVE" />}
                       </div>
@@ -255,7 +290,7 @@ export function BillingCreditsView({
                         <span className="text-xs font-medium text-slate-500">/mo</span>
                       </p>
                       <p className="text-xs font-semibold text-slate-700">
-                        {pl.quotaMax.toLocaleString()} AI Try-Ons • {pl.seats}
+                        {pl.quotaMax.toLocaleString()} AI try-ons per month
                       </p>
                       <ul className="space-y-1.5 text-xs text-slate-600">
                         {pl.features.map((f) => (
@@ -273,7 +308,7 @@ export function BillingCreditsView({
                       onClick={() => setConfirmPlan(pl)}
                       className="w-full"
                     >
-                      {active ? 'Current Plan' : `Switch to ${pl.id}`}
+                      {active ? 'Current plan' : `Switch to ${pl.name}`}
                     </Button>
                   </div>
                 );
@@ -366,16 +401,25 @@ export function BillingCreditsView({
 
         <ConfirmDialog
           open={Boolean(confirmPlan)}
-          title={`Switch Workspace Plan to ${confirmPlan?.id}?`}
-          description={`Updates preview quota entitlement to ${confirmPlan?.quotaMax.toLocaleString()} monthly try-on credits (৳${confirmPlan?.priceMonthly}/mo).`}
+          title={`Request a switch to ${confirmPlan?.name}?`}
+          description={`Online payment is not enabled yet, so we will switch your plan for you. ${confirmPlan?.name} includes ${confirmPlan?.quotaMax.toLocaleString()} try-ons per month at ৳${confirmPlan?.priceMonthly}/month.`}
           destructive={false}
-          confirmLabel={`Switch to ${confirmPlan?.id}`}
-          onConfirm={() => {
-            if (confirmPlan) {
-              // Plan changes need a real payment provider; never mutate the plan locally.
-              showToast('Plan changes are not available yet. Please contact support to upgrade.');
-            }
+          confirmLabel="Send request"
+          onConfirm={async () => {
+            const target = confirmPlan;
             setConfirmPlan(null);
+            if (!target) return;
+            try {
+              await brandWorkspaceApi.createSupportTicket({
+                subject: `Plan change request: ${target.name}`,
+                category: 'BILLING',
+                priority: 'MEDIUM',
+                message: `Please switch the workspace "${profile.name}" from ${currentPlan} to ${target.id}.`,
+              });
+              showToast('Request sent. We will contact you to switch your plan.');
+            } catch {
+              showToast('Could not send your request. Please try again.');
+            }
           }}
           onCancel={() => setConfirmPlan(null)}
         />

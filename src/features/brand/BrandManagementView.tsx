@@ -527,7 +527,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <SectionCard
               title="Core Brand, Business & Social Details"
-              subtitle="Persisted directly to your tenant record via PATCH /api/v1/brand/profile/details"
+              subtitle="These details are saved to your brand profile."
               right={
                 <PermissionGate module="brand" action="edit">
                   <Button

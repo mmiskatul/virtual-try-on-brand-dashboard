@@ -161,6 +161,7 @@ export function KpiCard({
   positive = true,
   hint,
   icon,
+  compare = false,
 }: {
   label: string;
   value: string | number;
@@ -168,6 +169,8 @@ export function KpiCard({
   positive?: boolean;
   hint?: string;
   icon?: React.ReactNode;
+  /** Set when `change` is a comparison with the previous period. */
+  compare?: boolean;
 }) {
   const [hintOpen, setHintOpen] = useState(false);
 
@@ -214,7 +217,7 @@ export function KpiCard({
             )}
             {change}
           </span>
-          <span className="text-slate-400 hidden sm:inline">vs previous period</span>
+          {compare && <span className="text-slate-400 hidden sm:inline">vs previous period</span>}
         </div>
       )}
 

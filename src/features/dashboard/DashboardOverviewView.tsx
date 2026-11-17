@@ -278,200 +278,144 @@ export function DashboardOverviewView() {
     summary?.workspace.marketplaceStatus || profile.marketplaceStatus || 'CONNECTED';
   const workspaceTryOnStatus = summary?.workspace.tryOnStatus || 'TRY-ON ACTIVE';
 
+  const firstName = (profile.owner || '').trim().split(' ')[0] || 'there';
+  const isNewShop = totalProductsCount === 0 && totalOrdersCount === 0;
+  const chartTotal = chartData.reduce((sum, d) => sum + (Number((d as Record<string, unknown>)[chartMetric]) || 0), 0);
+  const nextSteps = checklistItems.filter((i) => !i.completed).slice(0, 4);
+  const showMarketplace = publishedPostsCount > 0 || draftOrScheduledPostsCount > 0;
+
+  const attention: Array<{ id: string; text: string; href: string; tone: 'warn' | 'info' }> = [];
+  if (pendingOrders > 0) {
+    attention.push({ id: 'orders', text: `${pendingOrders} order${pendingOrders === 1 ? '' : 's'} waiting to be processed`, href: '/dashboard/orders', tone: 'warn' });
+  }
+  if (lowStockProducts.length > 0) {
+    attention.push({ id: 'stock', text: `${lowStockProducts.length} product${lowStockProducts.length === 1 ? '' : 's'} running low on stock`, href: '/dashboard/inventory', tone: 'warn' });
+  }
+  if (failedTryOns > 0) {
+    attention.push({ id: 'failed', text: `${failedTryOns} try-on${failedTryOns === 1 ? '' : 's'} failed. Check the customer photos`, href: '/dashboard/virtual-try-on/history', tone: 'warn' });
+  }
+  if (tryOnQuota > 0 && creditsRemaining / tryOnQuota < 0.2) {
+    attention.push({ id: 'credits', text: `AI credits are running low (${creditsRemaining} left)`, href: '/dashboard/billing', tone: 'warn' });
+  }
+  if (!isNewShop && totalProductsCount > 0 && storefrontPublishedCount === 0) {
+    attention.push({ id: 'nopub', text: 'Publish a product so customers can see it', href: '/dashboard/products', tone: 'info' });
+  }
+
+  const metricLabel = { revenue: 'Revenue', orders: 'Orders', tryOns: 'Try-ons' } as const;
+
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <PageHeader
-        eyebrow="Overview"
-        title={`Welcome back, ${profile.owner.split(' ')[0]}`}
-        subtitle={`Here is how ${workspaceName} is doing${summary?.generatedAt ? ` \u2022 updated ${new Date(summary.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}.`}
-        actions={
-          <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void loadOverviewCore();
-                void loadTimeseries();
-              }}
-              disabled={overviewLoading || timeseriesLoading}
-              className="gap-1.5 w-full sm:w-auto justify-center text-xs"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${overviewLoading || timeseriesLoading ? 'animate-spin' : ''}`} />
-              <span className="truncate">Refresh</span>
+    <div className="space-y-6">
+      {/* Header: one title, one primary action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">Hi {firstName}</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {isNewShop ? `Let's get ${workspaceName} ready to sell.` : `Here is how ${workspaceName} is doing.`}
+            {summary?.generatedAt && (
+              <span className="text-slate-400">
+                {' '}
+                Updated {new Date(summary.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label="Refresh overview"
+            title="Refresh"
+            onClick={() => {
+              void loadOverviewCore();
+              void loadTimeseries();
+            }}
+            disabled={overviewLoading || timeseriesLoading}
+            className="h-10 w-10 p-0 justify-center"
+          >
+            <RefreshCw className={`w-4 h-4 ${overviewLoading || timeseriesLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Link href={`/brands/${workspaceSlug}`} target="_blank">
+            <Button type="button" variant="outline" size="sm" className="h-10 gap-1.5 text-sm">
+              View store <ExternalLink className="w-3.5 h-3.5" />
             </Button>
-            <Link href={`/brands/${workspaceSlug}`} target="_blank" className="w-full sm:w-auto">
-              <Button variant="outline" size="sm" className="gap-1.5 w-full sm:w-auto justify-center text-xs">
-                <Store className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Public Store</span>
-                <ExternalLink className="w-3 h-3 shrink-0" />
-              </Button>
-            </Link>
-            <Link href="/dashboard/products/addproduct" className="w-full sm:w-auto">
-              <Button size="sm" className="gap-1.5 w-full sm:w-auto justify-center text-xs">
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span>Add Product</span>
-              </Button>
-            </Link>
-          </div>
-        }
-      />
+          </Link>
+          <Link href="/dashboard/products/addproduct">
+            <Button type="button" size="sm" className="h-10 gap-1.5 text-sm">
+              <Plus className="w-4 h-4" /> Add product
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       {overviewError && <ErrorBanner message={overviewError} onRetry={() => void loadOverviewCore()} />}
 
-      {/* A. Welcome & Workspace Status Strip + Quick Actions */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-        <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
-          <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
-            <SafeImage src={workspaceLogo} alt={workspaceName} fill className="object-cover" />
-          </div>
-          <div className="space-y-1.5 min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <h2 className="text-sm sm:text-base font-extrabold text-slate-950 truncate max-w-full">
-                {workspaceName}
-              </h2>
-              <StatusBadge status={workspacePlan} />
-              <StatusBadge status={workspaceStoreStatus} />
-              <StatusBadge status={workspaceMarketplaceStatus} />
-              <StatusBadge status={workspaceTryOnStatus} />
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] sm:text-xs text-slate-500">
-              <Link
-                href={`/brands/${workspaceSlug}`}
-                target="_blank"
-                className="inline-flex items-center gap-1 hover:text-slate-900 min-w-0 max-w-full"
-              >
-                <span className="shrink-0">Storefront:</span>
-                <code className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono break-all">
-                  /brands/{workspaceSlug}
-                </code>
-              </Link>
-              <Link
-                href={`/try/${workspaceSlug}`}
-                target="_blank"
-                className="inline-flex items-center gap-1 hover:text-slate-900 min-w-0 max-w-full"
-              >
-                <span className="shrink-0">Try-On:</span>
-                <code className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono break-all">
-                  /try/{workspaceSlug}
-                </code>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 min-[440px]:grid-cols-3 lg:flex lg:flex-wrap gap-2 w-full lg:w-auto shrink-0">
-          <Link href="/dashboard/marketplace/create" className="w-full lg:w-auto">
-            <Button variant="outline" size="sm" className="gap-1.5 w-full lg:w-auto justify-center text-xs">
-              <Globe className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Marketplace Post</span>
-            </Button>
-          </Link>
-          <Link href="/dashboard/virtual-try-on/studio" className="w-full lg:w-auto">
-            <Button variant="outline" size="sm" className="gap-1.5 w-full lg:w-auto justify-center text-xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span className="truncate">Try-On Studio</span>
-            </Button>
-          </Link>
-          <Link href="/dashboard/settings/onboarding" className="w-full lg:w-auto">
-            <Button variant="outline" size="sm" className="gap-1.5 w-full lg:w-auto justify-center text-xs">
-              <Palette className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Brand & Theme</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Quick Module Switcher Strip for Mobile & Tablet */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
-        {[
-          { label: 'Products', href: '/dashboard/products', icon: ShoppingBag, badge: totalProductsCount },
-          { label: 'Orders', href: '/dashboard/orders', icon: CreditCard, badge: pendingOrders },
-          { label: 'Inventory', href: '/dashboard/inventory', icon: Boxes, badge: lowStockProducts.length },
-          { label: 'Marketplace', href: '/dashboard/marketplace', icon: Globe },
-          { label: 'Try-On Studio', href: '/dashboard/virtual-try-on/studio', icon: Sparkles },
-          { label: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-          { label: 'Settings', href: '/dashboard/settings', icon: Settings },
-        ].map((mod) => {
-          const ModIcon = mod.icon;
-          return (
-            <Link
-              key={mod.href}
-              href={mod.href}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:border-slate-900 hover:bg-slate-50 text-xs font-semibold text-slate-700 shrink-0 transition-colors"
-            >
-              <ModIcon className="w-3.5 h-3.5 text-slate-500" />
-              <span>{mod.label}</span>
-              {typeof mod.badge === 'number' && mod.badge > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-white text-[10px] font-bold tabular-nums">
-                  {mod.badge}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* A. Needs attention: the first thing a brand owner should see */}
-      {(() => {
-        const attention: Array<{ id: string; text: string; href: string; tone: 'warn' | 'info' }> = [];
-        if (totalProductsCount === 0) {
-          attention.push({ id: 'noprod', text: 'Add your first product to start selling', href: '/dashboard/products/addproduct', tone: 'info' });
-        } else if (storefrontPublishedCount === 0) {
-          attention.push({ id: 'nopub', text: 'Publish a product to your storefront so customers can see it', href: '/dashboard/products', tone: 'info' });
-        }
-        if (pendingOrders > 0) {
-          attention.push({ id: 'orders', text: `${pendingOrders} order${pendingOrders === 1 ? '' : 's'} waiting to be processed`, href: '/dashboard/orders', tone: 'warn' });
-        }
-        if (lowStockProducts.length > 0) {
-          attention.push({ id: 'stock', text: `${lowStockProducts.length} product${lowStockProducts.length === 1 ? '' : 's'} running low on stock`, href: '/dashboard/inventory', tone: 'warn' });
-        }
-        if (failedTryOns > 0) {
-          attention.push({ id: 'failed', text: `${failedTryOns} try-on${failedTryOns === 1 ? '' : 's'} failed. Check photo quality`, href: '/dashboard/virtual-try-on/history', tone: 'warn' });
-        }
-        if (tryOnQuota > 0 && creditsRemaining / tryOnQuota < 0.2) {
-          attention.push({ id: 'credits', text: `AI credits are running low (${creditsRemaining} left)`, href: '/dashboard/billing', tone: 'warn' });
-        }
-        if (checklistPct < 100) {
-          attention.push({ id: 'setup', text: `Finish setting up your brand (${checklistPct}% done)`, href: '#readiness', tone: 'info' });
-        }
-        return (
-          <SectionCard
-            title="Needs your attention"
-            subtitle={attention.length === 0 ? undefined : `${attention.length} thing${attention.length === 1 ? '' : 's'} to look at`}
-          >
-            {attention.length === 0 ? (
-              <p className="flex items-center gap-2 text-sm text-emerald-700">
-                <CheckCircle2 className="w-4 h-4" /> All clear. Nothing needs your attention right now.
+      {/* First-run: a focused guide instead of a wall of empty cards */}
+      {isNewShop && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <h2 className="text-xl font-bold text-slate-950">Get your shop ready</h2>
+              <p className="text-sm text-slate-500 mt-1 max-w-xl">
+                A few quick steps and you can start selling with virtual try-on.
               </p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {attention.map((a) => (
-                  <li key={a.id}>
-                    <Link href={a.href} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:bg-slate-50 -mx-2 px-2 rounded-lg">
-                      <span className="flex items-center gap-2.5 min-w-0">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${a.tone === 'warn' ? 'bg-amber-500' : 'bg-sky-500'}`} />
-                        <span className="truncate text-slate-800">{a.text}</span>
-                      </span>
-                      <span className="text-xs font-bold text-slate-500 shrink-0">Open &rarr;</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SectionCard>
-        );
-      })()}
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-3xl font-extrabold text-slate-950 tabular-nums">{checklistPct}%</p>
+              <p className="text-xs text-slate-500">complete</p>
+            </div>
+          </div>
+          <div className="mt-5 h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow={checklistPct} aria-valuemin={0} aria-valuemax={100} aria-label="Setup progress">
+            <div className="h-full rounded-full bg-slate-950 transition-all" style={{ width: `${checklistPct}%` }} />
+          </div>
+          <ol className="mt-6 grid gap-3 sm:grid-cols-2">
+            {nextSteps.map((item, i) => (
+              <li key={item.id}>
+                <Link
+                  href={item.href}
+                  className="flex items-center gap-4 rounded-xl border border-slate-200 p-4 hover:border-slate-900 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="w-8 h-8 rounded-full bg-slate-950 text-white grid place-items-center text-sm font-bold shrink-0">
+                    {i + 1}
+                  </span>
+                  <span className="flex-1 text-sm font-semibold text-slate-900 leading-snug">{item.label}</span>
+                  <span className="text-slate-400" aria-hidden="true">&rarr;</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
-      {/* B. Four core numbers */}
+      {/* Needs attention (only when there is something to do) */}
+      {!isNewShop && attention.length > 0 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
+          <h2 className="text-sm font-bold text-slate-950 mb-2">Needs your attention</h2>
+          <ul className="divide-y divide-amber-100">
+            {attention.map((a) => (
+              <li key={a.id}>
+                <Link href={a.href} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-slate-950 text-slate-800">
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${a.tone === 'warn' ? 'bg-amber-500' : 'bg-sky-500'}`} />
+                    <span className="truncate">{a.text}</span>
+                  </span>
+                  <span className="text-xs font-bold text-slate-500 shrink-0">Open &rarr;</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Four core numbers */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard
           label="Revenue"
           value={`৳${totalRevenue.toLocaleString()}`}
           change={summary?.kpis.revenueChangeLabel || undefined}
           positive={!(summary?.kpis.revenueChangeLabel || '').startsWith('-')}
+          compare
           icon={<CreditCard className="w-4 h-4" />}
-          hint="Net revenue from active orders."
         />
         <KpiCard
           label="Orders"
@@ -479,422 +423,260 @@ export function DashboardOverviewView() {
           change={`${pendingOrders} to process`}
           positive={pendingOrders === 0}
           icon={<ShoppingBag className="w-4 h-4" />}
-          hint={`Average order value ৳${Math.round(aov).toLocaleString()}.`}
         />
         <KpiCard
-          label="Try-Ons"
+          label="Try-ons"
           value={tryOnUsed}
-          change={loggedTryOns > 0 ? `${Math.round((successfulTryOns / loggedTryOns) * 100)}% success` : 'No try-ons yet'}
+          change={loggedTryOns > 0 ? `${Math.round((successfulTryOns / loggedTryOns) * 100)}% success` : 'None yet'}
           icon={<Sparkles className="w-4 h-4 text-amber-600" />}
-          hint="Virtual fitting requests from your customers."
         />
         <KpiCard
-          label="AI Credits Left"
+          label="AI credits left"
           value={creditsRemaining.toLocaleString()}
           change={`of ${tryOnQuota}`}
           positive={tryOnQuota === 0 || creditsRemaining / tryOnQuota >= 0.2}
           icon={<Coins className="w-4 h-4" />}
-          hint="Monthly try-on allowance on your plan."
         />
       </div>
 
-      {/* C. Revenue Analytics & Sales Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-        <SectionCard
-          className="lg:col-span-8"
-          title="Revenue & Try-On Volume Analytics"
-          subtitle="Interactive breakdown across revenue, orders, and try-on demand"
-          right={
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-0.5 text-[11px] sm:text-xs">
-              {(['today', '7d', '30d', '90d', 'custom'] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPeriod(p)}
-                  className={`px-2.5 py-1 rounded-lg font-bold border shrink-0 transition-colors ${
-                    period === p ? 'bg-slate-950 text-white border-slate-950' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  {p === 'today' ? 'Today' : p === 'custom' ? 'Custom' : p.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          }
-        >
-          {period === 'custom' && (
-            <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
-              <span className="font-semibold text-slate-600">Date Range:</span>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                aria-label="Start date"
-                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-800"
-              />
-              <span className="text-slate-400">to</span>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                aria-label="End date"
-                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-800"
-              />
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {[
-                ['revenue', 'Revenue (৳)'],
-                ['orders', 'Order Volume'],
-                ['tryOns', 'Try-On Sessions'],
-              ].map(([k, lbl]) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setChartMetric(k as any)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                    chartMetric === k ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-950'
-                  }`}
-                >
-                  {lbl}
-                </button>
-              ))}
-            </div>
-            {timeseries && (
-              <span className="text-[11px] font-semibold text-slate-500 tabular-nums">
-                {timeseriesLoading
-                  ? 'Updating...'
-                  : `Period total: ৳${timeseries.totals.revenue.toLocaleString()} • ${timeseries.totals.orders} orders • ${timeseries.totals.tryOns} try-ons`}
-              </span>
-            )}
-          </div>
-          <SvgBarChart
-            data={chartData}
-            valueKey={chartMetric}
-            prefix={chartMetric === 'revenue' ? '৳' : ''}
-          />
-        </SectionCard>
-
-        <SectionCard title="Sales Overview" subtitle="Real-time order breakdown" className="lg:col-span-4">
-          <div className="space-y-2.5 text-xs sm:text-[13px]">
-            {[
-              ['Total Merchandise Revenue', `৳${totalRevenue.toFixed(2)}`],
-              ['Paid Orders', paidOrders],
-              ['Pending / Processing', pendingOrders],
-              ['Cancelled Orders', cancelledOrders],
-              ['Refunded Orders', refundedOrders],
-              ['Average Order Value (AOV)', `৳${aov.toFixed(2)}`],
-            ].map(([label, val]) => (
-              <div key={String(label)} className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
-                <span className="text-slate-600 font-medium leading-snug">{label}</span>
-                <span className="font-extrabold text-slate-950 tabular-nums shrink-0">{val}</span>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      </div>
-
-      {/* F. Dedicated Virtual Try-On Performance & G. Marketplace Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-        <SectionCard
-          className="lg:col-span-7"
-          title="Try-on funnel"
-          subtitle="How many customers go from trying on to buying"
-          right={
-            <Link href="/dashboard/analytics/virtual-try-on" className="text-xs font-bold underline whitespace-nowrap">
-              Full Report &rarr;
-            </Link>
-          }
-        >
-          {(() => {
-            const steps: Array<[string, number]> = [
-              ['Started a try-on', loggedTryOns],
-              ['Got a result', successfulTryOns],
-              ['Added to cart', cartConvertedTryOns],
-              ['Placed an order', attributedOrders],
-            ];
-            const top = Math.max(1, steps[0][1]);
-            return (
-              <div className="space-y-4">
-                <div className="space-y-2.5">
-                  {steps.map(([label, n], i) => {
-                    const pct = Math.round((n / top) * 100);
-                    const fromPrev = i > 0 && steps[i - 1][1] > 0 ? Math.round((n / steps[i - 1][1]) * 100) : null;
-                    return (
-                      <div key={label} className="text-xs">
-                        <div className="flex items-baseline justify-between mb-1">
-                          <span className="font-semibold text-slate-700">{label}</span>
-                          <span className="tabular-nums text-slate-500">
-                            <b className="text-slate-950 text-sm">{n}</b>
-                            {fromPrev !== null && <span className="ml-1.5">({fromPrev}% of previous)</span>}
-                          </span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden" role="img" aria-label={`${label}: ${n}`}>
-                          <div className="h-full rounded-full bg-slate-900" style={{ width: `${Math.max(n > 0 ? 3 : 0, pct)}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
+      {!isNewShop && (
+        <>
+          {/* Trend */}
+          <SectionCard
+            title="Performance"
+            subtitle={`Total for the period: ${metricLabel[chartMetric] === 'Revenue' ? '৳' : ''}${chartTotal.toLocaleString()}`}
+            right={
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs font-bold" role="group" aria-label="Metric">
+                  {(['revenue', 'orders', 'tryOns'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setChartMetric(m)}
+                      aria-pressed={chartMetric === m}
+                      className={`px-3 py-1.5 ${chartMetric === m ? 'bg-slate-950 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {metricLabel[m]}
+                    </button>
+                  ))}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                  {[
-                    ['Failed', failedTryOns],
-                    ['Avg speed', `${avgDurationSec}s`],
-                    ['Sales from try-ons', `৳${attributedRevenue.toLocaleString()}`],
-                    ['Credits used', creditsUsedTotal],
-                  ].map(([k, v]) => (
-                    <div key={String(k)} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
-                      <p className="text-slate-500 leading-snug">{k}</p>
-                      <p className="text-base font-extrabold text-slate-950 mt-0.5 tabular-nums">{v}</p>
-                    </div>
+                <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs font-bold" role="group" aria-label="Period">
+                  {(['today', '7d', '30d', '90d'] as const).map((per) => (
+                    <button
+                      key={per}
+                      type="button"
+                      onClick={() => setPeriod(per)}
+                      aria-pressed={period === per}
+                      className={`px-3 py-1.5 ${period === per ? 'bg-slate-950 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {per === 'today' ? 'Today' : per.toUpperCase()}
+                    </button>
                   ))}
                 </div>
               </div>
-            );
-          })()}
-        </SectionCard>
+            }
+          >
+            {chartTotal === 0 ? (
+              <p className="py-10 text-center text-sm text-slate-500">
+                No {metricLabel[chartMetric].toLowerCase()} in this period yet.
+              </p>
+            ) : (
+              <SvgBarChart
+                data={chartData}
+                valueKey={chartMetric}
+                prefix={chartMetric === 'revenue' ? '৳' : ''}
+                color={chartMetric === 'tryOns' ? '#d97706' : '#0f172a'}
+              />
+            )}
+          </SectionCard>
 
-        <SectionCard
-          className="lg:col-span-5"
-          title="Marketplace Publication Activity"
-          subtitle="Explicit global catalog posts status"
-          right={
-            <Link href="/dashboard/marketplace" className="text-xs font-bold underline whitespace-nowrap">
-              Manage Posts &rarr;
-            </Link>
-          }
-        >
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 text-xs">
-            <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
-              <p className="text-[11px] sm:text-xs text-slate-500">Published Posts</p>
-              <p className="text-base sm:text-lg font-extrabold text-slate-950 mt-0.5 tabular-nums">
-                {publishedPostsCount}
-              </p>
-            </div>
-            <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
-              <p className="text-[11px] sm:text-xs text-slate-500">Draft / Scheduled</p>
-              <p className="text-base sm:text-lg font-extrabold text-slate-950 mt-0.5 tabular-nums">
-                {draftOrScheduledPostsCount}
-              </p>
-            </div>
-            <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
-              <p className="text-[11px] sm:text-xs text-slate-500">Total Clicks</p>
-              <p className="text-base sm:text-lg font-extrabold text-slate-950 mt-0.5 tabular-nums">
-                {totalPostClicks.toLocaleString()}
-              </p>
-            </div>
-            <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
-              <p className="text-[11px] sm:text-xs text-slate-500">Post Revenue</p>
-              <p className="text-base sm:text-lg font-extrabold text-emerald-700 mt-0.5 tabular-nums">
-                ৳{postRevenue.toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </SectionCard>
-      </div>
-
-      {/* E. Product Performance + Onboarding Checklist */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-        <SectionCard
-          className="lg:col-span-6"
-          title="Top Garments & Low-Stock Alerts"
-          subtitle={`${lowStockProducts.length} SKU(s) currently below safety stock threshold`}
-          right={
-            <Link href="/dashboard/inventory" className="text-xs font-bold underline whitespace-nowrap">
-              Manage Inventory &rarr;
-            </Link>
-          }
-        >
-          {lowStockProducts.length > 0 && (
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <div className="flex items-start sm:items-center gap-2 text-amber-900 min-w-0">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
-                <span className="leading-snug">
-                  Low stock on <strong>{lowStockProducts[0].name}</strong> ({lowStockProducts[0].stock} left)
-                </span>
-              </div>
-              <Link href="/dashboard/inventory/adjustments" className="font-bold underline text-amber-950 shrink-0 self-end sm:self-auto">
-                Restock &rarr;
-              </Link>
-            </div>
-          )}
-
-          {bestSellingProducts.length === 0 ? (
-            <div className="p-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-center space-y-2 text-xs text-slate-500">
-              <p>No garments in your catalog yet.</p>
-              <Link href="/dashboard/products/addproduct" className="inline-block font-bold text-slate-900 underline">
-                Create your first product &rarr;
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2.5 pt-1">
-              {bestSellingProducts.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/dashboard/products/${p.id}`}
-                  className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-xl border border-slate-100 hover:border-slate-300 transition-colors text-xs sm:text-[13px]"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                      <SafeImage src={p.image} alt={p.name} fill className="object-cover" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 truncate">{p.name}</p>
-                      <p className="text-[11px] sm:text-xs text-slate-500">
-                        {p.salesCount || 0} sold • {p.stock} in stock
-                      </p>
-                    </div>
-                  </div>
-                  <span className="font-extrabold text-slate-950 tabular-nums shrink-0">৳{p.price}</span>
+          {/* Try-on funnel + sales summary */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <SectionCard
+              className="lg:col-span-3"
+              title="Try-on funnel"
+              subtitle="How many customers go from trying on to buying"
+              right={
+                <Link href="/dashboard/analytics/virtual-try-on" className="text-xs font-bold underline whitespace-nowrap">
+                  Full report &rarr;
                 </Link>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          id="readiness"
-          className="lg:col-span-6"
-          title={`Finish setting up (${checklistPct}%)`}
-          subtitle="Auto-synced with workspace setup plus manual milestone tracking"
-          right={
-            <Link href="/dashboard/settings/onboarding" className="text-xs font-bold underline whitespace-nowrap">
-              Manage Brand &rarr;
-            </Link>
-          }
-        >
-          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-3">
-            <div className="h-full bg-slate-950 transition-all duration-300" style={{ width: `${checklistPct}%` }} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {checklistItems.map((item) => {
-              const done = item.completed;
-              const isSaving = checklistSavingId === item.id;
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-2.5 sm:p-2 rounded-xl bg-slate-50 border border-slate-100 gap-2.5 min-h-[44px] sm:min-h-0"
-                >
-                  <button
-                    type="button"
-                    disabled={isSaving}
-                    onClick={() => void handleToggleChecklist(item.id)}
-                    className="flex items-center gap-2 text-left min-w-0 flex-1 disabled:opacity-60"
-                  >
-                    <CheckCircle2 className={`w-4 h-4 shrink-0 ${done ? 'text-emerald-600' : 'text-slate-300'}`} />
-                    <span className={`line-clamp-2 sm:line-clamp-1 leading-snug ${done ? 'line-through text-slate-400' : 'text-slate-800 font-medium'}`}>
-                      {item.label}
-                    </span>
-                  </button>
-                  <Link
-                    href={item.href}
-                    className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-slate-950 shrink-0"
-                  >
-                    Go
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-      </div>
-
-      {/* H. Recent Activity & Recent Orders */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-        <SectionCard className="lg:col-span-5" title="Recent Brand Activity" subtitle="Chronological staff & system events">
-          {safeLogs.length === 0 ? (
-            <div className="p-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-center text-xs text-slate-500">
-              No workspace activity logged yet. Catalog edits, inventory adjustments, and storefront updates appear here.
-            </div>
-          ) : (
-            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 text-xs">
-              {safeLogs.slice(0, 6).map((log) => (
-                <div key={log.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-1.5">
-                    <span className="font-bold text-slate-900 break-words">{log.entity}</span>
-                    <span className="text-[10px] sm:text-[11px] font-mono text-slate-400 shrink-0">{log.timestamp}</span>
+              }
+            >
+              {(() => {
+                const steps: Array<[string, number]> = [
+                  ['Started a try-on', loggedTryOns],
+                  ['Got a result', successfulTryOns],
+                  ['Added to cart', cartConvertedTryOns],
+                  ['Placed an order', attributedOrders],
+                ];
+                const top = Math.max(1, steps[0][1]);
+                return (
+                  <div className="space-y-3.5">
+                    {steps.map(([label, n], i) => {
+                      const pct = Math.round((n / top) * 100);
+                      const fromPrev = i > 0 && steps[i - 1][1] > 0 ? Math.round((n / steps[i - 1][1]) * 100) : null;
+                      return (
+                        <div key={label}>
+                          <div className="flex items-baseline justify-between mb-1.5 text-sm">
+                            <span className="font-medium text-slate-700">{label}</span>
+                            <span className="tabular-nums text-slate-500">
+                              <b className="text-slate-950">{n}</b>
+                              {fromPrev !== null && <span className="ml-2 text-xs">{fromPrev}% of previous</span>}
+                            </span>
+                          </div>
+                          <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden" role="img" aria-label={`${label}: ${n}`}>
+                            <div className="h-full rounded-full bg-slate-950" style={{ width: `${Math.max(n > 0 ? 3 : 0, pct)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <p className="pt-1 text-xs text-slate-500">
+                      Sales from try-ons: <b className="text-slate-900">৳{attributedRevenue.toLocaleString()}</b>
+                      {failedTryOns > 0 && <> &middot; {failedTryOns} failed</>} &middot; avg {avgDurationSec}s
+                    </p>
                   </div>
-                  <p className="text-slate-600 leading-relaxed">{log.details}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
+                );
+              })()}
+            </SectionCard>
 
-        <SectionCard
-          className="lg:col-span-7"
-          title="Recent Orders"
-          subtitle="Direct fulfillment belonging strictly to this brand"
-          right={
-            <Link href="/dashboard/orders" className="text-xs font-bold underline whitespace-nowrap">
-              All Orders &rarr;
-            </Link>
-          }
-        >
-          {recentOrders.length === 0 ? (
-            <div className="p-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-center text-xs text-slate-500">
-              No orders placed yet. Published storefront and marketplace orders will show up here.
-            </div>
-          ) : (
-            <>
-              {/* Mobile Phone Card Layout */}
-              <div className="sm:hidden space-y-2.5">
-                {recentOrders.map((ord) => (
-                  <Link
-                    key={ord.id}
-                    href={`/dashboard/orders/${ord.id}`}
-                    className="block p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-white transition-colors space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-extrabold text-slate-950">{ord.id}</span>
-                      <StatusBadge status={ord.status} />
-                    </div>
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 truncate">{ord.customerName}</p>
-                        <p className="text-[11px] text-slate-500">{ord.date}</p>
-                      </div>
-                      <span className="text-sm font-extrabold text-slate-950 tabular-nums shrink-0">৳{ord.total}</span>
-                    </div>
+            <SectionCard className="lg:col-span-2" title="Sales summary">
+              <dl className="divide-y divide-slate-100 text-sm">
+                {[
+                  ['Paid orders', paidOrders],
+                  ['Pending', pendingOrders],
+                  ['Cancelled', cancelledOrders],
+                  ['Refunded', refundedOrders],
+                  ['Average order', `৳${Math.round(aov).toLocaleString()}`],
+                ].map(([k, v]) => (
+                  <div key={String(k)} className="flex items-center justify-between py-2.5">
+                    <dt className="text-slate-600">{k}</dt>
+                    <dd className="font-bold text-slate-950 tabular-nums">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </SectionCard>
+          </div>
+
+          {/* Products + orders */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SectionCard
+              title="Top products"
+              right={
+                <Link href="/dashboard/inventory" className="text-xs font-bold underline whitespace-nowrap">
+                  Inventory &rarr;
+                </Link>
+              }
+            >
+              {bestSellingProducts.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-500">
+                  No products yet.{' '}
+                  <Link href="/dashboard/products/addproduct" className="font-bold underline">
+                    Add your first product
                   </Link>
+                </p>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {bestSellingProducts.map((pr) => {
+                    const low = pr.stock <= (pr.lowStockThreshold || 5);
+                    return (
+                      <li key={pr.id}>
+                        <Link href={`/dashboard/products/${pr.id}`} className="flex items-center gap-3 py-3 hover:bg-slate-50 -mx-2 px-2 rounded-lg">
+                          <div className="relative w-11 h-11 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                            <SafeImage src={pr.image} alt={pr.name} fill className="object-cover" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-950 truncate">{pr.name}</p>
+                            <p className="text-xs text-slate-500">{pr.sku} &middot; ৳{pr.price}</p>
+                          </div>
+                          <span
+                            className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${
+                              low ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {pr.stock} in stock
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title="Recent orders"
+              right={
+                <Link href="/dashboard/orders" className="text-xs font-bold underline whitespace-nowrap">
+                  All orders &rarr;
+                </Link>
+              }
+            >
+              {recentOrders.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-500">
+                  No orders yet. Share your store link to get your first one.
+                </p>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {recentOrders.map((ord) => (
+                    <li key={ord.id}>
+                      <Link href={`/dashboard/orders/${ord.id}`} className="flex items-center gap-3 py-3 hover:bg-slate-50 -mx-2 px-2 rounded-lg">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-950 truncate">{ord.customerName}</p>
+                          <p className="text-xs text-slate-500 font-mono">{ord.id}</p>
+                        </div>
+                        <StatusBadge status={ord.status} />
+                        <span className="text-sm font-bold text-slate-950 tabular-nums w-20 text-right shrink-0">৳{ord.total}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          </div>
+
+          {/* Marketplace: only when the brand actually uses it */}
+          {showMarketplace && (
+            <SectionCard
+              title="Marketplace"
+              right={
+                <Link href="/dashboard/marketplace" className="text-xs font-bold underline whitespace-nowrap">
+                  Manage &rarr;
+                </Link>
+              }
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                {[
+                  ['Published', publishedPostsCount],
+                  ['Draft / scheduled', draftOrScheduledPostsCount],
+                  ['Clicks', totalPostClicks],
+                  ['Revenue', `৳${postRevenue.toLocaleString()}`],
+                ].map(([k, v]) => (
+                  <div key={String(k)} className="rounded-xl bg-slate-50 border border-slate-200/70 p-3">
+                    <p className="text-xs text-slate-500">{k}</p>
+                    <p className="text-lg font-extrabold text-slate-950 mt-0.5 tabular-nums">{v}</p>
+                  </div>
                 ))}
               </div>
-
-              {/* Desktop Table Layout */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-left text-xs sm:text-[13px]">
-                  <thead className="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                    <tr>
-                      <th className="py-2 pr-3">Order</th>
-                      <th className="py-2 pr-3">Customer</th>
-                      <th className="py-2 pr-3">Amount</th>
-                      <th className="py-2 pr-3">Status</th>
-                      <th className="py-2 text-right">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {recentOrders.map((ord) => (
-                      <tr key={ord.id} className="hover:bg-slate-50">
-                        <td className="py-2.5 pr-3 font-mono font-bold whitespace-nowrap">
-                          <Link href={`/dashboard/orders/${ord.id}`} className="hover:underline">
-                            {ord.id}
-                          </Link>
-                        </td>
-                        <td className="py-2.5 pr-3">{ord.customerName}</td>
-                        <td className="py-2.5 pr-3 font-bold tabular-nums">৳{ord.total}</td>
-                        <td className="py-2.5 pr-3"><StatusBadge status={ord.status} /></td>
-                        <td className="py-2.5 text-right text-slate-500 whitespace-nowrap">{ord.date}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+            </SectionCard>
           )}
-        </SectionCard>
-      </div>
+
+          {/* Remaining setup (compact) */}
+          {checklistPct < 100 && nextSteps.length > 0 && (
+            <SectionCard id="readiness" title={`Finish setting up (${checklistPct}%)`}>
+              <ul className="divide-y divide-slate-100">
+                {nextSteps.map((item) => (
+                  <li key={item.id}>
+                    <Link href={item.href} className="flex items-center justify-between gap-3 py-2.5 text-sm text-slate-800 hover:text-slate-950">
+                      <span>{item.label}</span>
+                      <span className="text-xs font-bold text-slate-500">Go &rarr;</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
+        </>
+      )}
     </div>
   );
 }
-

@@ -615,21 +615,24 @@ export function DashboardShell({
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${isLiveBackend ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                  {isLiveBackend ? 'Live Sync' : 'Demo'}
+                  {isLiveBackend ? 'Live Sync' : 'Offline'}
                 </span>
               </div>
+              {/* Role switching is a developer tool: never shown in production */}
+              {process.env.NODE_ENV !== 'production' && (
               <select
-                value={activeRole}
-                onChange={(e) => setActiveRole(e.target.value as StaffRole)}
-                aria-label="Active Staff Role"
-                className="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none"
-              >
-                {(Object.keys(ROLE_LABELS) as StaffRole[]).map((role) => (
-                  <option key={role} value={role}>
-                    Role: {ROLE_LABELS[role].label}
-                  </option>
-                ))}
-              </select>
+                  value={activeRole}
+                  onChange={(e) => setActiveRole(e.target.value as StaffRole)}
+                  aria-label="Active Staff Role"
+                  className="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none"
+                >
+                  {(Object.keys(ROLE_LABELS) as StaffRole[]).map((role) => (
+                    <option key={role} value={role}>
+                      Role: {ROLE_LABELS[role].label}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
@@ -826,22 +829,24 @@ export function DashboardShell({
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${isLiveBackend ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              {isLiveBackend ? 'Live Sync' : 'Demo Workspace'}
+              {isLiveBackend ? 'Live Sync' : 'Offline'}
             </span>
 
-            {/* Active Staff Role Selector (Tests & Enforces RBAC) */}
+            {/* Role switching is a developer tool: never shown in production */}
+            {process.env.NODE_ENV !== 'production' && (
             <select
-              value={activeRole}
-              onChange={(e) => setActiveRole(e.target.value as StaffRole)}
-              title="Active Staff Role View"
-              className="hidden md:block px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-800 focus:outline-none"
-            >
-              {(Object.keys(ROLE_LABELS) as StaffRole[]).map((role) => (
-                <option key={role} value={role}>
-                  Role: {ROLE_LABELS[role].label}
-                </option>
-              ))}
-            </select>
+                value={activeRole}
+                onChange={(e) => setActiveRole(e.target.value as StaffRole)}
+                title="Active Staff Role View"
+                className="hidden md:block px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-800 focus:outline-none"
+              >
+                {(Object.keys(ROLE_LABELS) as StaffRole[]).map((role) => (
+                  <option key={role} value={role}>
+                    Role: {ROLE_LABELS[role].label}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {/* Quick Create Dropdown */}
             <div ref={quickCreateWrapperRef} className="relative">
