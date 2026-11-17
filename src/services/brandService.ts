@@ -1148,6 +1148,13 @@ export const brandWorkspaceApi = {
     }
   },
 
+  /** The signed-in person's real role and permissions, as the server sees them. */
+  async getMyAccess(): Promise<{ role: string; permissions: string[] }> {
+    const res = await apiFetch<{ data?: { role?: string; permissions?: string[] }; role?: string; permissions?: string[] }>('/api/v1/auth/rbac/me');
+    const d = res.data ?? res;
+    return { role: String(d.role || ''), permissions: Array.isArray(d.permissions) ? d.permissions : [] };
+  },
+
   async getOverviewSummary(): Promise<BrandOverviewSummary> {
     return apiFetch<BrandOverviewSummary>('/api/v1/brand/overview');
   },

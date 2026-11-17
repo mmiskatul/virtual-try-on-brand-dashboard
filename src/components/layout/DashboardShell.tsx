@@ -42,6 +42,7 @@ import {
 import { SIDEBAR_NAV_GROUPS } from '../../config/navigation';
 import { brandWorkspaceApi, type AppNotification } from '../../services/brandService';
 import { canPerform, ROLE_LABELS } from '../../config/permissions';
+import { setServerAccess, useServerAccess } from '../../config/access';
 import { StaffRole } from '../../types';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -141,6 +142,24 @@ export function DashboardShell({
   const [refreshing, setRefreshing] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const prefetchedHrefsRef = useRef<Set<string>>(new Set());
+
+  // Ask the server what this person may really do; the menu follows the answer.
+  const serverAccess = useServerAccess();
+  const [accessFailed, setAccessFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    brandWorkspaceApi
+      .getMyAccess()
+      .then((a) => {
+        if (!cancelled && a.role) setServerAccess(a);
+        else if (!cancelled) setAccessFailed(true);
+      })
+      .catch(() => !cancelled && setAccessFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const accessReady = !!serverAccess || accessFailed;
 
   useEffect(() => {
     setPendingHref(null);
@@ -514,6 +533,7 @@ export function DashboardShell({
         <nav className="space-y-1" aria-label="Brand Dashboard Navigation">
           {SIDEBAR_NAV_GROUPS.map((group) => {
             const Icon = GROUP_ICONS[group.icon] || LayoutDashboard;
+            if (!accessReady) return null;
             const item = group.items.find(
               (i) => !i.hidden && canPerform(activeRole, i.module, 'view', roleOverrides)
             );
@@ -890,18 +910,26 @@ export function DashboardShell({
               </button>
               {quickCreateOpen && (
                 <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-50 text-xs">
+                  {canPerform(activeRole, 'products', 'create', roleOverrides) && (
                   <Link href="/dashboard/products/addproduct" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
                     + Add Garment Product
                   </Link>
+                  )}
+                  {canPerform(activeRole, 'marketplace', 'create', roleOverrides) && (
                   <Link href="/dashboard/marketplace/create" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
                     + Create Marketplace Post
                   </Link>
+                  )}
+                  {canPerform(activeRole, 'marketing', 'create', roleOverrides) && (
                   <Link href="/dashboard/marketing/discounts" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
                     + New Discount Code
                   </Link>
+                  )}
+                  {canPerform(activeRole, 'tryon', 'view', roleOverrides) && (
                   <Link href="/dashboard/virtual-try-on/studio" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
                     Open Try-On Studio
                   </Link>
+                  )}
                 </div>
               )}
             </div>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { PermissionAction, ResourceModule } from '../../types';
 import { canPerform, ROLE_LABELS } from '../../config/permissions';
+import { ROLE_TITLES, useServerAccess } from '../../config/access';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { Button } from '../ui/button';
 
@@ -242,8 +243,10 @@ export function PermissionGate({
   const activeRole = useWorkspaceStore((s) => s.activeRole);
   const roleOverrides = useWorkspaceStore((s) => s.roleOverrides);
 
+  const serverAccess = useServerAccess(); // re-render when the real role arrives
   const allowed = canPerform(activeRole, module, action, roleOverrides);
   if (allowed) return <>{children}</>;
+  const roleName = serverAccess ? ROLE_TITLES[serverAccess.role] || serverAccess.role : ROLE_LABELS[activeRole].label;
 
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-3 max-w-lg mx-auto my-8">
@@ -252,7 +255,7 @@ export function PermissionGate({
       </div>
       <h3 className="text-base font-bold text-slate-900">Role Permission Restricted</h3>
       <p className="text-xs text-slate-600 leading-relaxed">
-        Your active staff role (<strong>{ROLE_LABELS[activeRole].label}</strong>) does not have <code>{action}</code> permission on the <code>{module}</code> module. Switch role or ask the Workspace Owner to grant access under Team &rarr; Roles.
+        Your role (<strong>{roleName}</strong>) does not have access to this page. Ask the workspace owner to change your role under Team.
       </p>
     </div>
   );

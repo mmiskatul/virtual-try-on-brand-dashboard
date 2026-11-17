@@ -1,4 +1,5 @@
 import { PermissionAction, ResourceModule, StaffRole } from '../types';
+import { getServerAccess, serverCan } from './access';
 
 const ALL_ACTIONS: PermissionAction[] = [
   'view',
@@ -104,6 +105,9 @@ export function canPerform(
   action: PermissionAction,
   overrides?: Partial<Record<StaffRole, Partial<Record<ResourceModule, PermissionAction[]>>>>
 ): boolean {
+  // The server's answer about the signed-in person wins; the local table is only a fallback while it loads
+  const server = getServerAccess();
+  if (server) return serverCan(server, module, action);
   const matrix = overrides?.[role]?.[module] || DEFAULT_ROLE_PERMISSIONS[role]?.[module] || [];
   return matrix.includes(action);
 }
