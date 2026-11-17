@@ -1,10 +1,10 @@
 import { BrandProfile, Fabric, Product } from '../../types';
 
 export const ONBOARDING_STEPS = [
-  '1. Brand Name',
-  '2. Contact Info',
-  '3. Style & Media',
-  '4. Review & Save',
+  '1. Brand',
+  '2. Contact',
+  '3. Look',
+  '4. Review',
 ] as const;
 
 export const CATEGORY_FOCUS_OPTIONS = [

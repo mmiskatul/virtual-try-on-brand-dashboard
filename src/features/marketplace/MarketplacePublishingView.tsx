@@ -75,7 +75,7 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
     if (!selectedProd) return;
     const newPost = {
       id: `post_${Date.now()}`,
-      tenantId: profile.id || 'tenant_aura',
+      tenantId: profile.id || '',
       productId: selectedProd.id,
       title: postTitle.trim() || selectedProd.name,
       description: postDesc.trim() || selectedProd.description || '',

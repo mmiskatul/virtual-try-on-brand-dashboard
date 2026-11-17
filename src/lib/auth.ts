@@ -21,7 +21,7 @@ const providers: NextAuthOptions['providers'] = [
   CredentialsProvider({
     name: 'Brand Merchant Login',
     credentials: {
-      email: { label: 'Merchant Email', type: 'email', placeholder: 'elena@auraatelier.com' },
+      email: { label: 'Merchant Email', type: 'email', placeholder: 'you@yourbrand.com' },
       password: { label: 'Password', type: 'password' }
     },
     async authorize(credentials, req) {
@@ -44,7 +44,7 @@ const providers: NextAuthOptions['providers'] = [
               name: sessionData.user.name,
               email: sessionData.user.email,
               role: sessionData.user.role || 'BRAND_OWNER',
-              tenantId: sessionData.user.tenantId || sessionData.tenant?.id || 'tenant_aura',
+              tenantId: sessionData.user.tenantId || sessionData.tenant?.id || '',
               emailVerified: Boolean(sessionData.user.emailVerified),
             };
           }
@@ -96,7 +96,7 @@ const providers: NextAuthOptions['providers'] = [
         name: data.user.name,
         email: data.user.email,
         role: data.user.role || 'BRAND_OWNER',
-        tenantId: data.user.tenantId || data.tenant?.id || 'tenant_aura',
+        tenantId: data.user.tenantId || data.tenant?.id || '',
         emailVerified: Boolean(data.user.emailVerified),
       };
     }

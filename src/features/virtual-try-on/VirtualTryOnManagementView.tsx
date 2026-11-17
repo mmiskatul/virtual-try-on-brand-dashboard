@@ -130,7 +130,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
       setStudioPhase('done');
       addTryOnSession({
         id: `gen_${Date.now()}`,
-        tenantId: profile.id || 'tenant_aura',
+        tenantId: profile.id || '',
         productId: activeStudioProduct.id,
         productName: activeStudioProduct.name,
         category: activeStudioProduct.tryOnCategory,
@@ -147,7 +147,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
       );
       addTryOnSession({
         id: `gen_${Date.now()}`,
-        tenantId: profile.id || 'tenant_aura',
+        tenantId: profile.id || '',
         productId: activeStudioProduct.id,
         productName: activeStudioProduct.name,
         category: activeStudioProduct.tryOnCategory,

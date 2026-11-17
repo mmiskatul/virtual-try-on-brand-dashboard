@@ -179,7 +179,7 @@ function BrandResetPasswordContent() {
           <>
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">Business Email</label>
-              <Input type="email" placeholder="elena@auraatelier.com" {...register('email')} />
+              <Input type="email" placeholder="you@yourbrand.com" {...register('email')} />
             </div>
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">6-Digit Reset Code</label>

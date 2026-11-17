@@ -147,7 +147,7 @@ function BrandForgotPasswordContent() {
           <label className="block text-xs font-medium text-gray-700">Business Email</label>
           <Input
             type="email"
-            placeholder="elena@auraatelier.com"
+            placeholder="you@yourbrand.com"
             autoComplete="email"
             {...register('email')}
             className={errors.email ? 'border-rose-500' : ''}

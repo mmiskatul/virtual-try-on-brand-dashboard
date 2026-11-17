@@ -28,11 +28,11 @@ import {
   WebhookSubscription,
 } from '../../types';
 import {
-  DEMO_NAV_MENUS,
-  DEMO_STOREFRONT_PAGES,
-  DEMO_STOREFRONT_SECTIONS,
-  DEMO_TRYON_CONFIG,
-} from '../../data/brandDemoSeed';
+  DEFAULT_NAV_MENUS,
+  DEFAULT_STOREFRONT_PAGES,
+  DEFAULT_STOREFRONT_SECTIONS,
+  DEFAULT_TRYON_CONFIG,
+} from '../../data/defaults';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../config/permissions';
 
 export interface WorkspaceSliceState {
@@ -133,12 +133,12 @@ const initialState: WorkspaceSliceState = {
   reviews: [],
   campaigns: [],
   discounts: [],
-  storefrontSections: DEMO_STOREFRONT_SECTIONS,
+  storefrontSections: DEFAULT_STOREFRONT_SECTIONS,
   storefrontHasUnsavedDraft: false,
   storefrontLastPublishedAt: null,
-  storefrontPages: DEMO_STOREFRONT_PAGES,
-  navMenus: DEMO_NAV_MENUS,
-  tryOnConfig: DEMO_TRYON_CONFIG,
+  storefrontPages: DEFAULT_STOREFRONT_PAGES,
+  navMenus: DEFAULT_NAV_MENUS,
+  tryOnConfig: DEFAULT_TRYON_CONFIG,
   tryOnSessions: [],
   teamMembers: [],
   roleOverrides: {},
@@ -477,7 +477,7 @@ export const workspaceSlice = createSlice({
       }
     },
     markOnboardingStepCompleted: (state, action: PayloadAction<{ tenantId: string; stepNumber: number }>) => {
-      const cleanTenantId = String(action.payload.tenantId || state.profile.id || 'tenant_aura').trim();
+      const cleanTenantId = String(action.payload.tenantId || state.profile.id || '').trim();
       const prev = state.onboardingCompletedStepsByTenant[cleanTenantId] || [];
       if (!prev.includes(action.payload.stepNumber)) {
         state.onboardingCompletedStepsByTenant[cleanTenantId] = [...prev, action.payload.stepNumber].sort(
@@ -492,7 +492,7 @@ export const workspaceSlice = createSlice({
         : [...state.onboardingCompletedIds, id];
     },
     markOnboardingCompleted: (state, action: PayloadAction<string>) => {
-      const cleanTenantId = String(action.payload || '').trim() || state.profile.id || 'tenant_aura';
+      const cleanTenantId = String(action.payload || '').trim() || state.profile.id || '';
       if (!state.onboardedTenantIds.includes(cleanTenantId)) {
         state.onboardedTenantIds.push(cleanTenantId);
       }
@@ -534,7 +534,7 @@ export const workspaceSlice = createSlice({
       action: PayloadAction<{ tenantId: string; partial: Partial<BrandProfile> }>
     ) => {
       const { tenantId, partial } = action.payload;
-      const cleanTenantId = String(tenantId || '').trim() || state.profile.id || 'tenant_aura';
+      const cleanTenantId = String(tenantId || '').trim() || state.profile.id || '';
       const prevDraft = state.onboardingProfileDrafts[cleanTenantId] || {};
       const mergedSeo = partial.seo
         ? { ...(state.profile.seo || DEFAULT_SEO), ...(prevDraft.seo || {}), ...partial.seo }
@@ -588,7 +588,7 @@ export const workspaceSlice = createSlice({
       action: PayloadAction<{ tenantId: string; snapshot: Partial<BrandProfile> | null }>
     ) => {
       const { tenantId, snapshot } = action.payload;
-      const cleanTenantId = String(tenantId || '').trim() || state.profile.id || 'tenant_aura';
+      const cleanTenantId = String(tenantId || '').trim() || state.profile.id || '';
       if (!snapshot) {
         delete state.onboardingProfileDrafts[cleanTenantId];
       } else {

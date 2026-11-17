@@ -45,13 +45,13 @@ import {
 import { Button } from '../../components/ui/button';
 
 const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: string }> = [
-  { id: 'chk_profile', label: 'Complete brand profile & story', href: '/dashboard/settings/onboarding' },
+  { id: 'chk_profile', label: 'Add your brand story, tagline & about text', href: '/dashboard/settings/onboarding' },
   { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/settings/onboarding/media' },
   { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/settings/onboarding/media' },
-  { id: 'chk_biz', label: 'Add legal & business contact details', href: '/dashboard/settings/onboarding' },
+  { id: 'chk_biz', label: 'Add legal & business details (needed for payouts)', href: '/dashboard/settings/business' },
   { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/addproduct' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },
-  { id: 'chk_storefront', label: 'Publish dedicated brand storefront', href: '/dashboard/settings/onboarding' },
+  { id: 'chk_storefront', label: 'Publish your brand storefront', href: '/dashboard/settings/store' },
   { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on/configuration' },
   { id: 'chk_publish', label: 'Publish first product to global marketplace', href: '/dashboard/marketplace/create' },
   { id: 'chk_test_tryon', label: 'Test public Virtual Try-On studio', href: '/dashboard/virtual-try-on/studio' },
@@ -281,9 +281,9 @@ export function DashboardOverviewView() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <PageHeader
-        eyebrow="Brand Business Operating System"
+        eyebrow="Overview"
         title={`Welcome back, ${profile.owner.split(' ')[0]}`}
-        subtitle={`Isolated tenant workspace for ${workspaceName} (${workspaceSlug}). Control catalog, marketplace publications, virtual try-on, and fulfillment.`}
+        subtitle={`Here is how ${workspaceName} is doing${summary?.generatedAt ? ` \u2022 updated ${new Date(summary.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}.`}
         actions={
           <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
             <Button
@@ -412,66 +412,89 @@ export function DashboardOverviewView() {
         })}
       </div>
 
-      {/* B. 8 Business Performance KPI Cards */}
+      {/* A. Needs attention: the first thing a brand owner should see */}
+      {(() => {
+        const attention: Array<{ id: string; text: string; href: string; tone: 'warn' | 'info' }> = [];
+        if (totalProductsCount === 0) {
+          attention.push({ id: 'noprod', text: 'Add your first product to start selling', href: '/dashboard/products/addproduct', tone: 'info' });
+        } else if (storefrontPublishedCount === 0) {
+          attention.push({ id: 'nopub', text: 'Publish a product to your storefront so customers can see it', href: '/dashboard/products', tone: 'info' });
+        }
+        if (pendingOrders > 0) {
+          attention.push({ id: 'orders', text: `${pendingOrders} order${pendingOrders === 1 ? '' : 's'} waiting to be processed`, href: '/dashboard/orders', tone: 'warn' });
+        }
+        if (lowStockProducts.length > 0) {
+          attention.push({ id: 'stock', text: `${lowStockProducts.length} product${lowStockProducts.length === 1 ? '' : 's'} running low on stock`, href: '/dashboard/inventory', tone: 'warn' });
+        }
+        if (failedTryOns > 0) {
+          attention.push({ id: 'failed', text: `${failedTryOns} try-on${failedTryOns === 1 ? '' : 's'} failed. Check photo quality`, href: '/dashboard/virtual-try-on/history', tone: 'warn' });
+        }
+        if (tryOnQuota > 0 && creditsRemaining / tryOnQuota < 0.2) {
+          attention.push({ id: 'credits', text: `AI credits are running low (${creditsRemaining} left)`, href: '/dashboard/billing', tone: 'warn' });
+        }
+        if (checklistPct < 100) {
+          attention.push({ id: 'setup', text: `Finish setting up your brand (${checklistPct}% done)`, href: '#readiness', tone: 'info' });
+        }
+        return (
+          <SectionCard
+            title="Needs your attention"
+            subtitle={attention.length === 0 ? undefined : `${attention.length} thing${attention.length === 1 ? '' : 's'} to look at`}
+          >
+            {attention.length === 0 ? (
+              <p className="flex items-center gap-2 text-sm text-emerald-700">
+                <CheckCircle2 className="w-4 h-4" /> All clear. Nothing needs your attention right now.
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {attention.map((a) => (
+                  <li key={a.id}>
+                    <Link href={a.href} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:bg-slate-50 -mx-2 px-2 rounded-lg">
+                      <span className="flex items-center gap-2.5 min-w-0">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${a.tone === 'warn' ? 'bg-amber-500' : 'bg-sky-500'}`} />
+                        <span className="truncate text-slate-800">{a.text}</span>
+                      </span>
+                      <span className="text-xs font-bold text-slate-500 shrink-0">Open &rarr;</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+        );
+      })()}
+
+      {/* B. Four core numbers */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard
-          label="Total Revenue"
+          label="Revenue"
           value={`৳${totalRevenue.toLocaleString()}`}
-          change={summary?.kpis.revenueChangeLabel || 'Live BDT'}
+          change={summary?.kpis.revenueChangeLabel || undefined}
           positive={!(summary?.kpis.revenueChangeLabel || '').startsWith('-')}
           icon={<CreditCard className="w-4 h-4" />}
-          hint="Net merchandise revenue from active orders."
+          hint="Net revenue from active orders."
         />
         <KpiCard
-          label="Total Orders"
+          label="Orders"
           value={totalOrdersCount}
-          change={summary?.kpis.ordersChangeLabel || `${pendingOrders} active`}
-          positive={!(summary?.kpis.ordersChangeLabel || '').startsWith('-')}
+          change={`${pendingOrders} to process`}
+          positive={pendingOrders === 0}
           icon={<ShoppingBag className="w-4 h-4" />}
-          hint="Confirmed tenant seller orders."
+          hint={`Average order value ৳${Math.round(aov).toLocaleString()}.`}
         />
         <KpiCard
-          label="Total Products"
-          value={totalProductsCount}
-          change={`${publishedCount} market • ${storefrontPublishedCount} store`}
-          icon={<Store className="w-4 h-4" />}
-          hint="All SKUs in your private + storefront catalog."
-        />
-        <KpiCard
-          label="Total Customers"
-          value={totalCustomersCount}
-          change={totalCustomersCount > 0 ? 'Unique buyers' : 'No orders yet'}
-          icon={<Users className="w-4 h-4" />}
-          hint="Verified shoppers who purchased from your brand."
-        />
-        <KpiCard
-          label="Marketplace Views"
-          value={marketplaceViews.toLocaleString()}
-          change={`${publishedPostsCount} active`}
-          icon={<Eye className="w-4 h-4" />}
-          hint="Impressions across published marketplace listings."
-        />
-        <KpiCard
-          label="Product Sales"
-          value={totalSalesUnits.toLocaleString()}
-          change={totalSalesUnits > 0 ? 'Units sold' : '0 units'}
-          icon={<TrendingUp className="w-4 h-4" />}
-          hint="Cumulative garment units sold."
-        />
-        <KpiCard
-          label="Try-On Sessions"
+          label="Try-Ons"
           value={tryOnUsed}
-          change={`${tryOnSessionsCount} logged`}
+          change={loggedTryOns > 0 ? `${Math.round((successfulTryOns / loggedTryOns) * 100)}% success` : 'No try-ons yet'}
           icon={<Sparkles className="w-4 h-4 text-amber-600" />}
-          hint="Customer virtual fitting requests processed."
+          hint="Virtual fitting requests from your customers."
         />
         <KpiCard
           label="AI Credits Left"
           value={creditsRemaining.toLocaleString()}
           change={`of ${tryOnQuota}`}
-          positive={creditsRemaining > 100}
+          positive={tryOnQuota === 0 || creditsRemaining / tryOnQuota >= 0.2}
           icon={<Coins className="w-4 h-4" />}
-          hint="Monthly plan AI try-on generation allowance."
+          hint="Monthly try-on allowance on your plan."
         />
       </div>
 
@@ -576,31 +599,60 @@ export function DashboardOverviewView() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
         <SectionCard
           className="lg:col-span-7"
-          title="Virtual Try-On Performance & Attribution"
-          subtitle="Measured strictly from recorded generation logs and attributed order IDs"
+          title="Try-on funnel"
+          subtitle="How many customers go from trying on to buying"
           right={
-            <Link href="/dashboard/virtual-try-on/analytics" className="text-xs font-bold underline whitespace-nowrap">
+            <Link href="/dashboard/analytics/virtual-try-on" className="text-xs font-bold underline whitespace-nowrap">
               Full Report &rarr;
             </Link>
           }
         >
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
-            {[
-              ['Logged Sessions', loggedTryOns],
-              ['Successful', successfulTryOns],
-              ['Failed', failedTryOns],
-              ['Avg Speed', `${avgDurationSec}s`],
-              ['Cart Conversions', cartConvertedTryOns],
-              ['Attributed Orders', attributedOrders],
-              ['Attributed Rev', `৳${attributedRevenue.toLocaleString()}`],
-              ['Credits Used', creditsUsedTotal],
-            ].map(([k, v]) => (
-              <div key={String(k)} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
-                <p className="text-[11px] sm:text-xs text-slate-500 leading-snug">{k}</p>
-                <p className="text-base sm:text-lg font-extrabold text-slate-950 mt-0.5 tabular-nums">{v}</p>
+          {(() => {
+            const steps: Array<[string, number]> = [
+              ['Started a try-on', loggedTryOns],
+              ['Got a result', successfulTryOns],
+              ['Added to cart', cartConvertedTryOns],
+              ['Placed an order', attributedOrders],
+            ];
+            const top = Math.max(1, steps[0][1]);
+            return (
+              <div className="space-y-4">
+                <div className="space-y-2.5">
+                  {steps.map(([label, n], i) => {
+                    const pct = Math.round((n / top) * 100);
+                    const fromPrev = i > 0 && steps[i - 1][1] > 0 ? Math.round((n / steps[i - 1][1]) * 100) : null;
+                    return (
+                      <div key={label} className="text-xs">
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="font-semibold text-slate-700">{label}</span>
+                          <span className="tabular-nums text-slate-500">
+                            <b className="text-slate-950 text-sm">{n}</b>
+                            {fromPrev !== null && <span className="ml-1.5">({fromPrev}% of previous)</span>}
+                          </span>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden" role="img" aria-label={`${label}: ${n}`}>
+                          <div className="h-full rounded-full bg-slate-900" style={{ width: `${Math.max(n > 0 ? 3 : 0, pct)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                  {[
+                    ['Failed', failedTryOns],
+                    ['Avg speed', `${avgDurationSec}s`],
+                    ['Sales from try-ons', `৳${attributedRevenue.toLocaleString()}`],
+                    ['Credits used', creditsUsedTotal],
+                  ].map(([k, v]) => (
+                    <div key={String(k)} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 min-w-0">
+                      <p className="text-slate-500 leading-snug">{k}</p>
+                      <p className="text-base font-extrabold text-slate-950 mt-0.5 tabular-nums">{v}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </SectionCard>
 
         <SectionCard
@@ -702,8 +754,9 @@ export function DashboardOverviewView() {
         </SectionCard>
 
         <SectionCard
+          id="readiness"
           className="lg:col-span-6"
-          title={`Brand Readiness Checklist (${checklistPct}%)`}
+          title={`Finish setting up (${checklistPct}%)`}
           subtitle="Auto-synced with workspace setup plus manual milestone tracking"
           right={
             <Link href="/dashboard/settings/onboarding" className="text-xs font-bold underline whitespace-nowrap">

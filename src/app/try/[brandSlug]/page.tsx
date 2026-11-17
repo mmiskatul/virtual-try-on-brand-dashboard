@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { AlertTriangle, CheckCircle, ShieldCheck, Sparkles, Upload } from 'lucide-react';
-import { DEMO_TRYON_CONFIG } from '../../../data/brandDemoSeed';
+import { DEFAULT_TRYON_CONFIG } from '../../../data/defaults';
 import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
@@ -33,7 +33,7 @@ export default function DedicatedBrandPublicTryOnPage() {
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
   const [notFoundFlag, setNotFoundFlag] = useState(false);
 
-  const appearance = DEMO_TRYON_CONFIG.appearance;
+  const appearance = DEFAULT_TRYON_CONFIG.appearance;
 
   useEffect(() => {
     async function loadBrandScope() {
@@ -131,7 +131,7 @@ export default function DedicatedBrandPublicTryOnPage() {
             <h2 className="font-bold text-sm text-slate-900">1. Upload Customer Photo</h2>
             <label className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 rounded accent-slate-950" />
-              <span>{DEMO_TRYON_CONFIG.dataProcessingNotice}</span>
+              <span>{DEFAULT_TRYON_CONFIG.dataProcessingNotice}</span>
             </label>
             <input
               ref={fileRef}

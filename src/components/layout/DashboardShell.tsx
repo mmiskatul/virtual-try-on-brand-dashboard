@@ -236,7 +236,7 @@ export function DashboardShell({
 
   const effectiveRole = authSession?.user?.role || verifiedUser?.role || '';
   const activeTenantId = String(
-    verifiedUser?.tenantId || authSession?.user?.tenantId || profile.id || 'tenant_aura'
+    verifiedUser?.tenantId || authSession?.user?.tenantId || profile.id || ''
   ).trim();
   const sessionRoleUpper = String(effectiveRole).toUpperCase();
   const isOwnerUser = sessionRoleUpper === 'BRAND_OWNER' || sessionRoleUpper === 'OWNER';

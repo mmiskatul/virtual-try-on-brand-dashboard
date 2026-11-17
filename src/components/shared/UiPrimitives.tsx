@@ -118,16 +118,19 @@ export function SectionCard({
   right,
   children,
   className = '',
+  id,
 }: {
   title?: string;
   subtitle?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
     <section
-      className={`rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 space-y-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] min-w-0 ${className}`}
+      id={id}
+      className={`scroll-mt-24 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 space-y-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] min-w-0 ${className}`}
     >
       {(title || right) && (
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3 pb-3 border-b border-slate-100">

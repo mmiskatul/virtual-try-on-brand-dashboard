@@ -223,7 +223,7 @@ export function GettingStartedWizard({
   const hideToast = useUiStore((s) => s.hideToast);
 
   const activeTenantId = String(
-    session?.user?.tenantId || verifiedTenantId || profile.id || 'tenant_aura'
+    session?.user?.tenantId || verifiedTenantId || profile.id || ''
   ).trim();
   const resolvedSessionEmail = session?.user?.email ?? verifiedEmail;
   const isAlreadyOnboarded = Boolean(activeTenantId && onboardedTenantIds.includes(activeTenantId));
@@ -602,10 +602,6 @@ export function GettingStartedWizard({
       notify('Please type your Brand Name first.');
       return;
     }
-    if (!form.storefrontTitle.trim()) {
-      notify('Please type a Shop Page Title first.');
-      return;
-    }
     if (selectedCategories.length === 0) {
       notify('Please pick at least one category for your shop.');
       return;
@@ -682,9 +678,9 @@ export function GettingStartedWizard({
   };
 
   const handleCompleteOnboarding = async () => {
-    if (!form.brandName.trim() || !form.storefrontTitle.trim()) {
+    if (!form.brandName.trim()) {
       setStep(1, activeTenantId);
-      notify('Please complete your Brand Name and Storefront Title before saving setup.');
+      notify('Please enter your Brand Name before saving setup.');
       return;
     }
     if (!form.bizEmail.trim() || !form.bizEmail.includes('@')) {
@@ -751,7 +747,7 @@ export function GettingStartedWizard({
     if (targetStep > maxUnlockedStep) {
       notify(
         step === 1
-          ? 'Please enter and save your Brand Name & Storefront Title first.'
+          ? 'Please enter your Brand Name and pick a category first.'
           : 'Complete the current step first before continuing.'
       );
       return;
@@ -901,8 +897,8 @@ export function GettingStartedWizard({
       {/* STEP 1: BRAND PROFILE & TITLE */}
       {step === 1 && (
         <SectionCard
-          title="1. Your Brand Name & Shop Info"
-          subtitle="Tell customers who you are. You can edit any of these later from Settings."
+          title="1. Your Brand"
+          subtitle="Just your brand name and what you sell. Taglines, stories and links can be added later from Settings."
           right={
             <div className="flex items-center gap-3">
               {canUndoExample && (
@@ -939,60 +935,6 @@ export function GettingStartedWizard({
                 />
                 <span className="text-[11px] font-normal text-slate-500 block">
                   The short name customers see on your shop and products.
-                </span>
-              </label>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-slate-800">Shop Page Title *</span>
-                  {form.brandName.trim() && (
-                    <button
-                      type="button"
-                      onClick={() => updateField('storefrontTitle', `${form.brandName.trim()} Shop`)}
-                      className="text-[11px] font-bold text-slate-600 hover:text-slate-950 underline underline-offset-2"
-                    >
-                      Use Brand Name
-                    </button>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={form.storefrontTitle}
-                  onChange={(e) => updateField('storefrontTitle', e.target.value)}
-                  placeholder="e.g. Sunny Wear Online Shop"
-                  className={FIELD_INPUT_CLASS}
-                />
-                <span className="text-[11px] font-normal text-slate-500 block">
-                  Shown as the main heading at the top of your shop page.
-                </span>
-              </div>
-
-              <label className="block space-y-1.5">
-                <span className="font-bold text-slate-800 block">Short Tagline</span>
-                <input
-                  type="text"
-                  value={form.slogan}
-                  onChange={(e) => updateField('slogan', e.target.value)}
-                  placeholder="e.g. Comfortable clothes made to fit well"
-                  className={FIELD_INPUT_CLASS}
-                />
-                <span className="text-[11px] font-normal text-slate-500 block">
-                  A short catchphrase under your shop title (optional).
-                </span>
-              </label>
-
-              <label className="block space-y-1.5">
-                <span className="font-bold text-slate-800 block">Top Notice Bar</span>
-                <input
-                  type="text"
-                  value={form.announcement}
-                  onChange={(e) => updateField('announcement', e.target.value)}
-                  placeholder="e.g. Free shipping on orders over ৳1,500"
-                  className={FIELD_INPUT_CLASS}
-                />
-                <span className="text-[11px] font-normal text-slate-500 block">
-                  Optional banner message at the very top of your shop page.
                 </span>
               </label>
 
@@ -1048,34 +990,6 @@ export function GettingStartedWizard({
                   Tap one or more categories to show what your shop sells.
                 </span>
               </div>
-
-              <label className="block space-y-1.5 md:col-span-2">
-                <span className="font-bold text-slate-800 block">Short Summary</span>
-                <input
-                  type="text"
-                  value={form.shortDescription}
-                  onChange={(e) => updateField('shortDescription', e.target.value)}
-                  placeholder="e.g. Everyday shirts, dresses, and jackets with Virtual Try-On."
-                  className={FIELD_INPUT_CLASS}
-                />
-                <span className="text-[11px] font-normal text-slate-500 block">
-                  One short line shown on search results and shop cards.
-                </span>
-              </label>
-
-              <label className="block space-y-1.5 md:col-span-2">
-                <span className="font-bold text-slate-800 block">About Your Brand</span>
-                <textarea
-                  rows={3}
-                  value={form.brandStory}
-                  onChange={(e) => updateField('brandStory', e.target.value)}
-                  placeholder="Tell customers about your clothes, style, and quality..."
-                  className={`${FIELD_INPUT_CLASS} resize-y`}
-                />
-                <span className="text-[11px] font-normal text-slate-500 block">
-                  Shown in the About section of your shop page.
-                </span>
-              </label>
             </div>
 
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
@@ -1125,49 +1039,11 @@ export function GettingStartedWizard({
       {/* STEP 2: BUSINESS & CONTACT INFO */}
       {step === 2 && (
         <SectionCard
-          title="2. Owner & Contact Info"
-          subtitle="Add your name, contact email, currency, and address so orders and receipts work properly."
+          title="2. Contact"
+          subtitle="Where should orders and customer messages go? Legal details are only needed later, when you start receiving payouts."
         >
           <form onSubmit={handleSaveStep2} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <label className="block space-y-1.5">
-                <span className="font-bold text-slate-800 block">Your Full Name</span>
-                <input
-                  type="text"
-                  value={form.ownerName}
-                  onChange={(e) => updateField('ownerName', e.target.value)}
-                  placeholder="e.g. Sarah Ahmed"
-                  className={FIELD_INPUT_CLASS}
-                />
-              </label>
-
-              <label className="block space-y-1.5">
-                <span className="font-bold text-slate-800 block">Company / Legal Name</span>
-                <input
-                  type="text"
-                  value={form.legalName}
-                  onChange={(e) => updateField('legalName', e.target.value)}
-                  placeholder="e.g. Sunny Wear Ltd. (optional)"
-                  className={FIELD_INPUT_CLASS}
-                />
-              </label>
-
-              <label className="block space-y-1.5">
-                <span className="font-bold text-slate-800 block">Shop Type</span>
-                <select
-                  value={normalizedBusinessType}
-                  onChange={(e) => updateField('businessType', e.target.value)}
-                  className={FIELD_INPUT_CLASS}
-                >
-                  <option value="">Select shop type...</option>
-                  {BUSINESS_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
               <label className="block space-y-1.5">
                 <span className="font-bold text-slate-800 block">Contact Email *</span>
                 <input
@@ -1231,38 +1107,6 @@ export function GettingStartedWizard({
                 />
               </label>
 
-              <label className="block space-y-1.5 md:col-span-2">
-                <span className="font-bold text-slate-800 block">Street Address</span>
-                <input
-                  type="text"
-                  value={form.address}
-                  onChange={(e) => updateField('address', e.target.value)}
-                  placeholder="Building, street name, and zip code (optional)"
-                  className={FIELD_INPUT_CLASS}
-                />
-              </label>
-
-              <label className="block space-y-1.5">
-                <span className="font-bold text-slate-800 block">Instagram</span>
-                <input
-                  type="text"
-                  value={form.instagram}
-                  onChange={(e) => updateField('instagram', e.target.value)}
-                  placeholder="e.g. @yourbrand"
-                  className={FIELD_INPUT_CLASS}
-                />
-              </label>
-
-              <label className="block space-y-1.5">
-                <span className="font-bold text-slate-800 block">Website Link</span>
-                <input
-                  type="text"
-                  value={form.website}
-                  onChange={(e) => updateField('website', e.target.value)}
-                  placeholder="e.g. https://yourbrand.com"
-                  className={FIELD_INPUT_CLASS}
-                />
-              </label>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
@@ -1421,7 +1265,7 @@ export function GettingStartedWizard({
               <FullShopLivePreview
                 styleId={form.headerStyle}
                 brandName={form.brandName}
-                storefrontTitle={form.storefrontTitle}
+                storefrontTitle={form.storefrontTitle || form.brandName}
                 slogan={form.slogan}
                 announcement={form.announcement}
                 primaryColor={form.primaryColor}
@@ -1482,7 +1326,7 @@ export function GettingStartedWizard({
                 </p>
                 <p>
                   <span className="text-slate-500">Shop Page Title:</span>{' '}
-                  <strong className="text-slate-950">{form.storefrontTitle || 'Not set'}</strong>
+                  <strong className="text-slate-950">{form.storefrontTitle || form.brandName || 'Not set'}</strong>
                 </p>
                 <p>
                   <span className="text-slate-500">Tagline:</span>{' '}

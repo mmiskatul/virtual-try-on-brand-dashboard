@@ -555,7 +555,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                   <input
                     value={form.name}
                     onChange={(e) => updateField('name', e.target.value)}
-                    placeholder="Aura Atelier"
+                    placeholder="Your brand name"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
                   />
                 </div>
@@ -574,7 +574,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                   <input
                     value={form.owner}
                     onChange={(e) => updateField('owner', e.target.value)}
-                    placeholder="Elena Rostova"
+                    placeholder="Your full name"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
                   />
                 </div>
@@ -583,7 +583,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                   <input
                     value={form.legalName}
                     onChange={(e) => updateField('legalName', e.target.value)}
-                    placeholder="Aura Atelier Fashion Ltd."
+                    placeholder="Your registered company name"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
                   />
                 </div>
@@ -892,7 +892,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                   <input
                     value={form.storefrontTitle}
                     onChange={(e) => updateField('storefrontTitle', e.target.value)}
-                    placeholder="Aura Atelier Official Storefront"
+                    placeholder="Your Brand Official Store"
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-slate-950"
                   />
                 </div>
