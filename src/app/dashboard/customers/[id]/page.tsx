@@ -1,10 +1,5 @@
-import { CustomersManagementView } from '@/features/customers/CustomersManagementView';
+import { CustomerDetailView } from '@/features/customers/CustomersView';
 
-export default function CustomerDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  return <CustomersManagementView customerId={decodeURIComponent(params.id)} />;
+export default function Page({ params }: { params: { id: string } }) {
+  return <CustomerDetailView email={decodeURIComponent(params.id)} />;
 }
-

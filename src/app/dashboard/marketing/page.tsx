@@ -1,5 +1,5 @@
-import { MarketingManagementView } from '@/features/marketing/MarketingManagementView';
+import { DiscountsView } from '@/features/marketing/DiscountsView';
 
 export default function Page() {
-  return <MarketingManagementView initialTab="overview" />;
+  return <DiscountsView />;
 }

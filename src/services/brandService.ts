@@ -95,6 +95,82 @@ export interface SupportTicket {
   messages?: Array<{ id: string; body?: string; message?: string; authorName?: string; createdAt?: string | number }>;
 }
 
+export interface BrandCustomer {
+  email: string;
+  name: string;
+  city: string;
+  country: string;
+  orderCount: number;
+  totalSpent: number;
+  firstOrderAt: number;
+  lastOrderAt: number;
+  group: 'NEW' | 'RETURNING';
+}
+
+export interface CustomerOrderRow {
+  id: string;
+  status: string;
+  paymentStatus: string;
+  totalAmount: number;
+  itemCount: number;
+  createdAt: number;
+}
+
+export interface BrandDiscount {
+  id: string;
+  code: string;
+  description?: string;
+  type: 'PERCENT' | 'FIXED';
+  value: number;
+  minOrder: number;
+  maxUses: number | null;
+  usedCount: number;
+  startsAt: number | null;
+  endsAt: number | null;
+  active: boolean;
+  createdAt: number;
+}
+
+export interface DiscountInput {
+  code: string;
+  description?: string;
+  type: 'PERCENT' | 'FIXED';
+  value: number;
+  minOrder?: number;
+  maxUses?: number | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  active?: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  roleName: string;
+  isOwner: boolean;
+  emailVerified: boolean;
+  joinedAt: number;
+}
+
+export interface TeamInvite {
+  id: string;
+  email: string;
+  role: string;
+  roleName: string;
+  invitedAt: number;
+  expiresAt: number;
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+}
+
+export interface TeamRoleInfo {
+  code: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutMs = init.body instanceof FormData ? 25000 : 8000;
@@ -864,6 +940,79 @@ export const brandWorkspaceApi = {
       body: JSON.stringify({ currentPassword, newPassword }),
     });
     return (res?.data || res) as { changed: boolean; revokedOtherSessions: number };
+  },
+
+  // --- Customers (derived from this brand's orders) ---
+  getCustomers: async () => {
+    return apiFetch<{ customers: BrandCustomer[]; totals: { customers: number; returning: number; revenue: number } }>(
+      '/api/v1/brand/customers'
+    );
+  },
+
+  getCustomer: async (email: string) => {
+    return apiFetch<{ customer: BrandCustomer; orders: CustomerOrderRow[] }>(
+      `/api/v1/brand/customers/${encodeURIComponent(email)}`
+    );
+  },
+
+  // --- Discounts & coupons ---
+  getDiscounts: async (): Promise<BrandDiscount[]> => {
+    const res = await apiFetch<{ discounts: BrandDiscount[] }>('/api/v1/brand/discounts');
+    return res.discounts;
+  },
+
+  createDiscount: async (input: DiscountInput): Promise<BrandDiscount> => {
+    const res = await apiFetch<{ discount: BrandDiscount }>('/api/v1/brand/discounts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return res.discount;
+  },
+
+  updateDiscount: async (id: string, patch: Partial<Omit<DiscountInput, 'code'>>): Promise<BrandDiscount> => {
+    const res = await apiFetch<{ discount: BrandDiscount }>(`/api/v1/brand/discounts/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    return res.discount;
+  },
+
+  deleteDiscount: async (id: string) => {
+    await apiFetch<any>(`/api/v1/brand/discounts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  // --- Team ---
+  getTeam: async () => {
+    return apiFetch<{ members: TeamMember[]; invites: TeamInvite[]; roles: TeamRoleInfo[] }>('/api/v1/brand/team');
+  },
+
+  inviteTeamMember: async (email: string, role: string) => {
+    return apiFetch<{ invite: TeamInvite; inviteUrl: string; emailDelivered: boolean }>('/api/v1/brand/team/invites', {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    });
+  },
+
+  revokeTeamInvite: async (id: string) => {
+    await apiFetch<any>(`/api/v1/brand/team/invites/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  changeTeamMemberRole: async (userId: string, role: string) => {
+    await apiFetch<any>(`/api/v1/brand/team/members/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  removeTeamMember: async (userId: string) => {
+    await apiFetch<any>(`/api/v1/brand/team/members/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+  },
+
+  acceptTeamInvite: async (token: string, name: string, password: string) => {
+    return apiFetch<{ accepted: boolean; email: string; brandName: string }>('/api/v1/auth/accept-invite', {
+      method: 'POST',
+      body: JSON.stringify({ token, name, password }),
+    });
   },
 
   executeTryOn: async (params: {

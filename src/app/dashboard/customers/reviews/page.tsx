@@ -1,5 +1,5 @@
-import { CustomersManagementView } from '@/features/customers/CustomersManagementView';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <CustomersManagementView initialTab="reviews" />;
+  redirect('/dashboard/reviews');
 }

@@ -1,5 +1,5 @@
-import { TeamManagementView } from '@/features/team/TeamManagementView';
+import { TeamView } from '@/features/team/TeamView';
 
 export default function Page() {
-  return <TeamManagementView initialTab="overview" />;
+  return <TeamView />;
 }

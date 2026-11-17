@@ -1,5 +1,5 @@
-import { TeamManagementView } from '@/features/team/TeamManagementView';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <TeamManagementView initialTab="activity" />;
+  redirect('/dashboard/team');
 }

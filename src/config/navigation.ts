@@ -114,23 +114,13 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     id: 'customers',
     label: 'CUSTOMERS',
     icon: 'Users',
-    items: [
-      { label: 'Customers', href: '/dashboard/customers', module: 'customers', hidden: true },
-      { label: 'Customer Groups', href: '/dashboard/customers/groups', module: 'customers', hidden: true },
-      { label: 'Reviews & Ratings', href: '/dashboard/customers/reviews', module: 'customers', hidden: true },
-    ],
+    items: [{ label: 'Customers', href: '/dashboard/customers', module: 'customers' }],
   },
-  // Hidden from the sidebar until the backend for this module exists (pages stay reachable by URL).
   {
     id: 'marketing',
     label: 'MARKETING',
     icon: 'Megaphone',
-    items: [
-      { label: 'Marketing', href: '/dashboard/marketing', module: 'marketing', hidden: true },
-      { label: 'Campaigns', href: '/dashboard/marketing/campaigns', module: 'marketing', hidden: true },
-      { label: 'Discounts', href: '/dashboard/marketing/discounts', module: 'marketing', hidden: true },
-      { label: 'Newsletter', href: '/dashboard/marketing/newsletter', module: 'marketing', hidden: true },
-    ],
+    items: [{ label: 'Discounts', href: '/dashboard/marketing', module: 'marketing' }],
   },
   {
     id: 'analytics',
@@ -145,17 +135,11 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
       { label: 'Virtual Try-On Reports', href: '/dashboard/analytics/virtual-try-on', module: 'analytics', hidden: true },
     ],
   },
-  // Hidden from the sidebar until the backend for this module exists (pages stay reachable by URL).
   {
     id: 'team',
     label: 'TEAM MANAGEMENT',
     icon: 'UserCog',
-    items: [
-      { label: 'Team', href: '/dashboard/team', module: 'team', hidden: true },
-      { label: 'Team Members', href: '/dashboard/team/members', module: 'team', hidden: true },
-      { label: 'Roles & Permissions', href: '/dashboard/team/roles', module: 'team', hidden: true },
-      { label: 'Activity Logs', href: '/dashboard/team/activity', module: 'team', hidden: true },
-    ],
+    items: [{ label: 'Team', href: '/dashboard/team', module: 'team' }],
   },
   {
     id: 'billing',

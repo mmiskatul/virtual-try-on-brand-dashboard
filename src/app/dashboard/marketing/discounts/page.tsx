@@ -1,5 +1,5 @@
-import { MarketingManagementView } from '@/features/marketing/MarketingManagementView';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <MarketingManagementView initialTab="discounts" />;
+  redirect('/dashboard/marketing');
 }

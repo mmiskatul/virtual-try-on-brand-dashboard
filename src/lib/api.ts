@@ -56,7 +56,8 @@ export async function refreshBrandSession(): Promise<boolean> {
 
 export async function brandFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers || {});
-  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+  // Only declare JSON when there is a body: the server rejects an empty body that claims to be JSON.
+  if (!headers.has('Content-Type') && options.body !== undefined && options.body !== null && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
 

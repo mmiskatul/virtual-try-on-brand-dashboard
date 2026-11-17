@@ -27,6 +27,7 @@ const PUBLIC_AUTH_FLOW_PREFIXES = [
   '/forgot-password',
   '/forget-password',
   '/reset-password',
+  '/accept-invite',
 ];
 const PUBLIC_STOREFRONT_PREFIXES = ['/brands', '/try'];
 const PUBLIC_META_PREFIXES = [

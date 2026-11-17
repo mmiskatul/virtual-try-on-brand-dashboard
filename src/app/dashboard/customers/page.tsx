@@ -1,5 +1,5 @@
-import { CustomersManagementView } from '@/features/customers/CustomersManagementView';
+import { CustomersView } from '@/features/customers/CustomersView';
 
 export default function Page() {
-  return <CustomersManagementView initialTab="all" />;
+  return <CustomersView />;
 }
