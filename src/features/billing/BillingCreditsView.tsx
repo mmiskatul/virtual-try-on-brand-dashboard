@@ -85,7 +85,6 @@ export function BillingCreditsView({
   const profile = useWorkspaceStore((s) => s.profile);
   const invoices = useWorkspaceStore((s) => s.invoices);
   const tryOnSessions = useWorkspaceStore((s) => s.tryOnSessions);
-  const updateProfile = useWorkspaceStore((s) => s.updateProfile);
   const showToast = useUiStore((s) => s.showToast);
 
   const [tab, setTab] = useState<BillingTab>(initialTab);
@@ -355,17 +354,11 @@ export function BillingCreditsView({
             title="Payment Methods on File"
             subtitle="Configured SaaS billing methods for automatic plan renewal."
           >
-            <div className="rounded-xl border border-slate-200 p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-slate-100 text-slate-900">
-                  <CreditCard className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900">Corporate Visa •••• 4242 (Default)</p>
-                  <p className="text-slate-500">Expires 09/2029 • Billing contact: {profile.email}</p>
-                </div>
-              </div>
-              <StatusBadge status="ACTIVE" />
+            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-600">
+              <p className="font-bold text-slate-900">No payment method on file</p>
+              <p className="mt-1">
+                Online payment processing is not enabled for this workspace yet. Billing contact: {profile.email || '—'}
+              </p>
             </div>
           </SectionCard>
         )}
@@ -378,8 +371,8 @@ export function BillingCreditsView({
           confirmLabel={`Switch to ${confirmPlan?.id}`}
           onConfirm={() => {
             if (confirmPlan) {
-              updateProfile({ plan: confirmPlan.id, quotaMax: confirmPlan.quotaMax });
-              showToast(`Updated workspace tier to ${confirmPlan.id}.`);
+              // Plan changes need a real payment provider; never mutate the plan locally.
+              showToast('Plan changes are not available yet. Please contact support to upgrade.');
             }
             setConfirmPlan(null);
           }}

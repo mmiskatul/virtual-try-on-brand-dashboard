@@ -353,7 +353,7 @@ export function OrdersCommerceView({
     );
   }
 
-  const filteredOrders = useMemo(() => {
+  const filteredOrders = (() => {
     const q = search.trim().toLowerCase();
     return safeOrders.filter((o) => {
       const matchStatus = statusFilter === 'ALL' || o.status === statusFilter;
@@ -364,7 +364,7 @@ export function OrdersCommerceView({
         o.customerEmail.toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
-  }, [safeOrders, search, statusFilter]);
+  })();
 
   const paidRevenue = safeOrders
     .filter((o) => o.status !== 'CANCELLED' && o.status !== 'REFUNDED')

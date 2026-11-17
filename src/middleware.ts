@@ -32,6 +32,7 @@ const PUBLIC_STOREFRONT_PREFIXES = ['/storefront', '/brands', '/try', '/api/edge
 const PUBLIC_META_PREFIXES = [
   '/api/auth',
   '/api/telemetry',
+  '/api/health',
   '/manifest.webmanifest',
   '/robots.txt',
   '/sitemap.xml',
@@ -71,16 +72,31 @@ function buildMergedCookieHeader(rawCookie: string | null, setCookies: string[])
  * Generate a strict, dynamic Content Security Policy (CSP) with a cryptographic nonce.
  * Protects merchant inventory, revenue metrics, and boutique storefronts against XSS attacks.
  */
+function backendOrigin(): string {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000').origin;
+  } catch {
+    return '';
+  }
+}
+
 function createContentSecurityPolicy(nonce: string) {
   const isDev = process.env.NODE_ENV !== 'production';
+  const backend = backendOrigin();
+  const connectSrc = isDev
+    ? "'self' http://localhost:* ws://localhost:* https:"
+    : `'self' ${backend}`;
+  const imgSrc = isDev
+    ? "'self' blob: data: https:"
+    : `'self' blob: data: ${backend} https://ai.vtrystudio.com https://res.cloudinary.com https://images.unsplash.com`;
 
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${isDev ? "'unsafe-eval'" : ''} https:;
     style-src 'self' 'nonce-${nonce}' 'unsafe-inline' https:;
-    img-src 'self' blob: data: https://images.unsplash.com https:;
+    img-src ${imgSrc};
     font-src 'self' data: https:;
-    connect-src 'self' http://localhost:* ws://localhost:* https:;
+    connect-src ${connectSrc};
     object-src 'none';
     base-uri 'self';
     form-action 'self' https://accounts.google.com;
@@ -95,8 +111,8 @@ function createContentSecurityPolicy(nonce: string) {
 const ALLOWED_ORIGIN_PATTERNS = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-  /^https:\/\/[a-z0-9-]+\.vercel\.app$/,
-  /^https:\/\/([a-z0-9-]+\.)?vton-platform\.io$/,
+  // Official V-TRY Studio domains: vtrystudio.com, shop.brand.*, admin.*, www.*
+  /^https:\/\/([a-z0-9-]+\.)*vtrystudio\.com$/,
 ];
 
 function isOriginAllowed(origin: string | null, requestOrigin?: string): boolean {
@@ -122,10 +138,44 @@ interface RateLimitRecord {
 const rateLimitStore = new Map<string, RateLimitRecord>();
 let lastCleanup = Date.now();
 
+type RateResult = { success: boolean; limit: number; remaining: number; reset: number };
+
+/**
+ * Distributed limiter via Upstash Redis REST (works on Edge/serverless, shared across instances).
+ * Enabled when UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set; returns null on any error
+ * so the caller falls back to the per-instance in-memory limiter.
+ */
+async function checkDistributedRateLimit(clientIp: string, pathname: string): Promise<RateResult | null> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  const isSensitive = pathname.startsWith('/api/auth');
+  const limit = isSensitive ? 30 : 120;
+  const windowSec = 60;
+  const bucket = Math.floor(Date.now() / (windowSec * 1000));
+  const key = `rl:brand:${isSensitive ? 's' : 'n'}:${clientIp}:${bucket}`;
+  try {
+    const res = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify([['INCR', key], ['EXPIRE', key, windowSec]]),
+      signal: AbortSignal.timeout(800),
+    });
+    if (!res.ok) return null;
+    const out = await res.json();
+    const count = Number(out?.[0]?.result);
+    if (!Number.isFinite(count)) return null;
+    const reset = windowSec - (Math.floor(Date.now() / 1000) % windowSec);
+    return { success: count <= limit, limit, remaining: Math.max(0, limit - count), reset };
+  } catch {
+    return null;
+  }
+}
+
 function checkEdgeRateLimit(
   clientIp: string,
   pathname: string
-): { success: boolean; limit: number; remaining: number; reset: number } {
+): RateResult {
   const now = Date.now();
   if (now - lastCleanup > 300000) {
     lastCleanup = now;
@@ -134,7 +184,7 @@ function checkEdgeRateLimit(
     });
   }
 
-  const isSensitive = pathname.startsWith('/api/inventory') || pathname.startsWith('/api/auth');
+  const isSensitive = pathname.startsWith('/api/auth');
   const limit = isSensitive ? 30 : 120;
   const windowMs = 60000;
 
@@ -196,7 +246,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Edge-Level Sliding-Window Rate Limiting
-  const rateLimit = checkEdgeRateLimit(clientIp, pathname);
+  const rateLimit =
+    (await checkDistributedRateLimit(clientIp, pathname)) ?? checkEdgeRateLimit(clientIp, pathname);
   if (!rateLimit.success) {
     return NextResponse.json(
       {
@@ -232,8 +283,6 @@ export async function middleware(request: NextRequest) {
     res.headers.set('x-nonce', nonce);
     res.headers.set('x-content-type-options', 'nosniff');
     res.headers.set('x-frame-options', 'DENY');
-    res.headers.set('x-xss-protection', '1; mode=block');
-    res.headers.set('x-edge-runtime', 'vercel-edge-v8');
     if (tenantId) {
       res.headers.set('x-auth-tenant-id', String(tenantId));
     }
@@ -267,7 +316,6 @@ export async function middleware(request: NextRequest) {
     requestHeaders.set('x-nonce', nonce);
     requestHeaders.set('Content-Security-Policy', cspHeader);
     requestHeaders.set('x-edge-routed', 'true');
-    requestHeaders.set('x-edge-runtime', 'vercel-edge-v8');
 
     return applyResponseHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
   }
@@ -374,7 +422,6 @@ export async function middleware(request: NextRequest) {
     requestHeaders.set('x-nonce', nonce);
     requestHeaders.set('Content-Security-Policy', cspHeader);
     requestHeaders.set('x-edge-routed', 'true');
-    requestHeaders.set('x-edge-runtime', 'vercel-edge-v8');
     return applyResponseHeaders(
       NextResponse.next({ request: { headers: requestHeaders } }),
       refreshedSetCookies,
@@ -437,7 +484,6 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', cspHeader);
   requestHeaders.set('x-edge-routed', 'true');
-  requestHeaders.set('x-edge-runtime', 'vercel-edge-v8');
   requestHeaders.set('x-auth-user-id', nextAuthUserId);
   if (token!.tenantId) {
     requestHeaders.set('x-auth-tenant-id', token!.tenantId as string);

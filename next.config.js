@@ -10,7 +10,20 @@ const nextConfig = {
   experimental: {
     taint: true,
     instrumentationHook: true,
-    optimizePackageImports: ['lucide-react', '@tanstack/react-query', 'zod', 'zustand'],
+    optimizePackageImports: ['lucide-react', '@tanstack/react-query', 'zod'],
+  },
+  poweredByHeader: false,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
+        ],
+      },
+    ];
   },
   images: {
     remotePatterns: [
@@ -22,18 +35,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'res.cloudinary.com'
       },
-      {
-        protocol: 'https',
-        hostname: '*.onrender.com'
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost'
-      },
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1'
-      }
+      { protocol: 'https', hostname: 'api.vtrystudio.com' },
+      { protocol: 'https', hostname: 'ai.vtrystudio.com' },
+      ...(process.env.NODE_ENV !== 'production'
+        ? [
+            { protocol: 'http', hostname: 'localhost' },
+            { protocol: 'http', hostname: '127.0.0.1' },
+          ]
+        : []),
     ]
   }
 };

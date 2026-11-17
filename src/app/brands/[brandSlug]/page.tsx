@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, ShieldCheck, Sparkles } from 'lucide-react';
-import { DEMO_BRAND_PROFILE, DEMO_PRODUCTS } from '../../../data/brandDemoSeed';
 import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
@@ -55,24 +54,10 @@ export default function PublicBrandStorefrontPage() {
         setLoading(false);
         return;
       } catch {
-        // Fallback strictly to matching brandSlug if demo storefront
+        // Not found / backend unavailable: show the not-found state below
       }
 
-      if (brandSlug === DEMO_BRAND_PROFILE.slug) {
-        setBrandName(DEMO_BRAND_PROFILE.name);
-        setBrandLogo(DEMO_BRAND_PROFILE.logo);
-        setBrandBanner(DEMO_BRAND_PROFILE.banner);
-        setBrandDesc(DEMO_BRAND_PROFILE.description || '');
-        setAnnouncement(DEMO_BRAND_PROFILE.announcement);
-        setAccentColor(DEMO_BRAND_PROFILE.primaryColor);
-        setPrimaryColor(DEMO_BRAND_PROFILE.primaryColor);
-        setHeaderStyle('cover');
-        setStorefrontTitle(DEMO_BRAND_PROFILE.name);
-        setSlogan(DEMO_BRAND_PROFILE.description || '');
-        setProducts(DEMO_PRODUCTS.filter((p) => p.brandStorefrontPublished));
-      } else {
-        setNotFoundFlag(true);
-      }
+      if (!cancelled) setNotFoundFlag(true);
       setLoading(false);
     }
     load();

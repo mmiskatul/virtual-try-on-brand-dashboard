@@ -5,6 +5,11 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { validateEnv } = await import('./lib/env');
+    validateEnv();
+  }
+
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { initNodeTelemetry } = await import('./lib/telemetry/otel-server');
     await initNodeTelemetry({
       serviceName: 'vton-brand-portal',

@@ -12,7 +12,6 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { DEMO_REVENUE_SERIES } from '../../data/brandDemoSeed';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { useMounted } from '../../hooks/useMounted';
@@ -89,6 +88,37 @@ export function AnalyticsReportsView({
   const failedTryOns = safeSessions.filter((t) => t.status === 'FAILED').length;
   const tryOnCartAdds = safeSessions.filter((t) => t.convertedToCart).length;
   const tryOnAttributedRevenue = safeSessions.reduce((s, t) => s + (t.attributedRevenue || 0), 0);
+
+  // Real revenue/order series derived from live orders (no demo data).
+  const series = useMemo(() => {
+    const days = period === 'today' ? 1 : period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const buckets = new Map<string, { label: string; revenue: number; orders: number; tryOns: number }>();
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      buckets.set(key, { label: key.slice(5), revenue: 0, orders: 0, tryOns: 0 });
+    }
+    for (const o of activeOrders) {
+      const raw: any = (o as any).createdAt ?? (o as any).date;
+      const t = raw ? new Date(raw) : null;
+      if (!t || Number.isNaN(t.getTime())) continue;
+      const b = buckets.get(t.toISOString().slice(0, 10));
+      if (b) {
+        b.revenue += o.total;
+        b.orders += 1;
+      }
+    }
+    for (const t of safeSessions) {
+      const raw: any = (t as any).createdAt ?? (t as any).date;
+      const d = raw ? new Date(raw) : null;
+      if (!d || Number.isNaN(d.getTime())) continue;
+      const b = buckets.get(d.toISOString().slice(0, 10));
+      if (b) b.tryOns += 1;
+    }
+    return Array.from(buckets.values());
+  }, [period, activeOrders, safeSessions]);
 
   const topProducts = useMemo(
     () => [...safeProducts].sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0)).slice(0, 8),
@@ -182,7 +212,7 @@ export function AnalyticsReportsView({
                 </div>
               }
             >
-              <SvgBarChart data={DEMO_REVENUE_SERIES[period]} valueKey="revenue" prefix="$" />
+              <SvgBarChart data={series} valueKey="revenue" prefix="৳" />
             </SectionCard>
           </>
         )}
@@ -370,7 +400,7 @@ export function AnalyticsReportsView({
               <KpiCard label="Try-On Attributed Sales" value={`৳${tryOnAttributedRevenue.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
             </div>
             <SectionCard title="Daily Virtual Try-On Volume">
-              <SvgBarChart data={DEMO_REVENUE_SERIES[period]} valueKey="tryOns" color="#d97706" />
+              <SvgBarChart data={series} valueKey="tryOns" color="#d97706" />
             </SectionCard>
           </div>
         )}

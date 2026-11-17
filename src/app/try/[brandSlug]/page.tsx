@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { AlertTriangle, CheckCircle, ShieldCheck, Sparkles, Upload } from 'lucide-react';
-import { DEMO_BRAND_PROFILE, DEMO_PRODUCTS, DEMO_TRYON_CONFIG } from '../../../data/brandDemoSeed';
+import { DEMO_TRYON_CONFIG } from '../../../data/brandDemoSeed';
 import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
@@ -41,7 +41,7 @@ export default function DedicatedBrandPublicTryOnPage() {
       try {
         const res = await brandWorkspaceApi.getPublicStorefront(brandSlug);
         setBrandName(res.tenant.name);
-        setBrandLogo(res.tenant.logoUrl || DEMO_BRAND_PROFILE.logo);
+        setBrandLogo(res.tenant.logoUrl || '');
         setAccentColor(res.tenant.storefrontSettings?.accentColor || '#0F172A');
         const list = res.products.filter((p) => p.isTryOnEligible && p.brandStorefrontPublished);
         setEligibleGarments(list);
@@ -49,19 +49,10 @@ export default function DedicatedBrandPublicTryOnPage() {
         setLoading(false);
         return;
       } catch {
-        // Fallback strictly when slug matches demo brand
+        // Not found / backend unavailable
       }
 
-      if (brandSlug === DEMO_BRAND_PROFILE.slug) {
-        setBrandName(DEMO_BRAND_PROFILE.name);
-        setBrandLogo(DEMO_BRAND_PROFILE.logo);
-        setAccentColor(DEMO_BRAND_PROFILE.primaryColor);
-        const list = DEMO_PRODUCTS.filter((p) => p.isTryOnEligible && p.brandStorefrontPublished);
-        setEligibleGarments(list);
-        if (list[0]) setSelectedId(list[0].id);
-      } else {
-        setNotFoundFlag(true);
-      }
+      setNotFoundFlag(true);
       setLoading(false);
     }
     loadBrandScope();

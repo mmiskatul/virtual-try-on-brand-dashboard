@@ -183,7 +183,7 @@ export function CustomersManagementView({
     );
   }
 
-  const filteredCustomers = useMemo(() => {
+  const filteredCustomers = (() => {
     const q = search.trim().toLowerCase();
     return safeCustomers.filter((c) => {
       const matchGroup = groupFilter === 'ALL' || c.group === groupFilter;
@@ -194,7 +194,7 @@ export function CustomersManagementView({
         c.city.toLowerCase().includes(q);
       return matchGroup && matchQ;
     });
-  }, [safeCustomers, search, groupFilter]);
+  })();
 
   const vipCount = safeCustomers.filter(
     (c) => c.group === 'VIP' || c.group === 'HIGH_VALUE'

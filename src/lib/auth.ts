@@ -4,7 +4,9 @@ import GoogleProvider from 'next-auth/providers/google';
 import { getBackendApiBaseUrl, isAllowedBrandRole } from './portal-auth';
 
 const BACKEND_API_URL = getBackendApiBaseUrl();
-const useSecureNextAuthCookies = Boolean(process.env.NEXTAUTH_URL?.startsWith('https://'));
+// Secure cookies in production even when NEXTAUTH_URL is not set (host is auto-detected).
+const useSecureNextAuthCookies =
+  process.env.NODE_ENV === 'production' || Boolean(process.env.NEXTAUTH_URL?.startsWith('https://'));
 
 function readCookieHeader(req: any): string | undefined {
   const headers = req?.headers;
