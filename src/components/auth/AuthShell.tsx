@@ -21,7 +21,7 @@ export function AuthShell({
   children,
   footer,
 }: AuthShellProps) {
-  const marketplaceUrl = process.env.NEXT_PUBLIC_MARKETPLACE_URL || 'http://localhost:3000';
+  const marketplaceUrl = process.env.NEXT_PUBLIC_MARKETPLACE_URL || (process.env.NODE_ENV === 'production' ? 'https://vtrystudio.com' : 'http://localhost:3000');
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-stone-900 grid grid-cols-1 lg:grid-cols-12">
