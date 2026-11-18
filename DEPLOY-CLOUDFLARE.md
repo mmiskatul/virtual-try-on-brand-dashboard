@@ -4,7 +4,7 @@ This app is already set up for Cloudflare Workers (OpenNext). Everything below r
 
 | | |
 |---|---|
-| Worker name | `v-try-brand-dashboard` (set in `wrangler.jsonc`) |
+| Worker name | `virtual-try-on-brand-dashboard` (set in `wrangler.jsonc`) |
 | Production domain | `https://shop.brand.vtrystudio.com` |
 | Backend API | `https://api.vtrystudio.com` |
 | Node | 26 (`.nvmrc`) |
@@ -34,11 +34,11 @@ Public, non-secret settings (site URL, API URL) are already in `wrangler.jsonc` 
 npm run deploy
 ```
 
-This builds the app and publishes it. Cloudflare prints the URL (`https://v-try-brand-dashboard.<your-subdomain>.workers.dev`).
+This builds the app and publishes it. Cloudflare prints the URL (`https://virtual-try-on-brand-dashboard.<your-subdomain>.workers.dev`).
 
 ## 4. Attach your domain
 
-Either in the dashboard (**Workers & Pages -> v-try-brand-dashboard -> Settings -> Domains & Routes -> Add -> Custom domain -> `shop.brand.vtrystudio.com`**), or uncomment the `routes` block in `wrangler.jsonc` and run `npm run deploy` again. The domain's DNS must be in the same Cloudflare account.
+Either in the dashboard (**Workers & Pages -> virtual-try-on-brand-dashboard -> Settings -> Domains & Routes -> Add -> Custom domain -> `shop.brand.vtrystudio.com`**), or uncomment the `routes` block in `wrangler.jsonc` and run `npm run deploy` again. The domain's DNS must be in the same Cloudflare account.
 
 ## 5. Settings in other places that must match
 
@@ -56,14 +56,15 @@ npm run preview
 
 In the Cloudflare dashboard create a Worker from this Git repository and use:
 
-- Build command: `npx opennextjs-cloudflare build`
-- Deploy command: `npx opennextjs-cloudflare deploy`
+- Build command: `npm run build` (this runs the OpenNext Cloudflare build; Cloudflare's default works)
+- Deploy command: `npx wrangler deploy` (Cloudflare's default; it detects OpenNext)
 - Build variable: `NODE_VERSION=26`
 
 Add the secrets above under **Settings -> Variables and Secrets** (type "Secret").
 
 ## Good to know
 
+- `npm run build` runs `opennextjs-cloudflare build`. Use `npm run build:next` for a plain Next.js build.
 - `NEXT_PUBLIC_*` values are baked in at build time. Edit `.env.production` and redeploy to change them.
 - The Edge runtime (`export const runtime = 'edge'`) is not supported by the adapter and must not be used in this app. Routes already run on Workers.
 - `next/image` uses the Cloudflare Images binding (`IMAGES` in `wrangler.jsonc`). If you do not want to use it, set `images.unoptimized: true` in `next.config.js` and remove the binding.

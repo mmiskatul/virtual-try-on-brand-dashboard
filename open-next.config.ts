@@ -1,4 +1,10 @@
 import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 
-// Add an incremental cache (R2/KV) here only if you start using ISR or `revalidate`.
-export default defineCloudflareConfig({});
+// `npm run build` runs the OpenNext Cloudflare build, so OpenNext must call the plain
+// Next.js build here (otherwise it would call `npm run build` again and loop).
+// This lets Cloudflare's default commands (`npm run build` + `npx wrangler deploy`) work.
+// Add an incremental cache (R2/KV) in defineCloudflareConfig only if you use ISR or `revalidate`.
+export default {
+  ...defineCloudflareConfig({}),
+  buildCommand: 'npx next build',
+};
