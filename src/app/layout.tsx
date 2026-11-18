@@ -49,6 +49,7 @@ export default async function RootLayout({
     <html
       lang="en"
       className={`${plusJakartaSans.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
     >
       <head>
         {nonce && <meta name="csp-nonce" content={nonce} />}
@@ -56,6 +57,7 @@ export default async function RootLayout({
       <body
         className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased"
         data-csp-protected={nonce ? 'true' : undefined}
+        suppressHydrationWarning
       >
         <QueryProvider>
           <WebVitalReporter serviceName="vton-brand-portal" />
