@@ -11,7 +11,6 @@ import {
   isValidBrandRefreshCookie,
 } from '@/lib/portal-auth';
 
-export const runtime = 'edge';
 
 /**
  * Real User Monitoring (RUM) Telemetry Ingestion Endpoint: Brand Portal

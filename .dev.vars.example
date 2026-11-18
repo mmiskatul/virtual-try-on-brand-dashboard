@@ -1,0 +1,7 @@
+# Copy to .dev.vars for `npm run preview` (local Workers runtime). Never commit .dev.vars.
+# In production set each secret with: npx wrangler secret put <NAME>
+NEXTAUTH_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=

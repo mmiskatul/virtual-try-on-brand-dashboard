@@ -1,0 +1,35 @@
+{
+  // Cloudflare Workers deployment (OpenNext). Deploy with: npm run deploy
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "v-try-brand-dashboard",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // The worker calls itself for cache revalidation; the name must match "name" above.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "v-try-brand-dashboard"
+    }
+  ],
+  // Next.js image optimisation (next/image) runs on Cloudflare Images.
+  "images": {
+    "binding": "IMAGES"
+  },
+  // Uncomment to attach the domain on deploy (its DNS must be in this Cloudflare account):
+  // "routes": [{ "pattern": "shop.brand.vtrystudio.com", "custom_domain": true }],
+  "observability": {
+    "enabled": true
+  },
+  // Public, non-secret settings. Secrets are NOT stored here: see .dev.vars.example and the README section.
+  "vars": {
+      "NEXTAUTH_URL": "https://shop.brand.vtrystudio.com",
+      "NEXT_PUBLIC_SITE_URL": "https://shop.brand.vtrystudio.com",
+      "NEXT_PUBLIC_BACKEND_API_URL": "https://api.vtrystudio.com",
+      "NEXT_PUBLIC_MARKETPLACE_URL": "https://vtrystudio.com"
+  }
+}
