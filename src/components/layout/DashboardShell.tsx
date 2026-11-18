@@ -738,7 +738,7 @@ export function DashboardShell({
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 overflow-x-clip">
+    <div className="flex min-h-screen lg:h-screen lg:overflow-hidden bg-[#F8FAFC] text-slate-900 overflow-x-clip">
       <ToastNotification message={toastMessage} />
 
       {/* Desktop Left Sidebar */}
@@ -762,7 +762,7 @@ export function DashboardShell({
       {/* Main Column */}
       <div
         aria-hidden={shellBlocked || undefined}
-        className={`flex-1 flex flex-col min-w-0 ${
+        className={`flex-1 flex flex-col min-w-0 lg:h-screen lg:overflow-y-auto ${
           shellBlocked ? 'pointer-events-none select-none opacity-40 blur-[2px] h-screen overflow-hidden' : ''
         }`}
       >
