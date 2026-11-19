@@ -179,6 +179,13 @@ function checkEdgeRateLimit(
   pathname: string,
   exempt = false,
 ): RateResult {
+  const isSensitive = pathname.startsWith('/api/auth');
+  const limit = isSensitive ? 30 : 120;
+  // Exempt requests (dev, RSC/prefetch, NextAuth session/csrf/providers polling) must not consume the budget.
+  if (exempt) {
+    return { success: true, limit, remaining: limit, reset: 0 };
+  }
+
   const now = Date.now();
   if (now - lastCleanup > 300000) {
     lastCleanup = now;
@@ -187,8 +194,6 @@ function checkEdgeRateLimit(
     });
   }
 
-  const isSensitive = pathname.startsWith('/api/auth');
-  const limit = isSensitive ? 30 : 120;
   const windowMs = 60000;
 
   const key = `${clientIp}:${isSensitive ? 'sensitive' : 'standard'}`;

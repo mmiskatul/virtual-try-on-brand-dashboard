@@ -20,6 +20,8 @@ function BrandVerifyEmailContent() {
   const urlEmail = searchParams.get('email') || '';
   const urlWarning = searchParams.get('warning');
   const fromRegister = searchParams.get('from') === 'register';
+  // Lock the email field whenever it was supplied by the registration flow / verification link.
+  const emailLocked = Boolean(urlEmail);
 
   const [status, setStatus] = useState<'idle' | 'verifying' | 'verified' | 'error'>(
     urlToken ? 'verifying' : urlWarning ? 'error' : 'idle'
@@ -233,8 +235,21 @@ function BrandVerifyEmailContent() {
             type="email"
             placeholder="claire@lumiere.com"
             {...register('email')}
-            className={errors.email ? 'border-rose-500' : ''}
+            readOnly={emailLocked}
+            aria-readonly={emailLocked}
+            tabIndex={emailLocked ? -1 : undefined}
+            className={`${errors.email ? 'border-rose-500' : ''} ${
+              emailLocked ? 'bg-gray-100 text-gray-600 cursor-not-allowed focus-visible:ring-0' : ''
+            }`}
           />
+          {emailLocked && (
+            <p className="text-[11px] text-gray-500">
+              This is the email you registered with and can&apos;t be changed here.{' '}
+              <Link href="/register" className="text-black font-semibold hover:text-gray-700">
+                Wrong email? Register again
+              </Link>
+            </p>
+          )}
           {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
