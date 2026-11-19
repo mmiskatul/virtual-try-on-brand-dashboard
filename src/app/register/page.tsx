@@ -61,6 +61,10 @@ function BrandRegisterContent() {
         email: data.email,
         password: data.password,
       });
+      if (res.status !== 'VERIFICATION_SENT') {
+        setErrorMsg(res.message || 'Could not send the verification email. Please try again.');
+        return;
+      }
       setRedirecting(true);
       const slugParam = res.tenant?.slug ? `&slug=${encodeURIComponent(res.tenant.slug)}` : '';
       const warningParam = res.warning ? `&warning=${encodeURIComponent(res.warning)}` : '';
@@ -68,6 +72,32 @@ function BrandRegisterContent() {
         `/verify-email?email=${encodeURIComponent(res.user.email)}&from=register${slugParam}${warningParam}`
       );
     } catch (err: any) {
+      // Email already registered: if it's the same unverified account (password matches), resume verification.
+      if (err?.status === 409 && /email/i.test(err?.message || '')) {
+        try {
+          await brandApi.login({ email: data.email, password: data.password });
+          setErrorMsg('This email is already registered. Please sign in.');
+          return;
+        } catch (loginErr: any) {
+          if (loginErr?.data?.code === 'EMAIL_NOT_VERIFIED') {
+            setRedirecting(true);
+            const target = `/verify-email?email=${encodeURIComponent(data.email)}&from=register`;
+            try {
+              const sent = await brandApi.resendVerification(data.email);
+              if (sent.status === 'VERIFICATION_SENT') {
+                router.push(target);
+              } else {
+                setRedirecting(false);
+                setErrorMsg(sent.message || 'Could not send a verification code. Please try again.');
+              }
+            } catch (resendErr: any) {
+              const warning = resendErr?.message || 'Could not send a new verification code. Please use Resend.';
+              router.push(`${target}&warning=${encodeURIComponent(warning)}`);
+            }
+            return;
+          }
+        }
+      }
       setErrorMsg(err?.message || 'Failed to register brand account.');
     }
   };
@@ -90,7 +120,7 @@ function BrandRegisterContent() {
         <div className="h-px flex-1 bg-stone-200" />
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+      <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {errorMsg && (
           <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />

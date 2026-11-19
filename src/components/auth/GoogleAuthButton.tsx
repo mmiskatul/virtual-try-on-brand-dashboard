@@ -23,9 +23,12 @@ export function formatBrandOAuthError(code: string | null): string | null {
       return 'Google sign-in was cancelled or denied.';
     case 'OAuthSignin':
     case 'OAuthCallback':
-      return 'Google OAuth failed. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and http://localhost:3001/api/auth/callback/google in Google Cloud Console.';
+      return 'Google sign-in failed. Please try again, or use email and password.';
     case 'OAuthAccountNotLinked':
       return 'This email is already linked with another sign-in method.';
+    case 'Callback':
+    case 'Configuration':
+      return 'Google sign-in is temporarily unavailable. Please try again later.';
     default:
       return 'Google sign-in could not be completed. Please try again.';
   }
@@ -41,27 +44,63 @@ export function GoogleAuthButton({
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    getProviders()
-      .then((providers) => {
-        setGoogleConfigured(Boolean(providers?.google));
-      })
-      .catch(() => {});
+    let cancelled = false;
+    // Retry a couple of times so a transient failure (e.g. rate limit) doesn't leave Google disabled.
+    const load = async (attempt: number) => {
+      try {
+        const providers = await getProviders();
+        if (cancelled) return;
+        if (providers) {
+          setGoogleConfigured(Boolean(providers.google));
+          return;
+        }
+      } catch {
+        // fall through to retry
+      }
+      if (!cancelled && attempt < 3) {
+        setTimeout(() => load(attempt + 1), 1500 * (attempt + 1));
+      }
+    };
+    load(0);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleClick = async () => {
+    if (loading) return;
     setNotice(null);
-    if (googleConfigured) {
-      setLoading(true);
+
+    let configured = googleConfigured;
+    if (!configured) {
+      // Re-check on click in case the initial lookup failed.
       try {
-        await signIn('google', { callbackUrl });
-      } finally {
-        setLoading(false);
+        const providers = await getProviders();
+        configured = Boolean(providers?.google);
+        setGoogleConfigured(configured);
+      } catch {
+        setNotice('Could not reach the sign-in service. Check your connection and try again.');
+        return;
       }
+    }
+
+    if (!configured) {
+      setNotice('Google sign-in is not available right now. Please use email and password instead.');
       return;
     }
-    setNotice(
-      'Google Sign-In is wired and ready. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to brand-dashboard/.env and restart the dev server to continue with Google.'
-    );
+
+    setLoading(true);
+    try {
+      const result = await signIn('google', { callbackUrl, redirect: true });
+      // With redirect enabled the browser navigates away; reaching here means it failed to start.
+      if (result?.error) {
+        setNotice(formatBrandOAuthError(result.error) || 'Google sign-in could not be started.');
+        setLoading(false);
+      }
+    } catch {
+      setNotice('Could not start Google sign-in. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (

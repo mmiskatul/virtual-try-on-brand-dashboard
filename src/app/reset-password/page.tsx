@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AlertCircle, CheckCircle2, KeyRound, Loader2, ArrowRight } from 'lucide-react';
 import { brandApi } from '../../lib/api';
+import { strongPasswordField } from '../../lib/schemas';
 import { AuthShell } from '../../components/auth/AuthShell';
 import { PasswordField } from '../../components/auth/PasswordField';
 import { Input } from '../../components/ui/input';
@@ -17,12 +18,7 @@ const resetFormSchema = z
   .object({
     email: z.string().optional(),
     code: z.string().optional(),
-    newPassword: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .max(128, 'Password cannot exceed 128 characters')
-      .regex(/[A-Za-z]/, 'Password must include at least one letter')
-      .regex(/[0-9]/, 'Password must include at least one number'),
+    newPassword: strongPasswordField,
     confirmPassword: z.string().min(1, 'Please confirm your new password'),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -167,7 +163,7 @@ function BrandResetPasswordContent() {
         </p>
       }
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errorMsg && (
           <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />

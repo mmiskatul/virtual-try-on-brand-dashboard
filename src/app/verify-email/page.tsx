@@ -19,7 +19,7 @@ function BrandVerifyEmailContent() {
   const urlToken = searchParams.get('token');
   const urlEmail = searchParams.get('email') || '';
   const urlWarning = searchParams.get('warning');
-  const fromRegister = searchParams.get('from') === 'register';
+  const fromRegister = ['register', 'login'].includes(searchParams.get('from') || '');
   // Lock the email field whenever it was supplied by the registration flow / verification link.
   const emailLocked = Boolean(urlEmail);
 
@@ -228,7 +228,7 @@ function BrandVerifyEmailContent() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmitCode)} className="space-y-4">
+      <form noValidate onSubmit={handleSubmit(onSubmitCode)} className="space-y-4">
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700">Business Email</label>
           <Input

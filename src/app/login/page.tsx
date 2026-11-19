@@ -66,8 +66,23 @@ function BrandLoginContent() {
       await brandApi.login({ email, password });
     } catch (err: any) {
       if (err?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        // Credentials were correct but the email is unverified: send a fresh code and go straight to verification.
         setNeedsVerificationEmail(email);
-        setErrorMsg('Please verify your business email address before accessing your brand workspace.');
+        setErrorMsg('Your email is not verified yet. Sending a new verification code...');
+        const target = `/verify-email?email=${encodeURIComponent(email)}&from=login`;
+        try {
+          const sent = await brandApi.resendVerification(email);
+          if (sent.status === 'VERIFICATION_SENT') {
+            router.push(target);
+          } else if (sent.status === 'ALREADY_VERIFIED') {
+            setErrorMsg('Your email is already verified. Please try signing in again.');
+          } else {
+            setErrorMsg(sent.message || 'Could not send a verification code. Please try again.');
+          }
+        } catch (resendErr: any) {
+          const warning = resendErr?.message || 'Could not send a new verification code. Please use Resend.';
+          router.push(`${target}&warning=${encodeURIComponent(warning)}`);
+        }
       } else if (err?.data?.error === 'TenantSuspended') {
         setErrorMsg('Your brand account has been suspended by platform administration.');
       } else {
@@ -177,7 +192,7 @@ function BrandLoginContent() {
         <div className="h-px flex-1 bg-stone-200" />
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errorMsg && (
           <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs space-y-2">
             <div className="flex items-start gap-2">

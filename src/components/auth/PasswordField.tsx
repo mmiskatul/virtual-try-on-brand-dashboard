@@ -68,7 +68,7 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
               ))}
             </div>
             <p className="text-[11px] text-gray-500">
-              Strength: <span className="text-gray-800 font-semibold">{strength.label}</span> — 8+ chars, at least 1 letter & 1 number
+              Strength: <span className="text-gray-800 font-semibold">{strength.label}</span> — 8+ chars with letters & numbers (symbols welcome, no spaces or emoji)
             </p>
           </div>
         )}

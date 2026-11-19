@@ -140,6 +140,7 @@ export const brandApi = {
   }) => {
     return request<{
       message: string;
+      status?: 'VERIFICATION_SENT' | 'VERIFICATION_NOT_SENT';
       requiresEmailVerification: boolean;
       emailDelivered?: boolean;
       warning?: string;
@@ -167,6 +168,7 @@ export const brandApi = {
   resendVerification: (email: string) => {
     return request<{
       message: string;
+      status?: 'VERIFICATION_SENT' | 'ALREADY_VERIFIED' | 'REQUEST_ACCEPTED';
       alreadyVerified?: boolean;
     }>(`${BRAND_API_URL}/api/v1/auth/resend-verification`, {
       method: 'POST',
