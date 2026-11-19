@@ -94,7 +94,8 @@ function createContentSecurityPolicy(nonce: string) {
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${isDev ? "'unsafe-eval'" : ''} https:;
-    style-src 'self' 'nonce-${nonce}' https:;
+    style-src 'self' 'unsafe-inline' https:;
+    style-src-elem 'self' 'unsafe-inline' https:;
     style-src-attr 'unsafe-inline';
     img-src ${imgSrc};
     font-src 'self' data: https:;
