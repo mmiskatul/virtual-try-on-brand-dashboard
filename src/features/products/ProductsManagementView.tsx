@@ -44,6 +44,17 @@ export type ProductsSubView =
   | 'import'
   | 'export';
 
+const STARTER_COLLECTIONS: Array<{ title: string; description: string }> = [
+  { title: 'New Arrivals', description: 'The latest pieces added to the shop.' },
+  { title: 'Best Sellers', description: 'Customer favourites that sell fastest.' },
+  { title: 'Summer Collection', description: 'Light, breathable styles for warm days.' },
+  { title: 'Winter Collection', description: 'Layers and warm fabrics for the cold season.' },
+  { title: 'Eid Collection', description: 'Festive and occasion wear.' },
+  { title: 'Party Wear', description: 'Standout outfits for evenings and events.' },
+  { title: 'Casual Everyday', description: 'Easy, comfortable styles for daily wear.' },
+  { title: 'Sale', description: 'Discounted pieces for a limited time.' },
+];
+
 function formatApiError(err: unknown, fallback: string): string {
   if (err instanceof ServiceError) {
     if (err.issues && err.issues.length > 0) {
@@ -414,6 +425,23 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
       setColDesc('');
     } catch (err) {
       setErrorBanner(formatApiError(err, 'Failed to save collection.'));
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleAddStarterCollection = async (starter: { title: string; description: string }) => {
+    setErrorBanner(null);
+    setBusyAction(true);
+    try {
+      const created = await brandWorkspaceApi.createCollection({
+        title: starter.title,
+        description: starter.description,
+      });
+      setApiCollections((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+      notify(`Collection "${created.title}" added.`);
+    } catch (err) {
+      setErrorBanner(formatApiError(err, 'Failed to add collection.'));
     } finally {
       setBusyAction(false);
     }
@@ -904,6 +932,32 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
                 );
               })}
             </div>
+            {canEdit && (() => {
+              const existingTitles = new Set(
+                [...apiCollections.map((c) => c.title), ...collectionsList].map((t) => t.toLowerCase())
+              );
+              const suggestions = STARTER_COLLECTIONS.filter((c) => !existingTitles.has(c.title.toLowerCase()));
+              if (suggestions.length === 0) return null;
+              return (
+                <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
+                  <p className="text-xs font-bold text-slate-700">Quick start: tap to add a ready-made collection</p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((c) => (
+                      <button
+                        key={c.title}
+                        type="button"
+                        disabled={busyAction}
+                        onClick={() => void handleAddStarterCollection(c)}
+                        title={c.description}
+                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-900 hover:text-slate-950 disabled:opacity-60"
+                      >
+                        + {c.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             {canEdit && (
               <form onSubmit={handleSaveCollection} className="flex flex-col sm:flex-row flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100 text-xs">
                 <input
