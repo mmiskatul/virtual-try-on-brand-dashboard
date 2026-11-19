@@ -28,7 +28,7 @@ import {
 } from '../../lib/productContract';
 import { formatApiError, useNotify } from './shared';
 import { VariantPlanner } from './VariantPlanner';
-import { VariantPlan, planProblem, planToVariants, variantsToPlan } from './variantPlan';
+import { VariantPlan, colorKey, planProblem, planToVariants, variantsToPlan } from './variantPlan';
 
 const DEFAULT_CATEGORIES = [
   'Dresses',
@@ -381,6 +381,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const [serverErrors, setServerErrors] = useState<Partial<Record<ProductFieldName, string>>>({});
   const [uploadingSlot, setUploadingSlot] = useState<'display' | 'ai' | null>(null);
+  const [uploadingColor, setUploadingColor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [skuStatus, setSkuStatus] = useState<{ checked: boolean; available: boolean; message: string } | null>(null);
@@ -559,6 +560,32 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
       setErrorMessage(formatApiError(err, 'Image upload failed. Please try again.'));
     } finally {
       setUploadingSlot(null);
+    }
+  };
+
+  /** One photo per colour: uploaded here, and the finished link is stored on the plan. */
+  const handleColorPhoto = async (color: string, file: File) => {
+    const invalid = validateImageFile(file);
+    if (invalid) {
+      setErrorMessage(invalid);
+      notify(invalid);
+      return;
+    }
+    setUploadingColor(color);
+    setErrorMessage(null);
+    try {
+      const res = await brandWorkspaceApi.uploadMediaFile(file);
+      if (res.ok && res.url) {
+        const url = res.url;
+        setForm((prev) => ({ ...prev, plan: { ...prev.plan, colorImages: { ...prev.plan.colorImages, [colorKey(color)]: url } } }));
+        notify(`${color} photo uploaded.`);
+      } else {
+        setErrorMessage(res.error || 'Image upload failed. Please try again.');
+      }
+    } catch (err) {
+      setErrorMessage(formatApiError(err, 'Image upload failed. Please try again.'));
+    } finally {
+      setUploadingColor(null);
     }
   };
 
@@ -899,14 +926,17 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
             {step === 3 && (
               <SectionCard
                 title="Sizes & colours (optional)"
-                subtitle="Pick the sizes and colours, then share your total stock across them."
+                subtitle="Pick sizes, share your stock across them, set a price per size and add a photo per colour."
               >
                 <VariantPlanner
                   plan={form.plan}
                   onChange={(plan) => set({ plan })}
                   totalStock={Math.max(0, Math.floor(parseNumber(form.stock) || 0))}
+                  basePrice={parseNumber(form.price) || 0}
                   error={showError('variants')}
                   onGoToStock={() => goToStep(2)}
+                  onUploadColorPhoto={(color, file) => void handleColorPhoto(color, file)}
+                  uploadingColor={uploadingColor}
                 />
               </SectionCard>
             )}

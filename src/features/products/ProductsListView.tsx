@@ -506,7 +506,14 @@ export function ProductsListView() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-3 font-bold text-slate-950">৳{p.price}</td>
+                          <td className="px-3 py-3 font-bold text-slate-950">
+                            {(() => {
+                              const prices = [p.price, ...(p.variants || []).map((v) => v.price ?? p.price)];
+                              const low = Math.min(...prices);
+                              const high = Math.max(...prices);
+                              return low === high ? `৳${low}` : `৳${low}–${high}`;
+                            })()}
+                          </td>
                           <td className="px-3 py-3">
                             <StockLabel p={p} />
                           </td>

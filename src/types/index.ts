@@ -55,6 +55,10 @@ export interface ProductVariant {
   color: string;
   colorHex?: string;
   stockQuantity: number;
+  /** Price for this size. When missing, the product price applies. */
+  price?: number;
+  /** Photo of this colour (the same for every size of that colour). */
+  imageUrl?: string;
   priceOverride?: number;
   barcode?: string;
   weightGrams?: number;

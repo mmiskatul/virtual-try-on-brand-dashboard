@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { Check, ChevronDown, Copy, Plus, X } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, Copy, ImagePlus, Loader2, Plus, Upload, X } from 'lucide-react';
+import { SafeImage } from '../../components/shared/UiPrimitives';
 import { PRODUCT_LIMITS } from '../../lib/productContract';
 import { Button } from '../../components/ui/button';
 import {
@@ -12,6 +13,8 @@ import {
   SizeLine,
   VariantPlan,
   cleanDigits,
+  colorKey,
+  planColors,
   planProblem,
   sizeColorTotal,
   sizesTotal,
@@ -144,33 +147,104 @@ function MultiSelect({
   );
 }
 
+// ─── Photo for one colour ────────────────────────────────────────────────────
+
+function ColorPhotoTile({
+  color,
+  imageUrl,
+  busy,
+  onFile,
+  onRemove,
+}: {
+  color: string;
+  imageUrl: string;
+  busy: boolean;
+  onFile: (file: File) => void;
+  onRemove: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-1.5">
+      <p className="flex items-center gap-1.5 font-semibold text-slate-700">
+        {SWATCHES[color] && <span className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: SWATCHES[color] }} />}
+        {color}
+      </p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onFile(file);
+          e.currentTarget.value = '';
+        }}
+      />
+      <div className="group relative h-40 w-full overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
+        {imageUrl ? (
+          <>
+            <SafeImage src={imageUrl} alt={`${color} photo`} fill className="object-contain p-1.5" />
+            <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-slate-950/50 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} aria-label={`Replace ${color} photo`} className="rounded-lg bg-white px-2 py-1 font-bold text-slate-900">
+                <Upload className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" disabled={busy} onClick={onRemove} aria-label={`Remove ${color} photo`} className="rounded-lg bg-white px-2 py-1 font-bold text-rose-600">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </>
+        ) : (
+          <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-slate-500">
+            <ImagePlus className="h-5 w-5" />
+            <span className="font-semibold">Upload photo</span>
+          </button>
+        )}
+        {busy && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/85">
+            <Loader2 className="h-5 w-5 animate-spin text-slate-900" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── The planner ─────────────────────────────────────────────────────────────
 
 export function VariantPlanner({
   plan,
   onChange,
   totalStock,
+  basePrice,
   error,
   onGoToStock,
+  onUploadColorPhoto,
+  uploadingColor,
 }: {
   plan: VariantPlan;
   onChange: (next: VariantPlan) => void;
   /** The "Total stock" typed on the Price & stock step. This is what gets shared out. */
   totalStock: number;
+  /** The product's selling price. Sizes without their own price use this. */
+  basePrice: number;
   error?: string;
   onGoToStock: () => void;
+  /** Uploads a photo for a colour. The editor puts the finished link into the plan. */
+  onUploadColorPhoto: (color: string, file: File) => void;
+  uploadingColor: string | null;
 }) {
   const assigned = sizesTotal(plan);
   const left = totalStock - assigned;
   const problem = useMemo(() => planProblem(plan, totalStock), [plan, totalStock]);
+  const colorsInPlan = useMemo(() => planColors(plan), [plan]);
 
   const setSizes = (names: string[]) => {
     const kept = new Map(plan.sizes.map((s) => [s.size.toLowerCase(), s]));
-    const next = sortSizeNames(names).map((name) => kept.get(name.toLowerCase()) ?? { size: name, qty: '0', colors: [] });
-    onChange({ sizes: next });
+    const next = sortSizeNames(names).map((name) => kept.get(name.toLowerCase()) ?? { size: name, qty: '0', price: '', colors: [] });
+    onChange({ ...plan, sizes: next });
   };
   const patchSize = (size: string, patch: Partial<SizeLine>) =>
-    onChange({ sizes: plan.sizes.map((s) => (s.size === size ? { ...s, ...patch } : s)) });
+    onChange({ ...plan, sizes: plan.sizes.map((s) => (s.size === size ? { ...s, ...patch } : s)) });
 
   const setColors = (size: string, names: string[]) => {
     const line = plan.sizes.find((s) => s.size === size);
@@ -182,7 +256,7 @@ export function VariantPlanner({
 
   const splitSizes = () => {
     const parts = splitEvenlyInto(plan.sizes.length, totalStock);
-    onChange({ sizes: plan.sizes.map((s, i) => ({ ...s, qty: String(parts[i]) })) });
+    onChange({ ...plan, sizes: plan.sizes.map((s, i) => ({ ...s, qty: String(parts[i]) })) });
   };
   const splitColors = (size: string) => {
     const line = plan.sizes.find((s) => s.size === size);
@@ -195,6 +269,7 @@ export function VariantPlanner({
     const source = plan.sizes.find((s) => s.size === fromSize);
     if (!source) return;
     onChange({
+      ...plan,
       sizes: plan.sizes.map((s) => {
         const parts = splitEvenlyInto(source.colors.length, toNum(s.qty));
         return { ...s, colors: source.colors.map((c, i) => ({ color: c.color, qty: String(parts[i]) })) };
@@ -244,7 +319,7 @@ export function VariantPlanner({
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => onChange({ sizes: plan.sizes.map((s) => ({ ...s, qty: '0', colors: s.colors.map((c) => ({ ...c, qty: '0' })) })) })}
+                onClick={() => onChange({ ...plan, sizes: plan.sizes.map((s) => ({ ...s, qty: '0', colors: s.colors.map((c) => ({ ...c, qty: '0' })) })) })}
               >
                 Reset to 0
               </Button>
@@ -302,6 +377,20 @@ export function VariantPlanner({
                   </div>
 
                   <div className="space-y-2 p-3">
+                    <label className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                      <span className="font-semibold text-slate-600">Price for {line.size}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-slate-400">৳</span>
+                        <input
+                          inputMode="decimal"
+                          aria-label={`Price for size ${line.size}`}
+                          value={line.price}
+                          onChange={(e) => patchSize(line.size, { price: e.target.value.replace(/[^0-9.]/g, '') })}
+                          placeholder={basePrice > 0 ? `Same as ${basePrice}` : 'Same as product'}
+                          className="w-28 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right tabular-nums"
+                        />
+                      </span>
+                    </label>
                     <MultiSelect
                       compact
                       showChips={false}
@@ -360,6 +449,34 @@ export function VariantPlanner({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: one photo per colour */}
+      {colorsInPlan.length > 0 && (
+        <div className="space-y-2">
+          <div>
+            <p className="font-bold text-slate-700">3. A photo for each colour</p>
+            <p className="text-[11px] text-slate-500">
+              Shoppers see this photo when they pick the colour, and the try-on uses it. It is used for every size of that colour.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {colorsInPlan.map((color) => (
+              <ColorPhotoTile
+                key={color}
+                color={color}
+                imageUrl={plan.colorImages[colorKey(color)] || ''}
+                busy={uploadingColor === color}
+                onFile={(file) => onUploadColorPhoto(color, file)}
+                onRemove={() => {
+                  const next = { ...plan.colorImages };
+                  delete next[colorKey(color)];
+                  onChange({ ...plan, colorImages: next });
+                }}
+              />
+            ))}
           </div>
         </div>
       )}

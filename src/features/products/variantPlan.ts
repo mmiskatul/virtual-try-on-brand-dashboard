@@ -20,13 +20,26 @@ export interface ColorLine {
 export interface SizeLine {
   size: string;
   qty: string;
+  /** Price for this size, as typed. Empty means "same as the product price". */
+  price: string;
   colors: ColorLine[];
 }
 export interface VariantPlan {
   sizes: SizeLine[];
+  /** One photo per colour (key is the colour name in lower case), used for every size of that colour. */
+  colorImages: Record<string, string>;
 }
 
-export const EMPTY_PLAN: VariantPlan = { sizes: [] };
+export const EMPTY_PLAN: VariantPlan = { sizes: [], colorImages: {} };
+
+export const colorKey = (color: string) => color.toLowerCase();
+
+/** The colours used anywhere in the plan, in the standard order. "Standard" (no colour) has no photo. */
+export function planColors(plan: VariantPlan): string[] {
+  const seen = new Map<string, string>();
+  for (const line of plan.sizes) for (const c of line.colors) if (!seen.has(colorKey(c.color))) seen.set(colorKey(c.color), c.color);
+  return sortColorNames([...seen.values()]);
+}
 
 /** Used when a size has no colours picked. */
 export const NO_COLOR = 'Standard';
@@ -97,6 +110,14 @@ export function splitEvenlyInto(count: number, total: number): number[] {
 
 // ─── Plan <-> variants ───
 
+/** Price from text: empty means "same as the product price"; anything else is parsed as typed. */
+export function parsePrice(text: string): number | undefined {
+  const trimmed = (text || '').trim();
+  if (trimmed === '') return undefined;
+  const value = Number(trimmed);
+  return Number.isNaN(value) ? Number.NaN : value;
+}
+
 const skuPart = (text: string, max: number) => text.replace(/[^A-Za-z0-9]/g, '').slice(0, max).toUpperCase() || 'X';
 
 /** The flat size × colour list the backend stores, with unique SKUs built from the master SKU. */
@@ -112,7 +133,18 @@ export function planToVariants(plan: VariantPlan, masterSku: string): ProductVar
       let n = 2;
       while (used.has(sku.toLowerCase())) sku = `${stem}-${n++}`;
       used.add(sku.toLowerCase());
-      out.push({ id: `var_${out.length + 1}`, sku, size: line.size, color: entry.color, stockQuantity: entry.qty, available: entry.qty > 0 });
+      const sizePrice = parsePrice(line.price);
+      const photo = plan.colorImages[colorKey(entry.color)];
+      out.push({
+        id: `var_${out.length + 1}`,
+        sku,
+        size: line.size,
+        color: entry.color,
+        stockQuantity: entry.qty,
+        available: entry.qty > 0,
+        ...(sizePrice !== undefined ? { price: sizePrice } : {}),
+        ...(photo ? { imageUrl: photo } : {}),
+      });
     }
   }
   return out;
@@ -122,7 +154,11 @@ export function planToVariants(plan: VariantPlan, masterSku: string): ProductVar
 export function variantsToPlan(variants: ProductVariant[] | undefined): VariantPlan {
   if (!variants || variants.length === 0) return EMPTY_PLAN;
   const bySize = new Map<string, ColorLine[]>();
+  const priceBySize = new Map<string, string>();
+  const colorImages: Record<string, string> = {};
   for (const v of variants) {
+    if (typeof v.price === 'number') priceBySize.set(v.size, String(v.price));
+    if (v.imageUrl && v.color !== NO_COLOR) colorImages[colorKey(v.color)] = v.imageUrl;
     const list = bySize.get(v.size) ?? [];
     list.push({ color: v.color, qty: String(v.stockQuantity ?? 0) });
     bySize.set(v.size, list);
@@ -130,9 +166,9 @@ export function variantsToPlan(variants: ProductVariant[] | undefined): VariantP
   const sizes: SizeLine[] = sortSizeNames([...bySize.keys()]).map((size) => {
     const lines = bySize.get(size)!;
     const colors = lines.length === 1 && lines[0].color === NO_COLOR ? [] : sortColorNames(lines.map((l) => l.color)).map((c) => lines.find((l) => l.color === c)!);
-    return { size, qty: String(lines.reduce((sum, l) => sum + toNum(l.qty), 0)), colors };
+    return { size, qty: String(lines.reduce((sum, l) => sum + toNum(l.qty), 0)), price: priceBySize.get(size) ?? '', colors };
   });
-  return { sizes };
+  return { sizes, colorImages };
 }
 
 /** What is wrong with the plan, in plain words (or nothing). Used to lock the step until it adds up. */
@@ -143,6 +179,12 @@ export function planProblem(plan: VariantPlan, totalStock: number): string | und
     return assigned < totalStock
       ? `Assign all ${totalStock} items to sizes (${totalStock - assigned} left).`
       : `Sizes add up to ${assigned}, which is ${assigned - totalStock} more than the total stock of ${totalStock}.`;
+  }
+  for (const line of plan.sizes) {
+    const price = parsePrice(line.price);
+    if (price !== undefined && (Number.isNaN(price) || price <= 0 || Math.round(price * 100) / 100 !== price || price > PRODUCT_LIMITS.priceMax)) {
+      return `Size ${line.size}: enter a price above 0 with at most 2 decimals, or leave it empty to use the product price.`;
+    }
   }
   for (const line of plan.sizes) {
     if (line.colors.length === 0) continue;
