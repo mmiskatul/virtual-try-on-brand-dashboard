@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, ImagePlus, Loader2, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Check, ImagePlus, Loader2, Lock, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -205,6 +205,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   const [includeInMarketplaceTryOn, setIncludeInMarketplaceTryOn] = useState(existing?.includeInMarketplaceTryOn ?? false);
 
   const [step, setStep] = useState(0);
+  const [maxReached, setMaxReached] = useState(0);
   const [uploadingSlot, setUploadingSlot] = useState<'display' | 'ai' | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -409,23 +410,67 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   };
 
   const STEPS = [
-    { key: 'basics', label: 'Basics' },
-    { key: 'images', label: 'Images' },
-    { key: 'pricing', label: 'Price & stock' },
-    { key: 'variants', label: 'Sizes & colours' },
-    { key: 'publish', label: 'Try-On & publish' },
+    { key: 'basics', label: 'Basics', hint: 'Title & category' },
+    { key: 'images', label: 'Images', hint: 'Photos' },
+    { key: 'pricing', label: 'Price & stock', hint: 'Price & SKU' },
+    { key: 'variants', label: 'Sizes & colours', hint: 'Optional' },
+    { key: 'publish', label: 'Try-On & publish', hint: 'Go live' },
   ] as const;
   const lastStep = STEPS.length - 1;
+
+  // A step is complete once its required fields are filled in. "Sizes & colours" is optional.
+  const skuTaken = skuStatus?.checked === true && skuStatus.available === false;
+  const stepDone = [
+    name.trim().length > 0 && category.trim().length > 0,
+    Boolean(imageUrl),
+    numericPrice > 0 && sku.trim().length > 0 && !skuTaken,
+    true,
+    false,
+  ];
+  // Each step unlocks only after every earlier step is complete.
+  const isUnlocked = (i: number) => stepDone.slice(0, i).every(Boolean);
+  const stepMissing = [
+    [
+      ...(name.trim() ? [] : ['a product title']),
+      ...(category.trim() ? [] : ['a category']),
+    ],
+    imageUrl ? [] : ['a store photo'],
+    [
+      ...(numericPrice > 0 ? [] : ['a selling price']),
+      ...(sku.trim() ? [] : ['a SKU']),
+      ...(skuTaken ? ['a SKU that is not already used'] : []),
+    ],
+    [],
+    [],
+  ];
+  const canContinue = stepDone[step];
+  const allRequiredDone = stepDone.slice(0, 3).every(Boolean);
+  const continueHint = canContinue ? '' : `Add ${stepMissing[step].join(' and ')} to continue.`;
 
   const checklist = [
     { label: 'Product title', done: name.trim().length > 0, required: true, step: 0 },
     { label: 'Category', done: category.trim().length > 0, required: true, step: 0 },
-    { label: 'Store photo', done: Boolean(imageUrl), required: false, step: 1 },
+    { label: 'Store photo', done: Boolean(imageUrl), required: true, step: 1 },
     { label: 'AI reference image', done: Boolean(aiReferenceUrl), required: false, step: 1 },
     { label: 'Selling price', done: numericPrice > 0, required: true, step: 2 },
-    { label: 'SKU', done: sku.trim().length > 0, required: true, step: 2 },
+    { label: 'SKU', done: sku.trim().length > 0 && !skuTaken, required: true, step: 2 },
   ];
   const requiredLeft = checklist.filter((c) => c.required && !c.done).length;
+
+  const goToStep = (i: number) => {
+    if (i >= 0 && i <= lastStep && isUnlocked(i)) setStep(i);
+  };
+
+  // Remember the furthest step reached, and never stay on a step that has become locked
+  // (for example after clearing the title on an earlier step).
+  useEffect(() => {
+    setMaxReached((m) => Math.max(m, step));
+    if (!isUnlocked(step)) {
+      const firstIncomplete = stepDone.findIndex((d, i) => i < lastStep && !d);
+      setStep(firstIncomplete === -1 ? 0 : firstIncomplete);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, name, category, imageUrl, price, sku, skuStatus]);
 
   // Publishing follows the switches in the last step: marketplace if enabled, otherwise the storefront.
   const publishMode: 'storefront' | 'marketplace' = marketplacePublished ? 'marketplace' : 'storefront';
@@ -446,33 +491,59 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
           }
         />
 
-        {/* Stepper */}
-        <nav aria-label="Product steps" className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {STEPS.map((st, i) => {
-            const active = i === step;
-            return (
-              <button
-                key={st.key}
-                type="button"
-                onClick={() => setStep(i)}
-                aria-current={active ? 'step' : undefined}
-                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
-                  active
-                    ? 'border-slate-950 bg-slate-950 text-white'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                    active ? 'bg-white/20' : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  {i + 1}
-                </span>
-                {st.label}
-              </button>
-            );
-          })}
+        {/* Milestone tracker: each step unlocks after the one before it is complete */}
+        <nav aria-label="Product steps" className="rounded-2xl border border-slate-200 bg-white px-4 py-5 sm:px-6">
+          <ol className="flex items-start">
+            {STEPS.map((st, i) => {
+              const unlocked = isUnlocked(i);
+              const current = i === step;
+              const passed = i !== step && i < maxReached && stepDone[i];
+              const lineFilled = i + 1 <= maxReached && stepDone[i];
+              return (
+                <li key={st.key} className="relative flex flex-1 flex-col items-center">
+                  {i < lastStep && (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute left-1/2 top-4 h-0.5 w-full ${lineFilled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToStep(i)}
+                    disabled={!unlocked}
+                    aria-current={current ? 'step' : undefined}
+                    aria-label={`${st.label}${unlocked ? '' : ' (locked)'}`}
+                    title={unlocked ? st.label : `Complete "${STEPS[i - 1]?.label}" first`}
+                    className="relative z-10 flex flex-col items-center gap-2 disabled:cursor-not-allowed"
+                  >
+                    <span
+                      className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors ${
+                        passed
+                          ? 'border-emerald-500 bg-emerald-500 text-white'
+                          : current
+                            ? 'border-slate-950 bg-slate-950 text-white ring-4 ring-slate-950/10'
+                            : unlocked
+                              ? 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
+                              : 'border-slate-200 bg-slate-50 text-slate-300'
+                      }`}
+                    >
+                      {passed ? <Check className="h-4 w-4" /> : unlocked ? i + 1 : <Lock className="h-3.5 w-3.5" />}
+                    </span>
+                    <span className="text-center">
+                      <span
+                        className={`block text-[11px] font-bold leading-tight sm:text-xs ${
+                          current ? 'text-slate-950' : unlocked ? 'text-slate-700' : 'text-slate-400'
+                        }`}
+                      >
+                        {st.label}
+                      </span>
+                      <span className="hidden text-[10px] text-slate-400 sm:block">{st.hint}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         </nav>
 
         {quotaInfo && !existing && (
@@ -717,7 +788,8 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                   <li key={c.label}>
                     <button
                       type="button"
-                      onClick={() => setStep(c.step)}
+                      onClick={() => goToStep(c.step)}
+                      disabled={!isUnlocked(c.step)}
                       className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50"
                     >
                       <span
@@ -738,22 +810,29 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
         </div>
 
         {/* Sticky action bar */}
-        <div className="sticky bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={step === 0} onClick={() => setStep((v) => Math.max(0, v - 1))}>
+        <div className="sticky bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Button variant="outline" size="sm" disabled={step === 0} onClick={() => goToStep(step - 1)}>
               Back
             </Button>
             {step < lastStep && (
-              <Button variant="outline" size="sm" onClick={() => setStep((v) => Math.min(lastStep, v + 1))}>
+              <Button size="sm" disabled={!canContinue} onClick={() => goToStep(step + 1)}>
                 Next
               </Button>
             )}
+            {continueHint && <span className="hidden truncate text-xs font-medium text-amber-700 sm:block">{continueHint}</span>}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={saving} onClick={() => saveProductRecord('draft')}>
               Save Draft
             </Button>
-            <Button size="sm" disabled={saving} onClick={() => saveProductRecord(publishMode)} className="gap-1.5">
+            <Button
+              size="sm"
+              disabled={saving || !allRequiredDone}
+              title={allRequiredDone ? undefined : 'Finish Basics, Images and Price & stock to publish'}
+              onClick={() => saveProductRecord(publishMode)}
+              className="gap-1.5"
+            >
               <Check className="w-3.5 h-3.5" /> {saving ? 'Saving...' : marketplacePublished ? 'Save & Publish to Marketplace' : 'Save & Publish'}
             </Button>
           </div>
