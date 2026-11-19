@@ -1,5 +1,5 @@
-import { ProductsManagementView } from '@/features/products/ProductsManagementView';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <ProductsManagementView initialView="export" />;
+  redirect('/dashboard/products');
 }

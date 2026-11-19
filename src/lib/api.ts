@@ -203,25 +203,6 @@ export const brandApi = {
     });
   },
 
-  // Products
-  getProducts: () => {
-    return request<any[]>(`${BRAND_API_URL}/api/v1/products`);
-  },
-
-  createProduct: (payload: any) => {
-    return request<any>(`${BRAND_API_URL}/api/v1/products`, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-  },
-
-  setPublication: (productId: string, channel: 'brandStorefrontPublished' | 'marketplacePublished', published: boolean) => {
-    return request<any>(`${BRAND_API_URL}/api/v1/products/${productId}/publish`, {
-      method: 'PATCH',
-      body: JSON.stringify({ channel, published })
-    });
-  },
-
   // Concurrency-safe inventory
   adjustInventory: (payload: { productId: string; variantSku: string; change: number; reason: string }) => {
     return request<{ success: boolean; newStock: number }>(`${BRAND_API_URL}/api/v1/inventory/adjust`, {

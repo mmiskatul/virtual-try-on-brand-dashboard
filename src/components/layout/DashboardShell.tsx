@@ -911,7 +911,7 @@ export function DashboardShell({
               {quickCreateOpen && (
                 <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-50 text-xs">
                   {canPerform(activeRole, 'products', 'create', roleOverrides) && (
-                  <Link href="/dashboard/products/addproduct" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
+                  <Link href="/dashboard/products/new" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
                     + Add Garment Product
                   </Link>
                   )}

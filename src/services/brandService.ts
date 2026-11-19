@@ -638,19 +638,6 @@ export const brandWorkspaceApi = {
     return res?.data?.categories || res?.categories || [];
   },
 
-  getCategoryFormOptions: async (): Promise<CategoryFormOptions> => {
-    const res = await apiFetch<any>('/api/v1/brand/categories/form-options');
-    return (
-      res?.data ||
-      res || {
-        presets: [],
-        tryOnClasses: ['tops', 'bottoms', 'dresses', 'outerwear', 'all', 'none'],
-        existingCategories: [],
-        existingCount: 0,
-        defaultSortOrder: 10,
-      }
-    );
-  },
 
   checkCategorySlug: async (
     slug: string,
@@ -670,13 +657,6 @@ export const brandWorkspaceApi = {
     );
   },
 
-  createCategory: async (payload: CreateCategoryPayload): Promise<BrandCategoryRecord> => {
-    const res = await apiFetch<any>('/api/v1/brand/categories', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-    return res?.data?.category || res?.category;
-  },
 
   addCategory: async (payload: CreateCategoryPayload): Promise<BrandCategoryRecord> => {
     const res = await apiFetch<any>('/api/v1/brand/categories/add', {
@@ -686,10 +666,6 @@ export const brandWorkspaceApi = {
     return res?.data?.category || res?.category;
   },
 
-  getCategoryById: async (id: string): Promise<BrandCategoryRecord> => {
-    const res = await apiFetch<any>(`/api/v1/brand/categories/${encodeURIComponent(id)}`);
-    return res?.data?.category || res?.category;
-  },
 
   updateCategory: async (
     id: string,
@@ -1379,14 +1355,6 @@ export interface BrandCategoryRecord {
   parentCategory?: string;
   tryOnCategory?: 'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all' | 'none';
   productCount?: number;
-}
-
-export interface CategoryFormOptions {
-  presets: string[];
-  tryOnClasses: Array<'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all' | 'none'>;
-  existingCategories: string[];
-  existingCount: number;
-  defaultSortOrder: number;
 }
 
 export interface CheckCategorySlugResult {

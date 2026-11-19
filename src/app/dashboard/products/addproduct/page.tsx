@@ -1,6 +1,5 @@
-import { ProductEditorView } from '@/features/products/ProductEditorView';
+import { redirect } from 'next/navigation';
 
-export default function AddProductPage() {
-  return <ProductEditorView />;
+export default function Page() {
+  redirect('/dashboard/products/new');
 }
-

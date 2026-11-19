@@ -49,7 +49,7 @@ const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: str
   { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/settings/onboarding/media' },
   { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/settings/onboarding/media' },
   { id: 'chk_biz', label: 'Add legal & business details (needed for payouts)', href: '/dashboard/settings/business' },
-  { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/addproduct' },
+  { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/new' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },
   { id: 'chk_storefront', label: 'Publish your brand storefront', href: '/dashboard/settings/store' },
   { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on/configuration' },
@@ -340,7 +340,7 @@ export function DashboardOverviewView() {
               View store <ExternalLink className="w-3.5 h-3.5" />
             </Button>
           </Link>
-          <Link href="/dashboard/products/addproduct">
+          <Link href="/dashboard/products/new">
             <Button type="button" size="sm" className="h-10 gap-1.5 text-sm">
               <Plus className="w-4 h-4" /> Add product
             </Button>
@@ -570,7 +570,7 @@ export function DashboardOverviewView() {
               {bestSellingProducts.length === 0 ? (
                 <p className="py-6 text-center text-sm text-slate-500">
                   No products yet.{' '}
-                  <Link href="/dashboard/products/addproduct" className="font-bold underline">
+                  <Link href="/dashboard/products/new" className="font-bold underline">
                     Add your first product
                   </Link>
                 </p>

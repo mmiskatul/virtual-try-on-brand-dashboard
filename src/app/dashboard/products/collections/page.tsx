@@ -1,5 +1,5 @@
-import { ProductsManagementView } from '@/features/products/ProductsManagementView';
+import { CollectionsView } from '@/features/products/CollectionsView';
 
 export default function Page() {
-  return <ProductsManagementView initialView="collections" />;
+  return <CollectionsView />;
 }

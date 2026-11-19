@@ -7,7 +7,8 @@ import { ArrowLeft, Check, ImagePlus, Loader2, Plus, Sparkles, Trash2, Upload } 
 import { Product, ProductVariant } from '../../types';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
-import { brandWorkspaceApi, ServiceError } from '../../services';
+import { brandWorkspaceApi } from '../../services';
+import { formatApiError } from './shared';
 import {
   ErrorBanner,
   PageHeader,
@@ -147,17 +148,6 @@ function ImageUploadSlot({
   );
 }
 
-function formatApiError(err: unknown, fallback: string): string {
-  if (err instanceof ServiceError) {
-    if (err.issues && err.issues.length > 0) {
-      return err.issues.map((i) => `${i.path}: ${i.message}`).join(' • ');
-    }
-    return err.message || fallback;
-  }
-  if (err instanceof Error && err.message) return err.message;
-  return fallback;
-}
-
 export function ProductEditorView({ existingProductId }: { existingProductId?: string }) {
   const router = useRouter();
   const profile = useWorkspaceStore((s) => s.profile);
@@ -214,6 +204,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   const [includeInBrandTryOn, setIncludeInBrandTryOn] = useState(existing?.includeInBrandTryOn ?? true);
   const [includeInMarketplaceTryOn, setIncludeInMarketplaceTryOn] = useState(existing?.includeInMarketplaceTryOn ?? false);
 
+  const [step, setStep] = useState(0);
   const [uploadingSlot, setUploadingSlot] = useState<'display' | 'ai' | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -417,32 +408,72 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     }
   };
 
+  const STEPS = [
+    { key: 'basics', label: 'Basics' },
+    { key: 'images', label: 'Images' },
+    { key: 'pricing', label: 'Price & stock' },
+    { key: 'variants', label: 'Sizes & colours' },
+    { key: 'publish', label: 'Try-On & publish' },
+  ] as const;
+  const lastStep = STEPS.length - 1;
+
+  const checklist = [
+    { label: 'Product title', done: name.trim().length > 0, required: true, step: 0 },
+    { label: 'Category', done: category.trim().length > 0, required: true, step: 0 },
+    { label: 'Store photo', done: Boolean(imageUrl), required: false, step: 1 },
+    { label: 'AI reference image', done: Boolean(aiReferenceUrl), required: false, step: 1 },
+    { label: 'Selling price', done: numericPrice > 0, required: true, step: 2 },
+    { label: 'SKU', done: sku.trim().length > 0, required: true, step: 2 },
+  ];
+  const requiredLeft = checklist.filter((c) => c.required && !c.done).length;
+
+  // Publishing follows the switches in the last step: marketplace if enabled, otherwise the storefront.
+  const publishMode: 'storefront' | 'marketplace' = marketplacePublished ? 'marketplace' : 'storefront';
+
   return (
     <PermissionGate module="products" action={existing ? 'edit' : 'create'}>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <PageHeader
           eyebrow={`Tenant Owned by ${profile.name}`}
-          title={existing ? `Edit Garment: ${existing.name}` : 'Create New Apparel Product'}
-          subtitle="Products save to your brand catalog first. Visibility across Brand Storefront, Global Marketplace, and Try-On remains cleanly separated."
+          title={existing ? `Edit: ${existing.name}` : 'Add a product'}
+          subtitle="Work through the steps. You can save a draft at any time."
           actions={
-            <>
-              <Link href="/dashboard/products">
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <ArrowLeft className="w-3.5 h-3.5" /> Back to Products
-                </Button>
-              </Link>
-              <Button variant="outline" size="sm" disabled={saving} onClick={() => saveProductRecord('draft')}>
-                Save Draft
+            <Link href="/dashboard/products">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to Products
               </Button>
-              <Button variant="outline" size="sm" disabled={saving} onClick={() => saveProductRecord('storefront')}>
-                Save to Storefront
-              </Button>
-              <Button size="sm" disabled={saving} onClick={() => saveProductRecord('marketplace')} className="gap-1.5">
-                <Check className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save & Publish Marketplace'}
-              </Button>
-            </>
+            </Link>
           }
         />
+
+        {/* Stepper */}
+        <nav aria-label="Product steps" className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {STEPS.map((st, i) => {
+            const active = i === step;
+            return (
+              <button
+                key={st.key}
+                type="button"
+                onClick={() => setStep(i)}
+                aria-current={active ? 'step' : undefined}
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
+                  active
+                    ? 'border-slate-950 bg-slate-950 text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                    active ? 'bg-white/20' : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                {st.label}
+              </button>
+            );
+          })}
+        </nav>
 
         {quotaInfo && !existing && (
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
@@ -454,14 +485,13 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
           </div>
         )}
 
-        {errorMessage && (
-          <ErrorBanner message={errorMessage} onDismiss={() => setErrorMessage(null)} />
-        )}
+        {errorMessage && <ErrorBanner message={errorMessage} onDismiss={() => setErrorMessage(null)} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left 8 Columns: Sections A-F */}
           <div className="lg:col-span-8 space-y-6">
-            <SectionCard title="A. Basic Product Information">
+            {step === 0 && (
+              <>
+            <SectionCard title="Basic information">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="sm:col-span-2">
                   <label className="block font-bold text-slate-700 mb-1">Garment Title *</label>
@@ -481,7 +511,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                   </select>
                   <p className="mt-1 text-[11px] text-slate-500">
                     {customCategories.length > 0 ? 'Your categories. ' : 'No categories added yet, showing standard ones. '}
-                    <Link href="/dashboard/products/categories/addcategory" className="font-semibold text-slate-900 underline">
+                    <Link href="/dashboard/products/categories/new" className="font-semibold text-slate-900 underline">
                       + Add category
                     </Link>
                   </p>
@@ -495,7 +525,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     ))}
                   </select>
                   <p className="mt-1 text-[11px] text-slate-500">
-                    <Link href="/dashboard/products/collections" className="font-semibold text-slate-900 underline">
+                    <Link href="/dashboard/products/collections/new" className="font-semibold text-slate-900 underline">
                       + Add collection
                     </Link>
                   </p>
@@ -515,8 +545,12 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               </div>
             </SectionCard>
 
+              </>
+            )}
+            {step === 1 && (
+              <>
             <SectionCard
-              title="B. Product Images"
+              title="Images"
               subtitle="Upload only. The image links are created automatically."
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -539,7 +573,11 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               </div>
             </SectionCard>
 
-            <SectionCard title="C. Pricing & Margin (Staff Only Cost)">
+              </>
+            )}
+            {step === 2 && (
+              <>
+            <SectionCard title="Pricing" subtitle="The private cost is only visible to your team.">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Selling Price (৳) *</label>
@@ -560,24 +598,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               </div>
             </SectionCard>
 
-            <SectionCard title="D. Size & Color Variants Matrix" right={<Button type="button" size="sm" variant="outline" onClick={generateVariantsMatrix} className="gap-1"><Plus className="w-3.5 h-3.5" /> Generate Variants</Button>}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <input value={variantSizes} onChange={(e) => setVariantSizes(e.target.value)} placeholder="Sizes (XS, S, M, L, XL)" className="px-3 py-2 rounded-xl border border-slate-200" />
-                <input value={variantColors} onChange={(e) => setVariantColors(e.target.value)} placeholder="Colors (Obsidian, Ivory)" className="px-3 py-2 rounded-xl border border-slate-200" />
-              </div>
-              {variants.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-xs">
-                  {variants.map((v) => (
-                    <div key={v.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-bold">{v.size} / {v.color}</span>
-                      <span className="font-mono text-slate-500">{v.sku} ({v.stockQuantity}u)</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </SectionCard>
-
-            <SectionCard title="E & F. Specifications & Inventory">
+            <SectionCard title="Stock & details">
               <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <label className="block font-bold mb-1">Master SKU *</label>
@@ -598,11 +619,32 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                 <div><label className="block font-bold mb-1">Stretch</label><input value={stretch} onChange={(e) => setStretch(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
               </div>
             </SectionCard>
-          </div>
+              </>
+            )}
+            {step === 3 && (
+              <>
+            <SectionCard title="Sizes & colours (optional)" right={<Button type="button" size="sm" variant="outline" onClick={generateVariantsMatrix} className="gap-1"><Plus className="w-3.5 h-3.5" /> Generate Variants</Button>}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <input value={variantSizes} onChange={(e) => setVariantSizes(e.target.value)} placeholder="Sizes (XS, S, M, L, XL)" className="px-3 py-2 rounded-xl border border-slate-200" />
+                <input value={variantColors} onChange={(e) => setVariantColors(e.target.value)} placeholder="Colors (Obsidian, Ivory)" className="px-3 py-2 rounded-xl border border-slate-200" />
+              </div>
+              {variants.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-xs">
+                  {variants.map((v) => (
+                    <div key={v.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold">{v.size} / {v.color}</span>
+                      <span className="font-mono text-slate-500">{v.sku} ({v.stockQuantity}u)</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
 
-          {/* Right 4 Columns: Sections G & H (Try-On & Separate Visibility Controls) */}
-          <div className="lg:col-span-4 space-y-6">
-            <SectionCard title="G. Virtual Try-On Config" subtitle="Garment pipeline settings">
+              </>
+            )}
+            {step === 4 && (
+              <>
+            <SectionCard title="Virtual Try-On" subtitle="Let shoppers see this garment on themselves">
               <div className="space-y-3 text-xs">
                 <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer font-bold">
                   <span className="flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-amber-600" /> Enable Virtual Try-On</span>
@@ -630,7 +672,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               </div>
             </SectionCard>
 
-            <SectionCard title="H. Separate Visibility Channels" subtitle="Independent customer exposure rules">
+            <SectionCard title="Where to show this product" subtitle="Choose who can see it">
               <div className="space-y-3 text-xs">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">1. Catalog Status</label>
@@ -663,6 +705,57 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                 </div>
               </div>
             </SectionCard>
+              </>
+            )}
+          </div>
+
+          {/* Checklist */}
+          <aside className="lg:col-span-4 lg:sticky lg:top-24">
+            <SectionCard title="Checklist" subtitle={requiredLeft === 0 ? 'Everything required is filled in.' : `${requiredLeft} required item(s) left`}>
+              <ul className="space-y-2 text-xs">
+                {checklist.map((c) => (
+                  <li key={c.label}>
+                    <button
+                      type="button"
+                      onClick={() => setStep(c.step)}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50"
+                    >
+                      <span
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                          c.done ? 'bg-emerald-500 text-white' : 'border border-slate-300 text-transparent'
+                        }`}
+                      >
+                        <Check className="h-3 w-3" />
+                      </span>
+                      <span className={`flex-1 font-semibold ${c.done ? 'text-slate-500' : 'text-slate-900'}`}>{c.label}</span>
+                      {!c.required && !c.done && <span className="text-[10px] font-bold text-slate-400">Recommended</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          </aside>
+        </div>
+
+        {/* Sticky action bar */}
+        <div className="sticky bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={step === 0} onClick={() => setStep((v) => Math.max(0, v - 1))}>
+              Back
+            </Button>
+            {step < lastStep && (
+              <Button variant="outline" size="sm" onClick={() => setStep((v) => Math.min(lastStep, v + 1))}>
+                Next
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={saving} onClick={() => saveProductRecord('draft')}>
+              Save Draft
+            </Button>
+            <Button size="sm" disabled={saving} onClick={() => saveProductRecord(publishMode)} className="gap-1.5">
+              <Check className="w-3.5 h-3.5" /> {saving ? 'Saving...' : marketplacePublished ? 'Save & Publish to Marketplace' : 'Save & Publish'}
+            </Button>
           </div>
         </div>
       </div>

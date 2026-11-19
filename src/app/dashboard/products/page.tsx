@@ -1,5 +1,5 @@
-import { ProductsManagementView } from '@/features/products/ProductsManagementView';
+import { ProductsListView } from '@/features/products/ProductsListView';
 
 export default function Page() {
-  return <ProductsManagementView initialView="list" />;
+  return <ProductsListView />;
 }

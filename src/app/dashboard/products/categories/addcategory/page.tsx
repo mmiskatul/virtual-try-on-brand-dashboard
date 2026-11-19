@@ -1,6 +1,5 @@
-import { CategoryEditorView } from '@/features/categories/CategoryEditorView';
+import { redirect } from 'next/navigation';
 
-export default function AddCategoryPage() {
-  return <CategoryEditorView />;
+export default function Page() {
+  redirect('/dashboard/products/categories/new');
 }
-
