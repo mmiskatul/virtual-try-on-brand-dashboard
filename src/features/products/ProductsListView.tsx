@@ -30,6 +30,7 @@ import { ProductsNavTabs } from '../../components/shared/ProductsNavTabs';
 import { Button } from '../../components/ui/button';
 import { Drawer, Switch, formatApiError, useNotify } from './shared';
 import { lowSizesOfVariants } from './variantPlan';
+import { DraftsPanel } from './DraftsPanel';
 
 type StatusChip = 'ALL' | 'LIVE' | 'DRAFT' | 'OUT_OF_STOCK';
 
@@ -327,6 +328,7 @@ export function ProductsListView() {
             </>
           }
         />
+        <DraftsPanel />
 
         <ProductsNavTabs />
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, ImagePlus, Loader2, Lock, Sparkles, Trash2, Upload } from 'lucide-react';
@@ -27,6 +27,21 @@ import {
   productFormSchema,
 } from '../../lib/productContract';
 import { formatApiError, useNotify } from './shared';
+import {
+  DRAFT_VERSION,
+  deleteDraft,
+  deleteStagedImage,
+  getStagedFile,
+  isLocalRef,
+  loadDraft,
+  newDraftId,
+  pruneOldDrafts,
+  resolveImageSrc,
+  restorePreviews,
+  saveDraft,
+  stageImage,
+} from '../../lib/draftStore';
+import { collectLocalRefs, replaceRefs, stripRefs, uploadStagedPhotos } from './draftRefs';
 import { PhotoKind, VariantPlanner } from './VariantPlanner';
 import { VariantPlan, planProblem, planToVariants, variantsToPlan } from './variantPlan';
 
@@ -165,7 +180,7 @@ function ImageUploadSlot({
       >
         {imageUrl ? (
           <>
-            <SafeImage src={imageUrl} alt={title} fill className="object-contain p-2" />
+            <SafeImage src={resolveImageSrc(imageUrl)} alt={title} fill className="object-contain p-2" />
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/50 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
               <button
                 type="button"
@@ -388,6 +403,121 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [collectionOptions, setCollectionOptions] = useState<string[]>([]);
 
+  // ─── Drafts ───
+  // An unfinished new product is kept in this browser as you type, so a refresh loses nothing. Photos picked in the
+  // form stay in the browser too and are only uploaded when the product is saved.
+  const isNewProduct = !existingProductId;
+  const tenantKey = profile.slug || profile.id || 'brand';
+  const [draftId, setDraftId] = useState('');
+  const [restoring, setRestoring] = useState(isNewProduct);
+  const [restoredNotice, setRestoredNotice] = useState<string | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const blankForm = useRef(JSON.stringify(form));
+  const latest = useRef({ form, step, maxReached });
+  useEffect(() => {
+    latest.current = { form, step, maxReached };
+  });
+  // Staged photos belong to the draft (or, when editing, to that product).
+  const scopeId = existing ? `edit-${existing.id}` : draftId;
+
+  const persistDraft = useCallback(async () => {
+    if (!isNewProduct || !draftId) return;
+    const { form: current, step: currentStep, maxReached: reached } = latest.current;
+    if (JSON.stringify(current) === blankForm.current) {
+      await deleteDraft(draftId);
+      return;
+    }
+    const saved = await saveDraft({
+      id: draftId,
+      version: DRAFT_VERSION,
+      tenantKey,
+      form: current,
+      step: currentStep,
+      maxReached: reached,
+      title: current.name.trim(),
+      updatedAt: Date.now(),
+    });
+    if (saved) setDraftSavedAt(Date.now());
+  }, [draftId, isNewProduct, tenantKey]);
+
+  // Open the draft named in the address (or start a new one).
+  useEffect(() => {
+    if (!isNewProduct) return;
+    let cancelled = false;
+    (async () => {
+      let id = new URLSearchParams(window.location.search).get('draft') || '';
+      if (id) {
+        const draft = await loadDraft(id);
+        if (draft && draft.tenantKey !== tenantKey) {
+          id = '';
+        } else if (draft && !cancelled) {
+          const saved = draft.form as FormState;
+          const missing = await restorePreviews(collectLocalRefs(saved));
+          setForm(missing.length > 0 ? stripRefs(saved, missing) : saved);
+          setStep(draft.step);
+          setMaxReached(draft.maxReached);
+          setRestoredNotice(
+            missing.length > 0
+              ? 'We restored your unfinished product. Some photos could not be recovered, please add them again.'
+              : 'We restored your unfinished product.'
+          );
+        }
+      }
+      if (!id) {
+        id = newDraftId();
+        router.replace(`/dashboard/products/new?draft=${id}`, { scroll: false });
+      }
+      if (!cancelled) {
+        setDraftId(id);
+        setRestoring(false);
+      }
+    })();
+    void pruneOldDrafts();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save shortly after every change, and straight away when you move between steps.
+  useEffect(() => {
+    if (!isNewProduct || restoring || !draftId) return;
+    const timer = setTimeout(() => void persistDraft(), 600);
+    return () => clearTimeout(timer);
+  }, [form, isNewProduct, restoring, draftId, persistDraft]);
+  useEffect(() => {
+    if (!isNewProduct || restoring || !draftId) return;
+    void persistDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, maxReached]);
+  useEffect(() => {
+    if (!isNewProduct) return;
+    const flush = () => {
+      if (document.visibilityState === 'hidden') void persistDraft();
+    };
+    document.addEventListener('visibilitychange', flush);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', flush);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [isNewProduct, persistDraft]);
+
+  const startOver = async () => {
+    await deleteDraft(draftId);
+    const fresh = newDraftId();
+    setForm(JSON.parse(blankForm.current) as FormState);
+    setStep(0);
+    setMaxReached(0);
+    setTouched(new Set());
+    setAttemptedSteps(new Set());
+    setRestoredNotice(null);
+    setDraftSavedAt(null);
+    setDraftId(fresh);
+    router.replace(`/dashboard/products/new?draft=${fresh}`, { scroll: false });
+  };
+
   // Load the brand's own categories and collections.
   useEffect(() => {
     let active = true;
@@ -538,7 +668,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
       ? Math.round(((numericPrice - numericCost) / numericPrice) * 100)
       : null;
 
-  // ─── Images ───
+  // ─── Images: kept in the browser until the product is saved ───
   const handleUploadImage = async (slot: 'display' | 'ai', file: File) => {
     const invalid = validateImageFile(file);
     if (invalid) {
@@ -549,21 +679,25 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     setUploadingSlot(slot);
     setErrorMessage(null);
     try {
-      const res = await brandWorkspaceApi.uploadMediaFile(file);
-      if (res.ok && res.url) {
-        set(slot === 'display' ? { imageUrl: res.url } : { aiReferenceUrl: res.url });
-        notify(slot === 'display' ? 'Product photo uploaded.' : 'AI reference image uploaded.');
-      } else {
-        setErrorMessage(res.error || 'Image upload failed. Please try again.');
-      }
+      const previous = slot === 'display' ? form.imageUrl : form.aiReferenceUrl;
+      const ref = await stageImage(scopeId, file);
+      if (isLocalRef(previous)) void deleteStagedImage(previous);
+      set(slot === 'display' ? { imageUrl: ref } : { aiReferenceUrl: ref });
+      notify('Photo added. It uploads when you save the product.');
     } catch (err) {
-      setErrorMessage(formatApiError(err, 'Image upload failed. Please try again.'));
+      setErrorMessage(formatApiError(err, 'Could not add the photo. Please try again.'));
     } finally {
       setUploadingSlot(null);
     }
   };
 
-  /** A colour's own store photo or AI photo: uploaded here, and the finished link is stored on that colour. */
+  const removeImage = (slot: 'display' | 'ai') => {
+    const previous = slot === 'display' ? form.imageUrl : form.aiReferenceUrl;
+    if (isLocalRef(previous)) void deleteStagedImage(previous);
+    set(slot === 'display' ? { imageUrl: '' } : { aiReferenceUrl: '' });
+  };
+
+  /** A colour's own store photo or AI photo: kept in the browser, and linked to that colour. */
   const handleColorPhoto = async (color: string, kind: PhotoKind, file: File) => {
     const invalid = validateImageFile(file);
     if (invalid) {
@@ -574,22 +708,20 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     setUploadingColor(`${color}|${kind}`);
     setErrorMessage(null);
     try {
-      const res = await brandWorkspaceApi.uploadMediaFile(file);
-      if (res.ok && res.url) {
-        const url = res.url;
-        setForm((prev) => ({
-          ...prev,
-          plan: {
-            ...prev.plan,
-            colors: prev.plan.colors.map((c) => (c.color === color ? { ...c, ...(kind === 'store' ? { photo: url } : { aiPhoto: url }) } : c)),
-          },
-        }));
-        notify(`${color} ${kind === 'store' ? 'store' : 'AI'} photo uploaded.`);
-      } else {
-        setErrorMessage(res.error || 'Image upload failed. Please try again.');
-      }
+      const section = form.plan.colors.find((c) => c.color === color);
+      const previous = kind === 'store' ? section?.photo : section?.aiPhoto;
+      const ref = await stageImage(scopeId, file);
+      if (previous && isLocalRef(previous)) void deleteStagedImage(previous);
+      setForm((prev) => ({
+        ...prev,
+        plan: {
+          ...prev.plan,
+          colors: prev.plan.colors.map((c) => (c.color === color ? { ...c, ...(kind === 'store' ? { photo: ref } : { aiPhoto: ref }) } : c)),
+        },
+      }));
+      notify(`${color} ${kind === 'store' ? 'store' : 'AI'} photo added. It uploads when you save the product.`);
     } catch (err) {
-      setErrorMessage(formatApiError(err, 'Image upload failed. Please try again.'));
+      setErrorMessage(formatApiError(err, 'Could not add the photo. Please try again.'));
     } finally {
       setUploadingColor(null);
     }
@@ -608,11 +740,47 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
       return;
     }
 
-    // Exactly what the contract validated, with the same consistency rules the server applies.
-    const payload: ProductPayload = applyConsistency(parsed.data);
-
     setSaving(true);
     try {
+      // 1. Upload the photos that are still only in this browser. Each finished upload is remembered,
+      //    so pressing Save again after a failure only uploads what is left.
+      let finalForm = form;
+      try {
+        finalForm = await uploadStagedPhotos(
+          form,
+          async (ref) => {
+            const file = await getStagedFile(ref);
+            if (!file) throw new Error('One of your photos is no longer available. Please add it again.');
+            const res = await brandWorkspaceApi.uploadMediaFile(file);
+            if (!res.ok || !res.url) throw new Error(res.error || 'A photo could not be uploaded.');
+            return res.url;
+          },
+          {
+            onProgress: (done, total) => setUploadProgress({ done, total }),
+            onUploaded: (ref, url) => {
+              setForm((prev) => replaceRefs(prev, { [ref]: url }));
+              void deleteStagedImage(ref);
+            },
+          }
+        );
+      } catch (err) {
+        setErrorMessage(
+          `${err instanceof Error ? err.message : 'A photo could not be uploaded.'} Nothing was saved yet. Press Save again to retry. Photos that already uploaded are kept.`
+        );
+        return;
+      } finally {
+        setUploadProgress(null);
+      }
+
+      // 2. Check the final values (now with real photo links) and send them to the backend.
+      const checked = productFormSchema.safeParse(toContractValues(finalForm));
+      if (!checked.success) {
+        setErrorMessage('Some fields need attention before this can be saved. They are marked in red.');
+        return;
+      }
+      // Exactly what the contract validated, with the same consistency rules the server applies.
+      const payload: ProductPayload = applyConsistency(checked.data);
+
       if (existing) {
         const updated = await brandWorkspaceApi.updateProduct(existing.id, payload);
         updateProduct(existing.id, updated);
@@ -622,6 +790,8 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
         addProduct(created);
         notify('Product created.');
       }
+      // Saved for real: the draft and any photos left in the browser are no longer needed.
+      await deleteDraft(scopeId);
       router.push('/dashboard/products');
     } catch (err) {
       // Show the server's field-level messages next to the fields they belong to.
@@ -661,6 +831,14 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     />
   );
 
+  if (restoring) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-500">
+        <Loader2 className="h-5 w-5 animate-spin" /> Opening your product…
+      </div>
+    );
+  }
+
   return (
     <PermissionGate module="products" action={existing ? 'edit' : 'create'}>
       <div className="space-y-6 pb-24">
@@ -676,6 +854,22 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
             </Link>
           }
         />
+
+        {isNewProduct && restoredNotice && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2.5 text-xs text-sky-900">
+            <span className="font-semibold">{restoredNotice}</span>
+            <button type="button" onClick={() => void startOver()} className="font-bold underline">
+              Start over
+            </button>
+          </div>
+        )}
+        {isNewProduct && (
+          <p className="-mt-3 text-[11px] text-slate-500">
+            {draftSavedAt
+              ? 'Draft saved in this browser. It is not published and not in your store yet. You can leave and come back from the Products page.'
+              : 'Your progress is saved in this browser as you go, until you press Save.'}
+          </p>
+        )}
 
         {/* Milestone tracker: each step unlocks after the one before it is complete */}
         <nav aria-label="Product steps" className="rounded-2xl border border-slate-200 bg-white px-4 py-5 sm:px-6">
@@ -843,7 +1037,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     busy={uploadingSlot === 'display'}
                     error={showError('images') || (attemptedSteps.has(1) && !form.imageUrl ? 'Upload a store photo to continue.' : undefined)}
                     onFile={(f) => void handleUploadImage('display', f)}
-                    onRemove={() => set({ imageUrl: '' })}
+                    onRemove={() => removeImage('display')}
                   />
                   <ImageUploadSlot
                     title="AI Reference Image (not shown to customers)"
@@ -852,7 +1046,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     busy={uploadingSlot === 'ai'}
                     error={showError('aiReferenceImage')}
                     onFile={(f) => void handleUploadImage('ai', f)}
-                    onRemove={() => set({ aiReferenceUrl: '' })}
+                    onRemove={() => removeImage('ai')}
                   />
                 </div>
               </SectionCard>
@@ -1104,7 +1298,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               onClick={() => void saveProduct()}
               className="gap-1.5"
             >
-              <Check className="w-3.5 h-3.5" /> {saving ? 'Saving...' : existing ? 'Save changes' : 'Save product'}
+              <Check className="w-3.5 h-3.5" /> {uploadProgress ? `Uploading photos ${uploadProgress.done}/${uploadProgress.total}…` : saving ? 'Saving...' : existing ? 'Save changes' : 'Save product'}
             </Button>
           )}
         </div>

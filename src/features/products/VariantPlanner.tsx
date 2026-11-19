@@ -5,6 +5,7 @@ import { AlertCircle, Check, CheckCircle2, ChevronDown, Copy, ImagePlus, Loader2
 import { PRODUCT_LIMITS } from '../../lib/productContract';
 import { Button } from '../../components/ui/button';
 import { SafeImage } from '../../components/shared/UiPrimitives';
+import { resolveImageSrc } from '../../lib/draftStore';
 import {
   COLOR_PRESETS,
   ColorSection,
@@ -189,7 +190,7 @@ function PhotoSlot({
       <div className="group relative h-52 w-full overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
         {imageUrl ? (
           <>
-            <SafeImage src={imageUrl} alt={title} fill className="object-contain p-2" />
+            <SafeImage src={resolveImageSrc(imageUrl)} alt={title} fill className="object-contain p-2" />
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/50 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
               <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 font-bold text-slate-900">
                 <Upload className="h-3.5 w-3.5" /> Replace
