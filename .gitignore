@@ -30,3 +30,6 @@ Thumbs.db
 .wrangler/
 .dev.vars
 cloudflare-env.d.ts
+
+# Next.js auto-generated (changes between dev and build)
+next-env.d.ts
