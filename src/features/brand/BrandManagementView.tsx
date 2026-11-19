@@ -41,7 +41,6 @@ import {
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
-import { MediaSlotCard } from './MediaSlotCard';
 
 export type BrandManagementTab = 'profile' | 'identity' | 'media';
 export type BrandAssetKey = 'logo' | 'banner' | 'lightLogo' | 'socialImage';
@@ -1064,6 +1063,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                       logoUrl={profile.logo || ''}
                       lightLogoUrl={profile.lightLogo || ''}
                       bannerUrl={profile.banner || ''}
+                      socialImageUrl={profile.socialImage || ''}
                       uploadingSlot={uploadingField}
                       onUploadSlot={(slot) => triggerUploadForSlot(slot)}
                       onRemoveSlot={(slot) => void handleRemoveAsset(slot)}
@@ -1175,45 +1175,6 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                     </div>
                   </div>
                 </div>
-              </div>
-            </SectionCard>
-
-            {/* Media Slots prioritized by active Storefront UI */}
-            <SectionCard
-              title="Upload Brand Media"
-              subtitle="Upload your logos, hero banner and share cover. Highlighted items are used by your selected storefront design."
-            >
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {(['logo', 'lightLogo', 'banner', 'socialImage'] as BrandAssetKey[]).map((assetKey) => {
-                  const meta = ASSET_CARDS.find((c) => c.key === assetKey);
-                  if (!meta) return null;
-                  const guidance = DESIGN_LAYOUT_GUIDANCE[form.headerStyle];
-                  const usedInUi =
-                    assetKey === 'logo' ||
-                    (assetKey === 'banner' && guidance.heroUsesBanner) ||
-                    (assetKey === 'lightLogo' && guidance.usesLightWatermark);
-                  const wide = assetKey === 'banner' || assetKey === 'socialImage';
-
-                  return (
-                    <div key={assetKey} className={wide ? 'lg:col-span-2' : ''}>
-                      <MediaSlotCard
-                        label={meta.label}
-                        dims={meta.dims}
-                        shape={wide ? 'wide' : 'square'}
-                        src={getAssetUrl(assetKey) || undefined}
-                        busy={uploadingField === assetKey}
-                        badge={usedInUi ? 'Used in your storefront' : 'Optional'}
-                        badgeActive={usedInUi}
-                        onPick={() => triggerUploadForSlot(assetKey)}
-                        onDropFile={(file) => {
-                          targetAssetKeyRef.current = assetKey;
-                          void handleFileUpload(file);
-                        }}
-                        onRemove={() => void handleRemoveAsset(assetKey)}
-                      />
-                    </div>
-                  );
-                })}
               </div>
             </SectionCard>
           </div>

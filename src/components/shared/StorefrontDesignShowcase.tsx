@@ -101,6 +101,7 @@ export interface ShopMockupPreviewProps {
   logoUrl: string;
   lightLogoUrl?: string;
   bannerUrl: string;
+  socialImageUrl?: string;
   uploadingSlot?: ShowcaseAssetSlot | null;
   onUploadSlot?: (slot: ShowcaseAssetSlot) => void;
   onRemoveSlot?: (slot: ShowcaseAssetSlot) => void;
@@ -695,6 +696,7 @@ export function FullShopLivePreview({
   logoUrl,
   lightLogoUrl,
   bannerUrl,
+  socialImageUrl,
   uploadingSlot,
   onUploadSlot,
   onRemoveSlot,
@@ -1138,7 +1140,57 @@ export function FullShopLivePreview({
           ))}
         </div>
       </div>
+
+      {/* Link-share card: the Social Share Cover (and watermark logo) are edited right here too */}
+      {interactive && (
+        <div className="p-4 sm:p-5 border-t border-slate-200 bg-white space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-bold text-slate-900">When Your Shop Link Is Shared</span>
+            <span className="text-[11px] text-slate-500">Cover image shown on WhatsApp, Facebook, Google &amp; more</span>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+            <div
+              className="relative sm:w-56 h-28 sm:h-auto shrink-0 flex items-center justify-center"
+              style={{
+                background: socialImageUrl
+                  ? undefined
+                  : `linear-gradient(135deg, ${primaryColor}22, ${accentColor}33)`,
+              }}
+            >
+              {socialImageUrl ? (
+                <img src={socialImageUrl} alt="Social share cover" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <span className="text-[11px] font-semibold text-slate-500">No share cover yet</span>
+              )}
+            </div>
+            <div className="flex-1 p-3 space-y-1.5 min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">vtrystudio.com</p>
+              <p className="text-sm font-bold text-slate-900 truncate">{displayTitle}</p>
+              <p className="text-xs text-slate-500 line-clamp-2">{displaySlogan}</p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <InteractiveMediaBadge
+                  slot="socialImage"
+                  hasAsset={Boolean(socialImageUrl)}
+                  label="Share Cover"
+                  uploadingSlot={uploadingSlot}
+                  onUploadSlot={onUploadSlot}
+                  onRemoveSlot={onRemoveSlot}
+                />
+                {!DESIGN_LAYOUT_GUIDANCE[styleId].usesLightWatermark && (
+                  <InteractiveMediaBadge
+                    slot="lightLogo"
+                    hasAsset={Boolean(lightLogoUrl)}
+                    label="Light Logo"
+                    uploadingSlot={uploadingSlot}
+                    onUploadSlot={onUploadSlot}
+                    onRemoveSlot={onRemoveSlot}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
