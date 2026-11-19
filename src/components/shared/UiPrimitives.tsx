@@ -26,14 +26,16 @@ export function SafeImage({
   fallbackSrc = FALLBACK_IMG,
   ...rest
 }: ImageProps & { fallbackSrc?: string }) {
-  const [imgSrc, setImgSrc] = useState(src || fallbackSrc);
+  // Remember which image failed to load, so a newly uploaded image is tried again.
+  const [failedSrc, setFailedSrc] = useState<unknown>(null);
+  const imgSrc = !src || failedSrc === src ? fallbackSrc : src;
   return (
     <Image
       {...rest}
-      src={imgSrc || fallbackSrc}
+      src={imgSrc}
       alt={alt || 'Brand asset'}
       onError={() => {
-        if (imgSrc !== fallbackSrc) setImgSrc(fallbackSrc);
+        if (imgSrc !== fallbackSrc) setFailedSrc(src);
       }}
     />
   );

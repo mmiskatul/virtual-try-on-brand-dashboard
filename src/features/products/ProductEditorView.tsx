@@ -152,19 +152,19 @@ function ImageUploadSlot({
           const f = e.dataTransfer.files?.[0];
           if (f && !busy) onFile(f);
         }}
-        className={`group relative h-72 w-full overflow-hidden rounded-2xl border transition-colors ${
+        className={`group relative h-96 w-full overflow-hidden rounded-2xl border transition-colors ${
           dragging
             ? 'border-slate-900 bg-slate-50 ring-2 ring-slate-900/10'
             : error
               ? 'border-rose-400 bg-rose-50/40'
               : imageUrl
-                ? 'border-slate-200 bg-slate-100'
+                ? 'border-slate-200 bg-slate-50'
                 : 'border-dashed border-slate-300 bg-slate-50/60 hover:border-slate-500'
         }`}
       >
         {imageUrl ? (
           <>
-            <SafeImage src={imageUrl} alt={title} fill className="object-cover" />
+            <SafeImage src={imageUrl} alt={title} fill className="object-contain p-2" />
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/50 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
               <button
                 type="button"
