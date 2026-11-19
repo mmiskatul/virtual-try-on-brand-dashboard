@@ -169,6 +169,14 @@ const variants = z
     });
   });
 
+/** Same wording as the backend. */
+export function variantStockMessage(totalStock: number, assigned: number): string | null {
+  if (assigned === totalStock) return null;
+  return assigned < totalStock
+    ? `Assign all ${totalStock} items to sizes and colours (${totalStock - assigned} left).`
+    : `Sizes and colours add up to ${assigned}, which is ${assigned - totalStock} more than the total stock of ${totalStock}.`;
+}
+
 // ─── THE FORM ─────────────────────────────────────────────────────────────────
 
 export const productFormSchema = z
@@ -200,6 +208,12 @@ export const productFormSchema = z
     catalogStatus: z.enum(CATALOG_STATUSES, { error: `Catalog status must be one of: ${CATALOG_STATUSES.join(', ')}.` }),
   })
   .superRefine((data, ctx) => {
+    // Sizes & colours share out the total stock: what is assigned to them must add up to it exactly.
+    if (data.variants.length > 0) {
+      const assigned = data.variants.reduce((sum, v) => sum + v.stockQuantity, 0);
+      const message = variantStockMessage(data.stock, assigned);
+      if (message) ctx.addIssue({ code: 'custom', path: ['variants'], message });
+    }
     if (typeof data.compareAtPrice === 'number' && typeof data.price === 'number' && data.compareAtPrice <= data.price) {
       ctx.addIssue({ code: 'custom', path: ['compareAtPrice'], message: 'Compare-at price must be higher than the selling price.' });
     }

@@ -3,8 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, ImagePlus, Loader2, Lock, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
-import { ProductVariant } from '../../types';
+import { ArrowLeft, Check, ImagePlus, Loader2, Lock, Sparkles, Trash2, Upload } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { brandWorkspaceApi, ServiceError } from '../../services';
 import {
@@ -28,6 +27,7 @@ import {
   productFormSchema,
 } from '../../lib/productContract';
 import { formatApiError, useNotify } from './shared';
+import { VariantPlan, VariantPlanner, planCombos, planToVariants, variantsToPlan } from './VariantPlanner';
 
 const DEFAULT_CATEGORIES = [
   'Dresses',
@@ -238,9 +238,8 @@ interface FormState {
   weightGsm: string;
   stretch: string;
   fitType: string;
-  variantSizes: string;
-  variantColors: string;
-  variants: ProductVariant[];
+  /** Chosen sizes, colours and how many pieces of each combination. */
+  plan: VariantPlan;
   brandStorefrontPublished: boolean;
   marketplacePublished: boolean;
   isTryOnEligible: boolean;
@@ -280,7 +279,6 @@ function toContractValues(form: FormState): Record<string, unknown> {
 
   const compare = parseNumber(form.compareAtPrice);
   const cost = parseNumber(form.costPrice);
-  const variantStock = form.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0);
 
   return {
     name: form.name,
@@ -297,11 +295,11 @@ function toContractValues(form: FormState): Record<string, unknown> {
     costPrice: cost === undefined ? null : cost,
     sku: form.sku,
     // With sizes & colours, the total is the sum of the variants.
-    // Left blank, stock counts as 0 and the low-stock alert as 5.
-    stock: form.variants.length > 0 ? variantStock : (parseNumber(form.stock) ?? 0),
+    // Left blank, stock counts as 0 and the low-stock alert as 5. With sizes & colours, they share this total.
+    stock: parseNumber(form.stock) ?? 0,
     lowStockThreshold: parseNumber(form.lowStockThreshold) ?? 5,
     warehouseLocation: form.warehouseLocation,
-    variants: form.variants,
+    variants: planToVariants(form.plan, form.sku),
     specs,
     brandStorefrontPublished: form.brandStorefrontPublished,
     marketplacePublished: form.marketplacePublished,
@@ -328,10 +326,6 @@ function applyConsistency(values: ProductFormValues): ProductFormValues {
     next.includeInMarketplaceTryOn = false;
   }
   return next;
-}
-
-function variantSkuPart(text: string): string {
-  return text.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() || 'X';
 }
 
 export function ProductEditorView({ existingProductId }: { existingProductId?: string }) {
@@ -369,9 +363,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     weightGsm: existing?.specs?.weightGsm || '',
     stretch: existing?.specs?.stretch || '',
     fitType: existing?.specs?.fitType || '',
-    variantSizes: '',
-    variantColors: '',
-    variants: existing?.variants || [],
+    plan: variantsToPlan(existing?.variants),
     brandStorefrontPublished: existing?.brandStorefrontPublished ?? true,
     marketplacePublished: existing?.marketplacePublished ?? false,
     isTryOnEligible: existing?.isTryOnEligible ?? true,
@@ -540,49 +532,6 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     numericPrice > 0 && typeof numericCost === 'number' && !Number.isNaN(numericCost)
       ? Math.round(((numericPrice - numericCost) / numericPrice) * 100)
       : null;
-
-  // ─── Variants ───
-  const generateVariants = () => {
-    const sizes = Array.from(new Set(form.variantSizes.split(',').map((s) => s.trim()).filter(Boolean)));
-    const colors = Array.from(new Set(form.variantColors.split(',').map((c) => c.trim()).filter(Boolean)));
-    if (sizes.length === 0 || colors.length === 0) {
-      setErrorMessage('Enter at least one size and one colour to generate variants.');
-      return;
-    }
-    if (sizes.length * colors.length > PRODUCT_LIMITS.variantsMax) {
-      setErrorMessage(`That would create more than ${PRODUCT_LIMITS.variantsMax} variants. Use fewer sizes or colours.`);
-      return;
-    }
-    setErrorMessage(null);
-    const perVariant = Math.max(0, Math.floor((parseNumber(form.stock) || 0) / (sizes.length * colors.length)));
-    const next: ProductVariant[] = [];
-    for (const color of colors) {
-      for (const size of sizes) {
-        const variantSku = `${form.sku.trim()}-${variantSkuPart(color)}-${variantSkuPart(size)}`;
-        next.push({
-          id: `v_${Date.now()}_${next.length + 1}`,
-          sku: variantSku,
-          size,
-          color,
-          stockQuantity: perVariant,
-          available: perVariant > 0,
-        });
-      }
-    }
-    set({ variants: next });
-    notify(`Generated ${next.length} size & colour combinations.`);
-  };
-
-  const updateVariantStock = (id: string, text: string) => {
-    const quantity = Number(text);
-    set({
-      variants: form.variants.map((v) =>
-        v.id === id
-          ? { ...v, stockQuantity: Number.isNaN(quantity) ? 0 : quantity, available: !Number.isNaN(quantity) && quantity > 0 }
-          : v
-      ),
-    });
-  };
 
   // ─── Images ───
   const handleUploadImage = async (slot: 'display' | 'ai', file: File) => {
@@ -906,13 +855,9 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     <Field
                       label="Total stock"
                       error={showError('stock')}
-                      hint={form.variants.length > 0 ? 'Sum of your sizes & colours.' : undefined}
+                      hint={planCombos(form.plan).length > 0 ? 'You share this across sizes & colours on the next step.' : undefined}
                     >
-                      {form.variants.length > 0 ? (
-                        <input readOnly value={form.variants.reduce((s, v) => s + (Number(v.stockQuantity) || 0), 0)} className={inputClass(false, 'bg-slate-100 text-slate-600')} />
-                      ) : (
-                        textInput('stock', 'stock', { type: 'number', inputMode: 'numeric', min: 0, max: PRODUCT_LIMITS.stockMax, step: '1', placeholder: '0' })
-                      )}
+                      {textInput('stock', 'stock', { type: 'number', inputMode: 'numeric', min: 0, max: PRODUCT_LIMITS.stockMax, step: '1', placeholder: '0' })}
                     </Field>
                     <Field label="Low-stock alert" error={showError('lowStockThreshold')} hint="Warn me below this many.">
                       {textInput('lowStockThreshold', 'lowStockThreshold', { type: 'number', inputMode: 'numeric', min: 0, step: '1', placeholder: '5' })}
@@ -950,57 +895,15 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
             {step === 3 && (
               <SectionCard
                 title="Sizes & colours (optional)"
-                subtitle="Skip this if the product has a single size and colour."
-                right={
-                  <Button type="button" size="sm" variant="outline" onClick={generateVariants} className="gap-1">
-                    <Plus className="w-3.5 h-3.5" /> Generate
-                  </Button>
-                }
+                subtitle="Pick the sizes and colours, then share your total stock across them."
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <Field label="Sizes" hint="Separate with commas.">
-                    <input value={form.variantSizes} onChange={(e) => set({ variantSizes: e.target.value })} placeholder="XS, S, M, L, XL" className={inputClass(false)} />
-                  </Field>
-                  <Field label="Colours" hint="Separate with commas.">
-                    <input value={form.variantColors} onChange={(e) => set({ variantColors: e.target.value })} placeholder="Obsidian, Ivory" className={inputClass(false)} />
-                  </Field>
-                </div>
-                {showError('variants') && (
-                  <p role="alert" className="text-[11px] font-medium text-rose-600">
-                    {showError('variants')}
-                  </p>
-                )}
-                {form.variants.length > 0 && (
-                  <div className="space-y-2 pt-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <p className="font-bold text-slate-700">{form.variants.length} combinations</p>
-                      <button type="button" onClick={() => set({ variants: [] })} className="font-semibold text-rose-600 hover:underline">
-                        Clear all
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {form.variants.map((v) => (
-                        <div key={v.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-                          <div className="min-w-0">
-                            <p className="font-bold">
-                              {v.size} / {v.color}
-                            </p>
-                            <p className="truncate font-mono text-[10px] text-slate-500">{v.sku}</p>
-                          </div>
-                          <input
-                            type="number"
-                            min={0}
-                            step={1}
-                            aria-label={`Stock for ${v.size} ${v.color}`}
-                            value={v.stockQuantity}
-                            onChange={(e) => updateVariantStock(v.id, e.target.value)}
-                            className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <VariantPlanner
+                  plan={form.plan}
+                  onChange={(plan) => set({ plan })}
+                  totalStock={Math.max(0, Math.floor(parseNumber(form.stock) || 0))}
+                  error={showError('variants')}
+                  onGoToStock={() => goToStep(2)}
+                />
               </SectionCard>
             )}
 
