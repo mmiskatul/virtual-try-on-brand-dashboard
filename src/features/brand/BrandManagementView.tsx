@@ -41,9 +41,24 @@ import {
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
+import { MediaSlotCard } from './MediaSlotCard';
 
 export type BrandManagementTab = 'profile' | 'identity' | 'media';
 export type BrandAssetKey = 'logo' | 'banner' | 'lightLogo' | 'socialImage';
+
+const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+function validateImageFile(file: File): string | null {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return 'Unsupported file type. Please upload a PNG, JPG or WEBP image.';
+  }
+  if (file.size === 0) return 'This file is empty. Please choose a different image.';
+  if (file.size > MAX_IMAGE_BYTES) {
+    return `Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). The maximum size is 10MB.`;
+  }
+  return null;
+}
 
 const FONT_OPTIONS = [
   'Plus Jakarta Sans',
@@ -65,9 +80,9 @@ const ASSET_CARDS: Array<{
   dims: string;
   aspect: string;
 }> = [
-  { key: 'logo', label: 'Primary Brand Logo', dims: '512×512 px • Square PNG/WEBP', aspect: 'aspect-[16/9]' },
+  { key: 'logo', label: 'Primary Brand Logo', dims: '512×512 px • Square PNG/WEBP', aspect: 'aspect-square' },
   { key: 'banner', label: 'Storefront Hero Banner', dims: '1600×900 px • Widescreen', aspect: 'aspect-[16/9]' },
-  { key: 'lightLogo', label: 'Light Header Watermark Logo', dims: '400×400 px • Transparent PNG', aspect: 'aspect-[16/9]' },
+  { key: 'lightLogo', label: 'Light Header Watermark Logo', dims: '400×400 px • Transparent PNG', aspect: 'aspect-square' },
   { key: 'socialImage', label: 'Social Open Graph Share Cover', dims: '1200×630 px • < 5MB', aspect: 'aspect-[16/9]' },
 ];
 
@@ -396,6 +411,12 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
   const handleFileUpload = async (file: File) => {
     const slotKey = targetAssetKeyRef.current;
     setErrorMessage(null);
+    const invalid = validateImageFile(file);
+    if (invalid) {
+      setErrorMessage(invalid);
+      notify(invalid);
+      return;
+    }
     setUploadingField(slotKey);
     const meta = ASSET_CARDS.find((c) => c.key === slotKey);
     try {
@@ -1159,101 +1180,37 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
 
             {/* Media Slots prioritized by active Storefront UI */}
             <SectionCard
-              title="Media Slots for Selected Storefront Design"
-              subtitle={`Ordered for ${
-                STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label || 'Editorial Split'
-              } — uploads persist to Cloudinary & backend media endpoints`}
+              title="Upload Brand Media"
+              subtitle="Upload your logos, hero banner and share cover. Highlighted items are used by your selected storefront design."
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                {DESIGN_LAYOUT_GUIDANCE[form.headerStyle].primarySlots.map((slotKey, idx) => {
-                  const meta = ASSET_CARDS.find((c) => c.key === slotKey);
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {(['logo', 'lightLogo', 'banner', 'socialImage'] as BrandAssetKey[]).map((assetKey) => {
+                  const meta = ASSET_CARDS.find((c) => c.key === assetKey);
                   if (!meta) return null;
-                  const { key: assetKey, label, dims, aspect } = meta;
-                  const src = getAssetUrl(assetKey);
-                  const isBusy = uploadingField === assetKey;
-                  const isPrimaryForLayout =
-                    slotKey === 'logo' ||
-                    (slotKey === 'banner' && DESIGN_LAYOUT_GUIDANCE[form.headerStyle].heroUsesBanner) ||
-                    (slotKey === 'lightLogo' && DESIGN_LAYOUT_GUIDANCE[form.headerStyle].usesLightWatermark);
+                  const guidance = DESIGN_LAYOUT_GUIDANCE[form.headerStyle];
+                  const usedInUi =
+                    assetKey === 'logo' ||
+                    (assetKey === 'banner' && guidance.heroUsesBanner) ||
+                    (assetKey === 'lightLogo' && guidance.usesLightWatermark);
+                  const wide = assetKey === 'banner' || assetKey === 'socialImage';
 
                   return (
-                    <div
-                      key={assetKey}
-                      className={`rounded-2xl border p-4 space-y-3 ${
-                        isPrimaryForLayout
-                          ? 'border-slate-300 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
-                          : 'border-slate-200 bg-slate-50/70'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <p className="font-bold text-slate-900">{label}</p>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                isPrimaryForLayout
-                                  ? 'bg-slate-950 text-white'
-                                  : 'bg-slate-200 text-slate-700'
-                              }`}
-                            >
-                              {isPrimaryForLayout ? `Slot ${idx + 1} • Used in UI` : 'Optional / OG Share'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">{dims}</p>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {src && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={isBusy}
-                              onClick={() => void handleRemoveAsset(assetKey)}
-                              className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Remove
-                            </Button>
-                          )}
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={src ? 'outline' : 'default'}
-                            disabled={isBusy}
-                            onClick={() => triggerUploadForSlot(assetKey)}
-                            className="gap-1.5"
-                          >
-                            {isBusy ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Upload className="w-3.5 h-3.5" />
-                            )}
-                            {isBusy ? 'Saving...' : src ? 'Replace' : 'Upload Photo'}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {src ? (
-                        <div
-                          className={`relative ${aspect} rounded-xl overflow-hidden bg-white border border-slate-200`}
-                        >
-                          <SafeImage src={src} alt={label} fill className="object-cover" />
-                          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-white text-[10px] font-bold">
-                            Synced to Backend
-                          </span>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => triggerUploadForSlot(assetKey)}
-                          className={`w-full ${aspect} rounded-xl border-2 border-dashed border-slate-300 bg-white hover:border-slate-500 flex flex-col items-center justify-center gap-1.5 text-slate-500 transition-colors`}
-                        >
-                          <ImageIcon className="w-5 h-5 text-slate-400" />
-                          <span className="font-semibold text-slate-700">Click to upload {label}</span>
-                          <span className="text-[11px] text-slate-400">PNG, JPG, or WEBP up to 10MB</span>
-                        </button>
-                      )}
+                    <div key={assetKey} className={wide ? 'lg:col-span-2' : ''}>
+                      <MediaSlotCard
+                        label={meta.label}
+                        dims={meta.dims}
+                        shape={wide ? 'wide' : 'square'}
+                        src={getAssetUrl(assetKey) || undefined}
+                        busy={uploadingField === assetKey}
+                        badge={usedInUi ? 'Used in your storefront' : 'Optional'}
+                        badgeActive={usedInUi}
+                        onPick={() => triggerUploadForSlot(assetKey)}
+                        onDropFile={(file) => {
+                          targetAssetKeyRef.current = assetKey;
+                          void handleFileUpload(file);
+                        }}
+                        onRemove={() => void handleRemoveAsset(assetKey)}
+                      />
                     </div>
                   );
                 })}
