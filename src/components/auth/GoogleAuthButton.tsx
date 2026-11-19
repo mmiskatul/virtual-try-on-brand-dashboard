@@ -26,6 +26,8 @@ export function formatBrandOAuthError(code: string | null): string | null {
       return 'Google sign-in failed. Please try again, or use email and password.';
     case 'OAuthAccountNotLinked':
       return 'This email is already linked with another sign-in method.';
+    case 'SessionCookieMissing':
+      return 'Your login succeeded but the server session cookie was not accepted by the browser. This happens when the site and the API are on different domains (for example localhost with the live API). Point the app at a local backend, or use the deployed site.';
     case 'Callback':
     case 'Configuration':
       return 'Google sign-in is temporarily unavailable. Please try again later.';

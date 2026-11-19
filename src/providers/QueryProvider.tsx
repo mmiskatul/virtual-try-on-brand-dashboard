@@ -57,6 +57,10 @@ function SessionTokenSync() {
           if (data?.needsReauth) {
             await brandApi.logout().catch(() => {});
             await signOut({ redirect: false });
+            // Explain why we are back at the login page instead of looping silently.
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+              window.location.assign('/login?error=SessionCookieMissing');
+            }
           }
         }
       } catch {

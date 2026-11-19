@@ -12,6 +12,7 @@ import { brandApi } from '../../lib/api';
 import { AuthShell } from '../../components/auth/AuthShell';
 import { PasswordField } from '../../components/auth/PasswordField';
 import { GoogleAuthButton, formatBrandOAuthError } from '../../components/auth/GoogleAuthButton';
+import { AuthToast, useAuthToast } from '../../components/auth/AuthToast';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 
@@ -37,12 +38,25 @@ function BrandLoginContent() {
   const [needsVerificationEmail, setNeedsVerificationEmail] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
+  const { toast, showToast, dismissToast } = useAuthToast();
+
+  // Show an error both inline (stays on screen) and as a toast (hard to miss).
+  const fail = (message: string) => {
+    setErrorMsg(message);
+    showToast('error', message);
+  };
 
   useEffect(() => {
     if (oauthError) {
       setErrorMsg(oauthError);
+      showToast('error', oauthError);
+    } else if (verifiedParam === '1') {
+      showToast('success', 'Email verified! Sign in to enter your workspace.');
+    } else if (resetParam === '1') {
+      showToast('success', 'Password updated! Sign in with your new password.');
     }
-  }, [oauthError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oauthError, verifiedParam, resetParam]);
 
   const {
     register,
@@ -69,24 +83,32 @@ function BrandLoginContent() {
         // Credentials were correct but the email is unverified: send a fresh code and go straight to verification.
         setNeedsVerificationEmail(email);
         setErrorMsg('Your email is not verified yet. Sending a new verification code...');
+        showToast('error', 'Your email is not verified yet. Sending a new verification code...');
         const target = `/verify-email?email=${encodeURIComponent(email)}&from=login`;
         try {
           const sent = await brandApi.resendVerification(email);
           if (sent.status === 'VERIFICATION_SENT') {
+            showToast('success', 'Verification code sent to your email.');
             router.push(target);
           } else if (sent.status === 'ALREADY_VERIFIED') {
-            setErrorMsg('Your email is already verified. Please try signing in again.');
+            fail('Your email is already verified. Please try signing in again.');
           } else {
-            setErrorMsg(sent.message || 'Could not send a verification code. Please try again.');
+            fail(sent.message || 'Could not send a verification code. Please try again.');
           }
         } catch (resendErr: any) {
           const warning = resendErr?.message || 'Could not send a new verification code. Please use Resend.';
           router.push(`${target}&warning=${encodeURIComponent(warning)}`);
         }
       } else if (err?.data?.error === 'TenantSuspended') {
-        setErrorMsg('Your brand account has been suspended by platform administration.');
+        fail('Your brand account has been suspended by platform administration.');
+      } else if (err?.status === 429) {
+        fail(err?.message || 'Too many attempts. Please wait a moment and try again.');
+      } else if (err?.status === 401 || err?.status === 400) {
+        fail('Invalid email or password. Please check your details and try again.');
+      } else if (!err?.status) {
+        fail('Could not reach the server. Check your connection and try again.');
       } else {
-        setErrorMsg(err?.message || 'Invalid merchant email or password.');
+        fail(err?.message || 'Login failed. Please try again.');
       }
       return;
     }
@@ -99,14 +121,22 @@ function BrandLoginContent() {
 
     if (result?.error) {
       if (result.error === 'SERVICE_UNAVAILABLE') {
-        setErrorMsg('Backend server is unreachable. Please ensure the backend API is running on port 4000.');
+        fail('Server is unreachable right now. Please try again in a moment.');
       } else {
-        setErrorMsg(result.error === 'CredentialsSignin' ? 'Could not verify merchant session.' : result.error);
+        fail(result.error === 'CredentialsSignin' ? 'Could not start your session. Please try again.' : result.error);
       }
       return;
     }
 
-    await getSession();
+    const established = await getSession();
+    if (!established?.user) {
+      fail('Signed in, but your session could not be started. Make sure cookies are enabled and try again.');
+      return;
+    }
+
+    showToast('success', 'Login successful! Redirecting to your dashboard...', 4000);
+    // Brief pause so the success toast is visible before the full-page navigation.
+    await new Promise((resolve) => setTimeout(resolve, 700));
 
     if (typeof window !== 'undefined') {
       window.location.assign(callbackUrl);
@@ -117,7 +147,15 @@ function BrandLoginContent() {
   };
 
   const onSubmit = async (data: BrandLoginFormValues) => {
-    await performLogin(data.email, data.password);
+    try {
+      await performLogin(data.email, data.password);
+    } catch {
+      fail('Something went wrong while signing in. Please try again.');
+    }
+  };
+
+  const onInvalid = () => {
+    showToast('error', 'Please fix the highlighted fields and try again.');
   };
 
   const handleResendVerification = async () => {
@@ -128,8 +166,9 @@ function BrandLoginContent() {
     try {
       const res = await brandApi.resendVerification(email);
       setResendMessage(res.message);
+      showToast('success', res.message);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Could not resend verification email.');
+      fail(err?.message || 'Could not resend verification email.');
     } finally {
       setResendLoading(false);
     }
@@ -141,6 +180,7 @@ function BrandLoginContent() {
       title="Welcome back"
       subtitle="Sign in to your brand account."
     >
+      <AuthToast toast={toast} onClose={dismissToast} />
       {session?.user && (
         <div className="p-3.5 rounded-2xl bg-gray-100 border border-gray-300 flex items-center justify-between gap-3 text-xs">
           <div>
@@ -192,7 +232,7 @@ function BrandLoginContent() {
         <div className="h-px flex-1 bg-stone-200" />
       </div>
 
-      <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
         {errorMsg && (
           <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs space-y-2">
             <div className="flex items-start gap-2">
