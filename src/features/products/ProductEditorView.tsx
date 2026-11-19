@@ -27,8 +27,8 @@ import {
   productFormSchema,
 } from '../../lib/productContract';
 import { formatApiError, useNotify } from './shared';
-import { VariantPlanner } from './VariantPlanner';
-import { VariantPlan, colorKey, planProblem, planToVariants, variantsToPlan } from './variantPlan';
+import { PhotoKind, VariantPlanner } from './VariantPlanner';
+import { VariantPlan, planProblem, planToVariants, variantsToPlan } from './variantPlan';
 
 const DEFAULT_CATEGORIES = [
   'Dresses',
@@ -476,7 +476,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     { key: 'basics', label: 'Basics', hint: 'Title & category' },
     { key: 'images', label: 'Images', hint: 'Photos' },
     { key: 'pricing', label: 'Price & stock', hint: 'Price & SKU' },
-    { key: 'variants', label: 'Sizes & colours', hint: 'Optional' },
+    { key: 'variants', label: 'Colours & sizes', hint: 'Optional' },
     { key: 'publish', label: 'Try-On & publish', hint: 'Go live' },
   ] as const;
   const lastStep = STEPS.length - 1;
@@ -563,22 +563,28 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     }
   };
 
-  /** One photo per colour: uploaded here, and the finished link is stored on the plan. */
-  const handleColorPhoto = async (color: string, file: File) => {
+  /** A colour's own store photo or AI photo: uploaded here, and the finished link is stored on that colour. */
+  const handleColorPhoto = async (color: string, kind: PhotoKind, file: File) => {
     const invalid = validateImageFile(file);
     if (invalid) {
       setErrorMessage(invalid);
       notify(invalid);
       return;
     }
-    setUploadingColor(color);
+    setUploadingColor(`${color}|${kind}`);
     setErrorMessage(null);
     try {
       const res = await brandWorkspaceApi.uploadMediaFile(file);
       if (res.ok && res.url) {
         const url = res.url;
-        setForm((prev) => ({ ...prev, plan: { ...prev.plan, colorImages: { ...prev.plan.colorImages, [colorKey(color)]: url } } }));
-        notify(`${color} photo uploaded.`);
+        setForm((prev) => ({
+          ...prev,
+          plan: {
+            ...prev.plan,
+            colors: prev.plan.colors.map((c) => (c.color === color ? { ...c, ...(kind === 'store' ? { photo: url } : { aiPhoto: url }) } : c)),
+          },
+        }));
+        notify(`${color} ${kind === 'store' ? 'store' : 'AI'} photo uploaded.`);
       } else {
         setErrorMessage(res.error || 'Image upload failed. Please try again.');
       }
@@ -828,7 +834,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
 
             {/* 2. IMAGES */}
             {step === 1 && (
-              <SectionCard title="Images" subtitle="Upload only. The image links are created automatically.">
+              <SectionCard title="Main images" subtitle="The product's main photos. A colour can have its own photos later, in the Colours & sizes step.">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <ImageUploadSlot
                     title="Store Photo (shown to customers)"
@@ -886,7 +892,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     <Field
                       label="Total stock"
                       error={showError('stock')}
-                      hint={form.plan.sizes.length > 0 ? 'You share this across sizes, then colours, on the next step.' : undefined}
+                      hint={form.plan.colors.length > 0 ? 'You share this across colours and sizes on the next step.' : undefined}
                     >
                       {textInput('stock', 'stock', { type: 'number', inputMode: 'numeric', min: 0, max: PRODUCT_LIMITS.stockMax, step: '1', placeholder: '0' })}
                     </Field>
@@ -925,8 +931,8 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
             {/* 4. SIZES & COLOURS */}
             {step === 3 && (
               <SectionCard
-                title="Sizes & colours (optional)"
-                subtitle="Pick sizes, share your stock across them, set a price per size and add a photo per colour."
+                title="Colours & sizes (optional)"
+                subtitle="Pick the colours, then give each colour its own sizes, counts and photos."
               >
                 <VariantPlanner
                   plan={form.plan}
@@ -935,8 +941,8 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                   basePrice={parseNumber(form.price) || 0}
                   error={showError('variants')}
                   onGoToStock={() => goToStep(2)}
-                  onUploadColorPhoto={(color, file) => void handleColorPhoto(color, file)}
-                  uploadingColor={uploadingColor}
+                  onUploadPhoto={(color, kind, file) => void handleColorPhoto(color, kind, file)}
+                  uploading={uploadingColor}
                 />
               </SectionCard>
             )}

@@ -61,6 +61,8 @@ export interface ProductVariant {
   imageUrl?: string;
   /** Alert when this size (all colours together) falls below this many pieces. */
   lowStockThreshold?: number;
+  /** Clear flat photo of this colour for the AI try-on. Never shown to shoppers. */
+  aiImageUrl?: string;
   priceOverride?: number;
   barcode?: string;
   weightGrams?: number;

@@ -153,6 +153,8 @@ export const productVariantSchema = z.object({
   imageUrl: z.string().trim().min(1).optional(),
   /** Alert when this size (all colours together) falls below this many pieces. Leave out for no size alert. */
   lowStockThreshold: lowStockThreshold.optional(),
+  /** Clear flat photo of this colour for the AI try-on (never shown to shoppers). */
+  aiImageUrl: z.string().trim().min(1).optional(),
 });
 
 const variants = z
@@ -178,6 +180,7 @@ const variants = z
     const priceBySize = new Map<string, number | undefined>();
     const alertBySize = new Map<string, number | undefined>();
     const photoByColor = new Map<string, string | undefined>();
+    const aiPhotoByColor = new Map<string, string | undefined>();
     list.forEach((variant, index) => {
       const sizeKey = variant.size.toLowerCase();
       if (priceBySize.has(sizeKey) && priceBySize.get(sizeKey) !== variant.price) {
@@ -193,6 +196,10 @@ const variants = z
         ctx.addIssue({ code: 'custom', path: [index, 'imageUrl'], message: `Colour ${variant.color} has two different photos. Use one photo per colour.` });
       }
       photoByColor.set(colorKey, variant.imageUrl);
+      if (aiPhotoByColor.has(colorKey) && aiPhotoByColor.get(colorKey) !== variant.aiImageUrl) {
+        ctx.addIssue({ code: 'custom', path: [index, 'aiImageUrl'], message: `Colour ${variant.color} has two different AI photos. Use one AI photo per colour.` });
+      }
+      aiPhotoByColor.set(colorKey, variant.aiImageUrl);
     });
   });
 
