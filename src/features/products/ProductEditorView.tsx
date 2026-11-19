@@ -27,7 +27,8 @@ import {
   productFormSchema,
 } from '../../lib/productContract';
 import { formatApiError, useNotify } from './shared';
-import { VariantPlan, VariantPlanner, planCombos, planToVariants, variantsToPlan } from './VariantPlanner';
+import { VariantPlanner } from './VariantPlanner';
+import { VariantPlan, planProblem, planToVariants, variantsToPlan } from './variantPlan';
 
 const DEFAULT_CATEGORIES = [
   'Dresses',
@@ -450,8 +451,11 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   const parsed = useMemo(() => productFormSchema.safeParse(toContractValues(form)), [form]);
   const errors = useMemo(() => (parsed.success ? {} : collectFieldErrors(parsed.error)), [parsed]);
   const skuTaken = skuStatus?.checked === true && skuStatus.available === false;
+  // Sizes add up to the total stock, and each size's colours add up to that size.
+  const planIssue = planProblem(form.plan, Math.max(0, Math.floor(parseNumber(form.stock) || 0)));
   const fieldErrors: Partial<Record<ProductFieldName, string>> = {
     ...errors,
+    ...(planIssue ? { variants: planIssue } : {}),
     ...(skuTaken && !errors.sku ? { sku: skuStatus?.message || 'This SKU is already in use.' } : {}),
     ...serverErrors,
   };
@@ -855,7 +859,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     <Field
                       label="Total stock"
                       error={showError('stock')}
-                      hint={planCombos(form.plan).length > 0 ? 'You share this across sizes & colours on the next step.' : undefined}
+                      hint={form.plan.sizes.length > 0 ? 'You share this across sizes, then colours, on the next step.' : undefined}
                     >
                       {textInput('stock', 'stock', { type: 'number', inputMode: 'numeric', min: 0, max: PRODUCT_LIMITS.stockMax, step: '1', placeholder: '0' })}
                     </Field>
