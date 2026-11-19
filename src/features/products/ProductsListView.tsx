@@ -29,6 +29,7 @@ import {
 import { ProductsNavTabs } from '../../components/shared/ProductsNavTabs';
 import { Button } from '../../components/ui/button';
 import { Drawer, Switch, formatApiError, useNotify } from './shared';
+import { lowSizesOfVariants } from './variantPlan';
 
 type StatusChip = 'ALL' | 'LIVE' | 'DRAFT' | 'OUT_OF_STOCK';
 
@@ -43,9 +44,17 @@ function StockLabel({ p }: { p: Product }) {
     return <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">Out of stock</span>;
   }
   const low = p.stock < (p.lowStockThreshold || 5);
+  const lowSizes = lowSizesOfVariants(p.variants);
   return (
-    <span className={`font-bold ${low ? 'text-amber-600' : 'text-slate-700'}`}>
-      {p.stock} {low ? 'left' : 'units'}
+    <span className="block">
+      <span className={`font-bold ${low ? 'text-amber-600' : 'text-slate-700'}`}>
+        {p.stock} {low ? 'left' : 'units'}
+      </span>
+      {lowSizes.length > 0 && (
+        <span className="mt-0.5 block text-[10px] font-semibold text-amber-700" title="Sizes below their low-stock alert">
+          Low: {lowSizes.map((s) => `${s.size} (${s.stock})`).join(', ')}
+        </span>
+      )}
     </span>
   );
 }

@@ -890,7 +890,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     >
                       {textInput('stock', 'stock', { type: 'number', inputMode: 'numeric', min: 0, max: PRODUCT_LIMITS.stockMax, step: '1', placeholder: '0' })}
                     </Field>
-                    <Field label="Low-stock alert" error={showError('lowStockThreshold')} hint="Warn me below this many.">
+                    <Field label="Low-stock alert" error={showError('lowStockThreshold')} hint="Whole product. You can set one per size too.">
                       {textInput('lowStockThreshold', 'lowStockThreshold', { type: 'number', inputMode: 'numeric', min: 0, step: '1', placeholder: '5' })}
                     </Field>
                     <Field label="Warehouse" error={showError('warehouseLocation')}>

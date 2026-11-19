@@ -240,7 +240,7 @@ export function VariantPlanner({
 
   const setSizes = (names: string[]) => {
     const kept = new Map(plan.sizes.map((s) => [s.size.toLowerCase(), s]));
-    const next = sortSizeNames(names).map((name) => kept.get(name.toLowerCase()) ?? { size: name, qty: '0', price: '', colors: [] });
+    const next = sortSizeNames(names).map((name) => kept.get(name.toLowerCase()) ?? { size: name, qty: '0', price: '', lowStock: '', colors: [] });
     onChange({ ...plan, sizes: next });
   };
   const patchSize = (size: string, patch: Partial<SizeLine>) =>
@@ -391,6 +391,25 @@ export function VariantPlanner({
                         />
                       </span>
                     </label>
+                    <label className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                      <span className="font-semibold text-slate-600">Low-stock alert for {line.size}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-slate-400">below</span>
+                        <input
+                          inputMode="numeric"
+                          aria-label={`Low-stock alert for size ${line.size}`}
+                          value={line.lowStock}
+                          onChange={(e) => patchSize(line.size, { lowStock: cleanDigits(e.target.value) })}
+                          placeholder="No alert"
+                          className="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right tabular-nums"
+                        />
+                      </span>
+                    </label>
+                    {line.lowStock !== '' && qty < toNum(line.lowStock) && (
+                      <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 font-semibold text-amber-800">
+                        Already below the alert level: {qty} pieces, alert at {toNum(line.lowStock)}.
+                      </p>
+                    )}
                     <MultiSelect
                       compact
                       showChips={false}

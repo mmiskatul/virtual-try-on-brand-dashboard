@@ -1235,6 +1235,8 @@ export interface BrandOverviewSummary {
     sku: string;
     stock: number;
     lowStockThreshold: number;
+    /** Sizes below the alert level the brand set for them. */
+    lowSizes?: Array<{ size: string; stock: number; threshold: number }>;
   }>;
   recentOrders: Array<{
     id: string;

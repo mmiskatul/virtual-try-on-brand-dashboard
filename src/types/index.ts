@@ -59,6 +59,8 @@ export interface ProductVariant {
   price?: number;
   /** Photo of this colour (the same for every size of that colour). */
   imageUrl?: string;
+  /** Alert when this size (all colours together) falls below this many pieces. */
+  lowStockThreshold?: number;
   priceOverride?: number;
   barcode?: string;
   weightGrams?: number;

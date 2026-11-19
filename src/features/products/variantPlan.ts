@@ -22,6 +22,8 @@ export interface SizeLine {
   qty: string;
   /** Price for this size, as typed. Empty means "same as the product price". */
   price: string;
+  /** Low-stock alert for this size (all colours together), as typed. Empty means "no alert for this size". */
+  lowStock: string;
   colors: ColorLine[];
 }
 export interface VariantPlan {
@@ -118,6 +120,30 @@ export function parsePrice(text: string): number | undefined {
   return Number.isNaN(value) ? Number.NaN : value;
 }
 
+/** Alert level from text: empty means "no alert for this size". */
+export function parseAlert(text: string | undefined): number | undefined {
+  const trimmed = (text || '').trim();
+  if (trimmed === '') return undefined;
+  const value = Number(trimmed);
+  return Number.isNaN(value) ? Number.NaN : value;
+}
+
+/** Sizes that are below the alert level set for them (all colours of a size added up). */
+export function lowSizesOfVariants(variants: ProductVariant[] | undefined): Array<{ size: string; stock: number; threshold: number }> {
+  const totals = new Map<string, number>();
+  const levels = new Map<string, number>();
+  for (const v of variants || []) {
+    totals.set(v.size, (totals.get(v.size) ?? 0) + (v.stockQuantity || 0));
+    if (typeof v.lowStockThreshold === 'number') levels.set(v.size, v.lowStockThreshold);
+  }
+  const out: Array<{ size: string; stock: number; threshold: number }> = [];
+  for (const [size, stock] of totals) {
+    const threshold = levels.get(size);
+    if (threshold !== undefined && stock < threshold) out.push({ size, stock, threshold });
+  }
+  return out;
+}
+
 const skuPart = (text: string, max: number) => text.replace(/[^A-Za-z0-9]/g, '').slice(0, max).toUpperCase() || 'X';
 
 /** The flat size × colour list the backend stores, with unique SKUs built from the master SKU. */
@@ -134,6 +160,7 @@ export function planToVariants(plan: VariantPlan, masterSku: string): ProductVar
       while (used.has(sku.toLowerCase())) sku = `${stem}-${n++}`;
       used.add(sku.toLowerCase());
       const sizePrice = parsePrice(line.price);
+      const sizeAlert = parseAlert(line.lowStock);
       const photo = plan.colorImages[colorKey(entry.color)];
       out.push({
         id: `var_${out.length + 1}`,
@@ -144,6 +171,7 @@ export function planToVariants(plan: VariantPlan, masterSku: string): ProductVar
         available: entry.qty > 0,
         ...(sizePrice !== undefined ? { price: sizePrice } : {}),
         ...(photo ? { imageUrl: photo } : {}),
+        ...(sizeAlert !== undefined ? { lowStockThreshold: sizeAlert } : {}),
       });
     }
   }
@@ -155,9 +183,11 @@ export function variantsToPlan(variants: ProductVariant[] | undefined): VariantP
   if (!variants || variants.length === 0) return EMPTY_PLAN;
   const bySize = new Map<string, ColorLine[]>();
   const priceBySize = new Map<string, string>();
+  const alertBySize = new Map<string, string>();
   const colorImages: Record<string, string> = {};
   for (const v of variants) {
     if (typeof v.price === 'number') priceBySize.set(v.size, String(v.price));
+    if (typeof v.lowStockThreshold === 'number') alertBySize.set(v.size, String(v.lowStockThreshold));
     if (v.imageUrl && v.color !== NO_COLOR) colorImages[colorKey(v.color)] = v.imageUrl;
     const list = bySize.get(v.size) ?? [];
     list.push({ color: v.color, qty: String(v.stockQuantity ?? 0) });
@@ -166,7 +196,7 @@ export function variantsToPlan(variants: ProductVariant[] | undefined): VariantP
   const sizes: SizeLine[] = sortSizeNames([...bySize.keys()]).map((size) => {
     const lines = bySize.get(size)!;
     const colors = lines.length === 1 && lines[0].color === NO_COLOR ? [] : sortColorNames(lines.map((l) => l.color)).map((c) => lines.find((l) => l.color === c)!);
-    return { size, qty: String(lines.reduce((sum, l) => sum + toNum(l.qty), 0)), price: priceBySize.get(size) ?? '', colors };
+    return { size, qty: String(lines.reduce((sum, l) => sum + toNum(l.qty), 0)), price: priceBySize.get(size) ?? '', lowStock: alertBySize.get(size) ?? '', colors };
   });
   return { sizes, colorImages };
 }
@@ -184,6 +214,12 @@ export function planProblem(plan: VariantPlan, totalStock: number): string | und
     const price = parsePrice(line.price);
     if (price !== undefined && (Number.isNaN(price) || price <= 0 || Math.round(price * 100) / 100 !== price || price > PRODUCT_LIMITS.priceMax)) {
       return `Size ${line.size}: enter a price above 0 with at most 2 decimals, or leave it empty to use the product price.`;
+    }
+  }
+  for (const line of plan.sizes) {
+    const alert = parseAlert(line.lowStock);
+    if (alert !== undefined && (Number.isNaN(alert) || !Number.isInteger(alert) || alert < 0 || alert > PRODUCT_LIMITS.lowStockMax)) {
+      return `Size ${line.size}: enter a whole number of pieces for the low-stock alert, or leave it empty for no alert.`;
     }
   }
   for (const line of plan.sizes) {
