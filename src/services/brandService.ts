@@ -1,4 +1,5 @@
 import { BRAND_API_URL, brandFetch } from '../lib/api';
+import type { ProductPayload } from '../lib/productContract';
 import { normalizeHeaderStyle } from '../features/onboarding/onboardingPresets';
 import { BrandProfile, InventoryMovement, Order, Product } from '../types';
 
@@ -256,20 +257,24 @@ export function normalizeBackendProduct(raw: any): Product {
     category: raw.category || 'Apparel',
     subCategory: raw.subCategory,
     description: raw.description || '',
-    shortDescription: raw.description ? String(raw.description).slice(0, 120) : '',
+    shortDescription: raw.shortDescription ?? '',
     collections: raw.collection ? [raw.collection] : [],
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     price: Number(raw.price ?? 0),
     compareAtPrice: raw.compareAtPrice ? Number(raw.compareAtPrice) : undefined,
+    costPrice: raw.costPrice != null ? Number(raw.costPrice) : undefined,
     stock: variants.length > 0 ? totalStock : Number(raw.stock ?? 0),
-    lowStockThreshold: 5,
-    catalogStatus: raw.brandStorefrontPublished || raw.marketplacePublished ? 'ACTIVE' : 'DRAFT',
+    lowStockThreshold: raw.lowStockThreshold != null ? Number(raw.lowStockThreshold) : 5,
+    warehouseLocation: raw.warehouseLocation || undefined,
+    catalogStatus:
+      raw.catalogStatus || (raw.brandStorefrontPublished || raw.marketplacePublished ? 'ACTIVE' : 'DRAFT'),
     brandStorefrontPublished: Boolean(raw.brandStorefrontPublished),
     marketplacePublished: Boolean(raw.marketplacePublished),
     isTryOnEligible: Boolean(raw.isTryOnEligible ?? true),
     tryOnCategory: raw.tryOnCategory || 'tops',
-    includeInBrandTryOn: Boolean(raw.isTryOnEligible ?? true),
-    includeInMarketplaceTryOn: Boolean(raw.isTryOnEligible && raw.marketplacePublished),
+    includeInBrandTryOn: raw.includeInBrandTryOn ?? Boolean(raw.isTryOnEligible ?? true),
+    includeInMarketplaceTryOn: raw.includeInMarketplaceTryOn ?? Boolean(raw.isTryOnEligible && raw.marketplacePublished),
+    aiReferenceImage: raw.aiReferenceImage || raw.specs?._aiReferenceImage || undefined,
     imageQualityStatus: 'VERIFIED',
     image:
       (Array.isArray(raw.images) && raw.images[0]) ||
@@ -277,7 +282,8 @@ export function normalizeBackendProduct(raw: any): Product {
       'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
     images: Array.isArray(raw.images) && raw.images.length > 0 ? raw.images : undefined,
     variants,
-    specs: raw.specs || {},
+    // Keys starting with "_" are internal and are not part of the product's specifications.
+    specs: Object.fromEntries(Object.entries(raw.specs || {}).filter(([key]) => !key.startsWith('_'))),
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString().slice(0, 10) : undefined,
     updatedAt: raw.updatedAt ? new Date(raw.updatedAt).toISOString().slice(0, 10) : undefined,
   };
@@ -523,7 +529,7 @@ export const brandWorkspaceApi = {
     return normalizeBackendProduct(res.product);
   },
 
-  addProduct: async (payload: any): Promise<Product> => {
+  addProduct: async (payload: ProductPayload): Promise<Product> => {
     const res = await apiFetch<{ product: any }>('/api/v1/products/addproduct', {
       method: 'POST',
       headers: { 'Idempotency-Key': `addprod_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` },
@@ -532,7 +538,7 @@ export const brandWorkspaceApi = {
     return normalizeBackendProduct(res.product);
   },
 
-  updateProduct: async (id: string, payload: any): Promise<Product> => {
+  updateProduct: async (id: string, payload: Partial<ProductPayload>): Promise<Product> => {
     const res = await apiFetch<{ product: any }>(`/api/v1/products/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(payload),

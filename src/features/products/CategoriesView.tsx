@@ -134,7 +134,7 @@ export function CategoriesView({ mode = 'list', editId }: { mode?: 'list' | 'new
       if (mode === 'edit' && editing) {
         const updated = await brandWorkspaceApi.updateCategory(editing.id, {
           name: cleanName,
-          description: description.trim() || undefined,
+          description: description.trim(),
           tryOnCategory: tryOn,
           active,
         });

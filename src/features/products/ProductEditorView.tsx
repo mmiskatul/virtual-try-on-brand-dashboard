@@ -4,11 +4,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, ImagePlus, Loader2, Lock, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
-import { Product, ProductVariant } from '../../types';
+import { ProductVariant } from '../../types';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
-import { useUiStore } from '../../stores/useUiStore';
-import { brandWorkspaceApi } from '../../services';
-import { formatApiError } from './shared';
+import { brandWorkspaceApi, ServiceError } from '../../services';
 import {
   ErrorBanner,
   PageHeader,
@@ -18,6 +16,18 @@ import {
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
+import {
+  CATALOG_STATUSES,
+  PRODUCT_LIMITS,
+  PRODUCT_STEP_FIELDS,
+  ProductFieldName,
+  ProductFormValues,
+  ProductPayload,
+  TRY_ON_CATEGORIES,
+  collectFieldErrors,
+  productFormSchema,
+} from '../../lib/productContract';
+import { formatApiError, useNotify } from './shared';
 
 const DEFAULT_CATEGORIES = [
   'Dresses',
@@ -45,12 +55,60 @@ function validateImageFile(file: File): string | null {
   return null;
 }
 
+// ─── Small building blocks ───────────────────────────────────────────────────
+
+const inputClass = (invalid: boolean, extra = '') =>
+  `w-full px-3 py-2 rounded-xl border bg-white ${invalid ? 'border-rose-400 focus:outline-rose-500' : 'border-slate-200'} ${extra}`;
+
+function Field({
+  label,
+  required,
+  error,
+  hint,
+  counter,
+  children,
+  className = '',
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  hint?: React.ReactNode;
+  counter?: { value: number; max: number };
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label className="block font-bold text-slate-700">
+          {label}
+          {required && <span className="text-rose-600"> *</span>}
+        </label>
+        {counter && (
+          <span className={`text-[10px] tabular-nums ${counter.value > counter.max ? 'text-rose-600 font-bold' : 'text-slate-400'}`}>
+            {counter.value}/{counter.max}
+          </span>
+        )}
+      </div>
+      {children}
+      {error ? (
+        <p role="alert" className="mt-1 text-[11px] font-medium text-rose-600">
+          {error}
+        </p>
+      ) : (
+        hint && <p className="mt-1 text-[11px] text-slate-500">{hint}</p>
+      )}
+    </div>
+  );
+}
+
 /** Upload-only image card: no URL typing. The image URL is created automatically by the upload. */
 function ImageUploadSlot({
   title,
   description,
   imageUrl,
   busy,
+  error,
   onFile,
   onRemove,
 }: {
@@ -58,6 +116,7 @@ function ImageUploadSlot({
   description: string;
   imageUrl: string;
   busy: boolean;
+  error?: string;
   onFile: (file: File) => void;
   onRemove: () => void;
 }) {
@@ -96,9 +155,11 @@ function ImageUploadSlot({
         className={`group relative h-72 w-full overflow-hidden rounded-2xl border transition-colors ${
           dragging
             ? 'border-slate-900 bg-slate-50 ring-2 ring-slate-900/10'
-            : imageUrl
-              ? 'border-slate-200 bg-slate-100'
-              : 'border-dashed border-slate-300 bg-slate-50/60 hover:border-slate-500'
+            : error
+              ? 'border-rose-400 bg-rose-50/40'
+              : imageUrl
+                ? 'border-slate-200 bg-slate-100'
+                : 'border-dashed border-slate-300 bg-slate-50/60 hover:border-slate-500'
         }`}
       >
         {imageUrl ? (
@@ -144,108 +205,222 @@ function ImageUploadSlot({
           </div>
         )}
       </div>
+      {error && (
+        <p role="alert" className="text-[11px] font-medium text-rose-600">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
 
+// ─── Form state ──────────────────────────────────────────────────────────────
+
+/** Everything the form edits, as the user typed it (numbers are still text here). */
+interface FormState {
+  name: string;
+  category: string;
+  subCategory: string;
+  collection: string;
+  shortDescription: string;
+  description: string;
+  tagsText: string;
+  imageUrl: string;
+  aiReferenceUrl: string;
+  price: string;
+  compareAtPrice: string;
+  costPrice: string;
+  sku: string;
+  stock: string;
+  lowStockThreshold: string;
+  warehouseLocation: string;
+  material: string;
+  weightGsm: string;
+  stretch: string;
+  fitType: string;
+  variantSizes: string;
+  variantColors: string;
+  variants: ProductVariant[];
+  brandStorefrontPublished: boolean;
+  marketplacePublished: boolean;
+  isTryOnEligible: boolean;
+  includeInBrandTryOn: boolean;
+  includeInMarketplaceTryOn: boolean;
+  tryOnCategory: string;
+  catalogStatus: string;
+}
+
+const STRETCH_OPTIONS = ['', 'NONE', 'LOW', 'MEDIUM', 'HIGH'];
+
+/** Number from text: empty means "not entered" (undefined), anything else is parsed as typed. */
+function parseNumber(text: string): number | undefined {
+  const trimmed = text.trim();
+  if (trimmed === '') return undefined;
+  const value = Number(trimmed);
+  return Number.isNaN(value) ? Number.NaN : value;
+}
+
+/** Turns what the user typed into the exact shape the contract (and the backend) validates. */
+function toContractValues(form: FormState): Record<string, unknown> {
+  const tags: string[] = [];
+  for (const raw of form.tagsText.split(',')) {
+    const tag = raw.trim();
+    if (tag && !tags.some((t) => t.toLowerCase() === tag.toLowerCase())) tags.push(tag);
+  }
+
+  const specs: Record<string, string> = {};
+  for (const [key, value] of [
+    ['material', form.material],
+    ['weightGsm', form.weightGsm],
+    ['stretch', form.stretch],
+    ['fitType', form.fitType],
+  ] as const) {
+    if (value.trim()) specs[key] = value.trim();
+  }
+
+  const compare = parseNumber(form.compareAtPrice);
+  const cost = parseNumber(form.costPrice);
+  const variantStock = form.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0);
+
+  return {
+    name: form.name,
+    category: form.category,
+    subCategory: form.subCategory,
+    collection: form.collection,
+    shortDescription: form.shortDescription,
+    description: form.description,
+    tags,
+    images: form.imageUrl ? [form.imageUrl] : [],
+    aiReferenceImage: form.aiReferenceUrl || null,
+    price: parseNumber(form.price),
+    compareAtPrice: compare === undefined ? null : compare,
+    costPrice: cost === undefined ? null : cost,
+    sku: form.sku,
+    // With sizes & colours, the total is the sum of the variants.
+    // Left blank, stock counts as 0 and the low-stock alert as 5.
+    stock: form.variants.length > 0 ? variantStock : (parseNumber(form.stock) ?? 0),
+    lowStockThreshold: parseNumber(form.lowStockThreshold) ?? 5,
+    warehouseLocation: form.warehouseLocation,
+    variants: form.variants,
+    specs,
+    brandStorefrontPublished: form.brandStorefrontPublished,
+    marketplacePublished: form.marketplacePublished,
+    isTryOnEligible: form.isTryOnEligible,
+    includeInBrandTryOn: form.includeInBrandTryOn,
+    includeInMarketplaceTryOn: form.includeInMarketplaceTryOn,
+    // When try-on is off the garment type does not matter; otherwise the brand must choose one.
+    tryOnCategory: form.tryOnCategory || (form.isTryOnEligible ? '' : 'all'),
+    catalogStatus: form.catalogStatus,
+  };
+}
+
+/** Same rule the server applies, so what you see here is what gets saved. */
+function applyConsistency(values: ProductFormValues): ProductFormValues {
+  const next = { ...values };
+  if (next.catalogStatus === 'DRAFT' || next.catalogStatus === 'ARCHIVED') {
+    next.brandStorefrontPublished = false;
+    next.marketplacePublished = false;
+  }
+  if (!next.isTryOnEligible) {
+    next.includeInBrandTryOn = false;
+    next.includeInMarketplaceTryOn = false;
+  } else if (!next.marketplacePublished) {
+    next.includeInMarketplaceTryOn = false;
+  }
+  return next;
+}
+
+function variantSkuPart(text: string): string {
+  return text.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() || 'X';
+}
+
 export function ProductEditorView({ existingProductId }: { existingProductId?: string }) {
   const router = useRouter();
+  const notify = useNotify();
   const profile = useWorkspaceStore((s) => s.profile);
   const products = useWorkspaceStore((s) => s.products);
   const addProduct = useWorkspaceStore((s) => s.addProduct);
   const updateProduct = useWorkspaceStore((s) => s.updateProduct);
-  const showToast = useUiStore((s) => s.showToast);
-  const hideToast = useUiStore((s) => s.hideToast);
 
   const existing = useMemo(
     () => (existingProductId ? products.find((p) => p.id === existingProductId) : undefined),
     [products, existingProductId]
   );
 
-  const [name, setName] = useState(existing?.name || '');
-  const [shortDescription, setShortDescription] = useState(existing?.shortDescription || '');
-  const [description, setDescription] = useState(existing?.description || '');
-  const [category, setCategory] = useState(existing?.category || '');
-  const [subCategory, setSubCategory] = useState(existing?.subCategory || 'Womenswear');
-  const [collection, setCollection] = useState(existing?.collections?.[0] || '');
-  const [tagsText, setTagsText] = useState((existing?.tags || ['editorial']).join(', '));
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-
-  // Display photo shown to customers, and a separate clear garment photo used only by the AI try-on model.
-  const [imageUrl, setImageUrl] = useState(existing?.image || '');
-  const [aiReferenceUrl, setAiReferenceUrl] = useState(
-    ((existing?.specs as Record<string, string> | undefined)?._aiReferenceImage as string) || ''
-  );
-  const [price, setPrice] = useState(String(existing?.price ?? 185));
-  const [compareAtPrice, setCompareAtPrice] = useState(String(existing?.compareAtPrice ?? ''));
-  const [costPrice, setCostPrice] = useState(String(existing?.costPrice ?? 72));
-  const [sku, setSku] = useState(existing?.sku || `AUR-${Math.floor(100 + Math.random() * 899)}`);
-  const [stock, setStock] = useState(String(existing?.stock ?? 30));
-  const [lowStockThreshold, setLowStockThreshold] = useState(String(existing?.lowStockThreshold ?? 5));
-  const [warehouseLocation, setWarehouseLocation] = useState(existing?.warehouseLocation || 'Dhaka Main Studio');
-
-  // Specs
-  const [material, setMaterial] = useState(existing?.specs?.material || '100% Organic Cotton');
-  const [weightGsm, setWeightGsm] = useState(existing?.specs?.weightGsm || '190 gsm');
-  const [stretch, setStretch] = useState(existing?.specs?.stretch || 'LOW');
-  const [fitType, setFitType] = useState(existing?.specs?.fitType || 'Tailored');
-
-  // Variants Matrix Generator
-  const [variantSizes, setVariantSizes] = useState('S, M, L');
-  const [variantColors, setVariantColors] = useState('Obsidian, Ivory');
-  const [variants, setVariants] = useState<ProductVariant[]>(existing?.variants || []);
-
-  // Separated visibility & AI try-on controls
-  const [catalogStatus, setCatalogStatus] = useState<Product['catalogStatus']>(existing?.catalogStatus || 'ACTIVE');
-  const [brandStorefrontPublished, setBrandStorefrontPublished] = useState(existing?.brandStorefrontPublished ?? true);
-  const [marketplacePublished, setMarketplacePublished] = useState(existing?.marketplacePublished ?? false);
-  const [isTryOnEligible, setIsTryOnEligible] = useState(existing?.isTryOnEligible ?? true);
-  const [tryOnCategory, setTryOnCategory] = useState(existing?.tryOnCategory || 'dresses');
-  const [includeInBrandTryOn, setIncludeInBrandTryOn] = useState(existing?.includeInBrandTryOn ?? true);
-  const [includeInMarketplaceTryOn, setIncludeInMarketplaceTryOn] = useState(existing?.includeInMarketplaceTryOn ?? false);
+  const [form, setForm] = useState<FormState>(() => ({
+    name: existing?.name || '',
+    category: existing?.category || '',
+    subCategory: existing?.subCategory || '',
+    collection: existing?.collections?.[0] || '',
+    shortDescription: existing?.shortDescription || '',
+    description: existing?.description || '',
+    tagsText: (existing?.tags || []).join(', '),
+    imageUrl: existing?.images?.[0] || '',
+    aiReferenceUrl:
+      existing?.aiReferenceImage || ((existing?.specs as Record<string, string> | undefined)?._aiReferenceImage ?? ''),
+    price: existing ? String(existing.price) : '',
+    compareAtPrice: existing?.compareAtPrice != null ? String(existing.compareAtPrice) : '',
+    costPrice: existing?.costPrice != null ? String(existing.costPrice) : '',
+    sku: existing?.sku || '',
+    stock: existing ? String(existing.stock ?? 0) : '',
+    lowStockThreshold: existing?.lowStockThreshold != null ? String(existing.lowStockThreshold) : '',
+    warehouseLocation: existing?.warehouseLocation || '',
+    material: existing?.specs?.material || '',
+    weightGsm: existing?.specs?.weightGsm || '',
+    stretch: existing?.specs?.stretch || '',
+    fitType: existing?.specs?.fitType || '',
+    variantSizes: '',
+    variantColors: '',
+    variants: existing?.variants || [],
+    brandStorefrontPublished: existing?.brandStorefrontPublished ?? true,
+    marketplacePublished: existing?.marketplacePublished ?? false,
+    isTryOnEligible: existing?.isTryOnEligible ?? true,
+    includeInBrandTryOn: existing?.includeInBrandTryOn ?? true,
+    includeInMarketplaceTryOn: existing?.includeInMarketplaceTryOn ?? false,
+    tryOnCategory: existing?.tryOnCategory || '',
+    catalogStatus: existing?.catalogStatus || 'ACTIVE',
+  }));
+  const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
   const [step, setStep] = useState(0);
   const [maxReached, setMaxReached] = useState(0);
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
+  const [serverErrors, setServerErrors] = useState<Partial<Record<ProductFieldName, string>>>({});
   const [uploadingSlot, setUploadingSlot] = useState<'display' | 'ai' | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [skuStatus, setSkuStatus] = useState<{ checked: boolean; available: boolean; message: string } | null>(null);
-  const [quotaInfo, setQuotaInfo] = useState<{ plan: string; used: number; limit: number; remaining: number } | null>(null);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [collectionOptions, setCollectionOptions] = useState<string[]>([]);
 
+  // Load the brand's own categories and collections.
   useEffect(() => {
     let active = true;
     brandWorkspaceApi
       .getProductFormOptions()
       .then((opts) => {
         if (!active || !opts) return;
-        if (Array.isArray(opts.categories) && opts.categories.length > 0) {
-          setCustomCategories(opts.categories);
-        }
-        if (Array.isArray(opts.collections)) {
-          setCollectionOptions(opts.collections);
-        }
-        if (opts.quota) {
-          setQuotaInfo(opts.quota);
-        }
+        if (Array.isArray(opts.categories) && opts.categories.length > 0) setCustomCategories(opts.categories);
+        if (Array.isArray(opts.collections)) setCollectionOptions(opts.collections);
       })
       .catch(() => {
         brandWorkspaceApi
           .getCategories()
           .then((cats) => {
-            if (active && Array.isArray(cats)) {
-              setCustomCategories(cats.map((c) => c.name).filter(Boolean));
-            }
+            if (active && Array.isArray(cats)) setCustomCategories(cats.map((c) => c.name).filter(Boolean));
           })
           .catch(() => {});
       });
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Live check that the SKU is not already used by another product.
   useEffect(() => {
-    const cleanSku = sku.trim();
+    const cleanSku = form.sku.trim();
     if (!cleanSku) {
       setSkuStatus(null);
       return;
@@ -255,9 +430,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
       brandWorkspaceApi
         .checkProductSku(cleanSku, existing?.id)
         .then((res) => {
-          if (active) {
-            setSkuStatus({ checked: true, available: res.available, message: res.message });
-          }
+          if (active) setSkuStatus({ checked: true, available: res.available, message: res.message });
         })
         .catch(() => {});
     }, 350);
@@ -265,15 +438,13 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
       active = false;
       clearTimeout(timer);
     };
-  }, [existing?.id, sku]);
+  }, [existing?.id, form.sku]);
 
-  // Use the brand's own categories. Only when none have been added yet, offer the standard list.
   const categoryOptions = useMemo(
     () =>
       Array.from(
         new Set(
-          [...(customCategories.length > 0 ? customCategories : DEFAULT_CATEGORIES), existing?.category || '']
-            .filter(Boolean)
+          [...(customCategories.length > 0 ? customCategories : DEFAULT_CATEGORIES), existing?.category || ''].filter(Boolean)
         )
       ),
     [customCategories, existing?.category]
@@ -283,37 +454,137 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     [collectionOptions, existing?.collections]
   );
 
-  const numericPrice = Number(price) || 0;
-  const numericCost = Number(costPrice) || 0;
-  const profitMarginPct =
-    numericPrice > 0 ? Math.round(((numericPrice - numericCost) / numericPrice) * 100) : 0;
-
-  const notify = (msg: string) => {
-    showToast(msg);
-    setTimeout(hideToast, 3000);
+  // ─── Validation: the same rules the server enforces ───
+  const parsed = useMemo(() => productFormSchema.safeParse(toContractValues(form)), [form]);
+  const errors = useMemo(() => (parsed.success ? {} : collectFieldErrors(parsed.error)), [parsed]);
+  const skuTaken = skuStatus?.checked === true && skuStatus.available === false;
+  const fieldErrors: Partial<Record<ProductFieldName, string>> = {
+    ...errors,
+    ...(skuTaken && !errors.sku ? { sku: skuStatus?.message || 'This SKU is already in use.' } : {}),
+    ...serverErrors,
   };
 
-  const generateVariantsMatrix = () => {
-    const sizes = variantSizes.split(',').map((s) => s.trim()).filter(Boolean);
-    const colors = variantColors.split(',').map((c) => c.trim()).filter(Boolean);
+  const stepOf = (field: ProductFieldName) => PRODUCT_STEP_FIELDS.findIndex((fields) => fields.includes(field));
+  /** Show an error once the field was touched, or its step was attempted, or the server rejected it. */
+  const showError = (field: ProductFieldName): string | undefined => {
+    const message = fieldErrors[field];
+    if (!message) return undefined;
+    if (serverErrors[field] || touched.has(field) || attemptedSteps.has(stepOf(field))) return message;
+    return undefined;
+  };
+  const touch = (field: ProductFieldName) =>
+    setTouched((prev) => (prev.has(field) ? prev : new Set(prev).add(field)));
+
+  const STEPS = [
+    { key: 'basics', label: 'Basics', hint: 'Title & category' },
+    { key: 'images', label: 'Images', hint: 'Photos' },
+    { key: 'pricing', label: 'Price & stock', hint: 'Price & SKU' },
+    { key: 'variants', label: 'Sizes & colours', hint: 'Optional' },
+    { key: 'publish', label: 'Try-On & publish', hint: 'Go live' },
+  ] as const;
+  const lastStep = STEPS.length - 1;
+
+  // A step is complete when none of its fields has an error. The store photo is also needed to go live.
+  const stepDone = STEPS.map((_, i) => {
+    const clean = PRODUCT_STEP_FIELDS[i].every((field) => !fieldErrors[field]);
+    if (i === 1) return clean && Boolean(form.imageUrl);
+    return clean;
+  });
+  stepDone[lastStep] = false;
+  // Each step unlocks only after every earlier step is complete.
+  const isUnlocked = (i: number) => stepDone.slice(0, i).every(Boolean);
+
+  const stepMissing = (i: number): string[] => {
+    const messages = PRODUCT_STEP_FIELDS[i].map((field) => fieldErrors[field]).filter(Boolean) as string[];
+    if (i === 1 && !form.imageUrl) messages.unshift('Upload a store photo.');
+    return messages;
+  };
+  const canContinue = stepDone[step];
+  const allRequiredDone = stepDone.slice(0, 3).every(Boolean);
+  const continueHint = canContinue ? '' : stepMissing(step)[0] || '';
+
+  const goToStep = (i: number) => {
+    if (i >= 0 && i <= lastStep && isUnlocked(i)) setStep(i);
+  };
+  const tryNext = () => {
+    if (!canContinue) {
+      setAttemptedSteps((prev) => new Set(prev).add(step));
+      return;
+    }
+    goToStep(step + 1);
+  };
+
+  // Remember the furthest step reached, and never stay on a step that has become locked.
+  useEffect(() => {
+    setMaxReached((m) => Math.max(m, step));
+    if (!isUnlocked(step)) {
+      const firstIncomplete = stepDone.findIndex((d, i) => i < lastStep && !d);
+      setStep(firstIncomplete === -1 ? 0 : firstIncomplete);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, parsed, form.imageUrl, skuStatus]);
+
+  const checklist = [
+    { label: 'Product title', done: !fieldErrors.name, required: true, step: 0 },
+    { label: 'Category', done: !fieldErrors.category, required: true, step: 0 },
+    { label: 'Store photo', done: Boolean(form.imageUrl), required: true, step: 1 },
+    { label: 'AI reference image', done: Boolean(form.aiReferenceUrl), required: false, step: 1 },
+    { label: 'Selling price', done: !fieldErrors.price, required: true, step: 2 },
+    { label: 'SKU', done: !fieldErrors.sku, required: true, step: 2 },
+  ];
+  const requiredLeft = checklist.filter((c) => c.required && !c.done).length;
+
+  const numericPrice = parseNumber(form.price) || 0;
+  const numericCost = parseNumber(form.costPrice);
+  const marginPct =
+    numericPrice > 0 && typeof numericCost === 'number' && !Number.isNaN(numericCost)
+      ? Math.round(((numericPrice - numericCost) / numericPrice) * 100)
+      : null;
+
+  // ─── Variants ───
+  const generateVariants = () => {
+    const sizes = Array.from(new Set(form.variantSizes.split(',').map((s) => s.trim()).filter(Boolean)));
+    const colors = Array.from(new Set(form.variantColors.split(',').map((c) => c.trim()).filter(Boolean)));
+    if (sizes.length === 0 || colors.length === 0) {
+      setErrorMessage('Enter at least one size and one colour to generate variants.');
+      return;
+    }
+    if (sizes.length * colors.length > PRODUCT_LIMITS.variantsMax) {
+      setErrorMessage(`That would create more than ${PRODUCT_LIMITS.variantsMax} variants. Use fewer sizes or colours.`);
+      return;
+    }
+    setErrorMessage(null);
+    const perVariant = Math.max(0, Math.floor((parseNumber(form.stock) || 0) / (sizes.length * colors.length)));
     const next: ProductVariant[] = [];
-    for (const c of colors) {
-      for (const s of sizes) {
-        const varSku = `${sku}-${c.slice(0, 3).toUpperCase()}-${s.toUpperCase()}`;
+    for (const color of colors) {
+      for (const size of sizes) {
+        const variantSku = `${form.sku.trim()}-${variantSkuPart(color)}-${variantSkuPart(size)}`;
         next.push({
-          id: `${varSku}_${Date.now()}`,
-          sku: varSku,
-          size: s,
-          color: c,
-          stockQuantity: Math.max(1, Math.floor((Number(stock) || 10) / Math.max(1, sizes.length * colors.length))),
-          available: true,
+          id: `v_${Date.now()}_${next.length + 1}`,
+          sku: variantSku,
+          size,
+          color,
+          stockQuantity: perVariant,
+          available: perVariant > 0,
         });
       }
     }
-    setVariants(next);
-    notify(`Generated ${next.length} SKU variant combinations.`);
+    set({ variants: next });
+    notify(`Generated ${next.length} size & colour combinations.`);
   };
 
+  const updateVariantStock = (id: string, text: string) => {
+    const quantity = Number(text);
+    set({
+      variants: form.variants.map((v) =>
+        v.id === id
+          ? { ...v, stockQuantity: Number.isNaN(quantity) ? 0 : quantity, available: !Number.isNaN(quantity) && quantity > 0 }
+          : v
+      ),
+    });
+  };
+
+  // ─── Images ───
   const handleUploadImage = async (slot: 'display' | 'ai', file: File) => {
     const invalid = validateImageFile(file);
     if (invalid) {
@@ -326,8 +597,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     try {
       const res = await brandWorkspaceApi.uploadMediaFile(file);
       if (res.ok && res.url) {
-        if (slot === 'display') setImageUrl(res.url);
-        else setAiReferenceUrl(res.url);
+        set(slot === 'display' ? { imageUrl: res.url } : { aiReferenceUrl: res.url });
         notify(slot === 'display' ? 'Product photo uploaded.' : 'AI reference image uploaded.');
       } else {
         setErrorMessage(res.error || 'Image upload failed. Please try again.');
@@ -339,141 +609,71 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     }
   };
 
-  const saveProductRecord = async (mode: 'draft' | 'storefront' | 'marketplace') => {
+  // ─── Save ───
+  const saveProduct = async () => {
     setErrorMessage(null);
-    if (!name.trim() || !sku.trim()) {
-      setErrorMessage('Garment title and SKU are required.');
-      return;
-    }
-    if (!category.trim()) {
-      setErrorMessage('Please select a category.');
+    setServerErrors({});
+
+    if (!parsed.success || skuTaken) {
+      const firstBad = PRODUCT_STEP_FIELDS.findIndex((fields) => fields.some((f) => fieldErrors[f]));
+      setAttemptedSteps(new Set(PRODUCT_STEP_FIELDS.map((_, i) => i)));
+      setErrorMessage('Some fields need attention before this can be saved. They are marked in red.');
+      if (firstBad >= 0) setStep(firstBad);
       return;
     }
 
-    const finalStorefront = mode === 'draft' ? false : mode === 'storefront' || brandStorefrontPublished;
-    const finalMarketplace = mode === 'marketplace' ? true : mode === 'draft' ? false : marketplacePublished;
-
-    const apiPayload = {
-      name: name.trim(),
-      sku: sku.trim(),
-      category: category.trim(),
-      subCategory: subCategory.trim(),
-      collection: collection.trim(),
-      description: description.trim() || shortDescription.trim(),
-      price: numericPrice,
-      ...(compareAtPrice !== '' ? { compareAtPrice: Number(compareAtPrice) } : {}),
-      stock: Math.max(0, Math.floor(Number(stock) || 0)),
-      images: imageUrl ? [imageUrl] : [],
-      tags: tagsText.split(',').map((t) => t.trim()).filter(Boolean),
-      brandStorefrontPublished: finalStorefront,
-      marketplacePublished: finalMarketplace,
-      isTryOnEligible,
-      tryOnCategory,
-      // `_aiReferenceImage` is a reserved key: the clear garment photo given to the AI try-on model (hidden from shoppers).
-      specs: { material, weightGsm, stretch, fitType, ...(aiReferenceUrl ? { _aiReferenceImage: aiReferenceUrl } : {}) },
-      ...(variants.length > 0 ? { variants } : {}),
-    };
+    // Exactly what the contract validated, with the same consistency rules the server applies.
+    const payload: ProductPayload = applyConsistency(parsed.data);
 
     setSaving(true);
     try {
       if (existing) {
-        const updated = await brandWorkspaceApi.updateProduct(existing.id, apiPayload);
-        updateProduct(existing.id, {
-          ...updated,
-          shortDescription,
-          costPrice: numericCost,
-          lowStockThreshold: Number(lowStockThreshold) || 5,
-          warehouseLocation,
-          includeInBrandTryOn,
-          includeInMarketplaceTryOn: finalMarketplace && includeInMarketplaceTryOn,
-        });
-        notify('Garment updated in tenant catalog.');
+        const updated = await brandWorkspaceApi.updateProduct(existing.id, payload);
+        updateProduct(existing.id, updated);
+        notify('Product updated.');
       } else {
-        const created = await brandWorkspaceApi.addProduct(apiPayload);
-        addProduct({
-          ...created,
-          shortDescription,
-          costPrice: numericCost,
-          lowStockThreshold: Number(lowStockThreshold) || 5,
-          warehouseLocation,
-          includeInBrandTryOn,
-          includeInMarketplaceTryOn: finalMarketplace && includeInMarketplaceTryOn,
-        });
-        notify('Garment created inside your private tenant catalog.');
+        const created = await brandWorkspaceApi.addProduct(payload);
+        addProduct(created);
+        notify('Product created.');
       }
       router.push('/dashboard/products');
     } catch (err) {
-      setErrorMessage(formatApiError(err, 'Failed to save product to backend catalog.'));
+      // Show the server's field-level messages next to the fields they belong to.
+      if (err instanceof ServiceError && err.issues && err.issues.length > 0) {
+        const mapped: Partial<Record<ProductFieldName, string>> = {};
+        for (const issue of err.issues) {
+          const field = String(issue.path).split(/[.[\]]/)[0] as ProductFieldName;
+          if (field && !(field in mapped)) mapped[field] = issue.message;
+        }
+        setServerErrors(mapped);
+        const firstBad = PRODUCT_STEP_FIELDS.findIndex((fields) => fields.some((f) => mapped[f]));
+        if (firstBad >= 0) setStep(firstBad);
+      }
+      setErrorMessage(formatApiError(err, 'Failed to save the product.'));
     } finally {
       setSaving(false);
     }
   };
 
-  const STEPS = [
-    { key: 'basics', label: 'Basics', hint: 'Title & category' },
-    { key: 'images', label: 'Images', hint: 'Photos' },
-    { key: 'pricing', label: 'Price & stock', hint: 'Price & SKU' },
-    { key: 'variants', label: 'Sizes & colours', hint: 'Optional' },
-    { key: 'publish', label: 'Try-On & publish', hint: 'Go live' },
-  ] as const;
-  const lastStep = STEPS.length - 1;
-
-  // A step is complete once its required fields are filled in. "Sizes & colours" is optional.
-  const skuTaken = skuStatus?.checked === true && skuStatus.available === false;
-  const stepDone = [
-    name.trim().length > 0 && category.trim().length > 0,
-    Boolean(imageUrl),
-    numericPrice > 0 && sku.trim().length > 0 && !skuTaken,
-    true,
-    false,
-  ];
-  // Each step unlocks only after every earlier step is complete.
-  const isUnlocked = (i: number) => stepDone.slice(0, i).every(Boolean);
-  const stepMissing = [
-    [
-      ...(name.trim() ? [] : ['a product title']),
-      ...(category.trim() ? [] : ['a category']),
-    ],
-    imageUrl ? [] : ['a store photo'],
-    [
-      ...(numericPrice > 0 ? [] : ['a selling price']),
-      ...(sku.trim() ? [] : ['a SKU']),
-      ...(skuTaken ? ['a SKU that is not already used'] : []),
-    ],
-    [],
-    [],
-  ];
-  const canContinue = stepDone[step];
-  const allRequiredDone = stepDone.slice(0, 3).every(Boolean);
-  const continueHint = canContinue ? '' : `Add ${stepMissing[step].join(' and ')} to continue.`;
-
-  const checklist = [
-    { label: 'Product title', done: name.trim().length > 0, required: true, step: 0 },
-    { label: 'Category', done: category.trim().length > 0, required: true, step: 0 },
-    { label: 'Store photo', done: Boolean(imageUrl), required: true, step: 1 },
-    { label: 'AI reference image', done: Boolean(aiReferenceUrl), required: false, step: 1 },
-    { label: 'Selling price', done: numericPrice > 0, required: true, step: 2 },
-    { label: 'SKU', done: sku.trim().length > 0 && !skuTaken, required: true, step: 2 },
-  ];
-  const requiredLeft = checklist.filter((c) => c.required && !c.done).length;
-
-  const goToStep = (i: number) => {
-    if (i >= 0 && i <= lastStep && isUnlocked(i)) setStep(i);
-  };
-
-  // Remember the furthest step reached, and never stay on a step that has become locked
-  // (for example after clearing the title on an earlier step).
-  useEffect(() => {
-    setMaxReached((m) => Math.max(m, step));
-    if (!isUnlocked(step)) {
-      const firstIncomplete = stepDone.findIndex((d, i) => i < lastStep && !d);
-      setStep(firstIncomplete === -1 ? 0 : firstIncomplete);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, name, category, imageUrl, price, sku, skuStatus]);
-
-  // Publishing follows the switches in the last step: marketplace if enabled, otherwise the storefront.
-  const publishMode: 'storefront' | 'marketplace' = marketplacePublished ? 'marketplace' : 'storefront';
+  const draftOrArchived = form.catalogStatus === 'DRAFT' || form.catalogStatus === 'ARCHIVED';
+  const textInput = (
+    field: ProductFieldName,
+    key: keyof FormState,
+    props: React.InputHTMLAttributes<HTMLInputElement> = {},
+    extraClass = ''
+  ) => (
+    <input
+      value={String(form[key] ?? '')}
+      onChange={(e) => {
+        set({ [key]: e.target.value } as Partial<FormState>);
+        if (serverErrors[field]) setServerErrors((prev) => ({ ...prev, [field]: undefined }));
+      }}
+      onBlur={() => touch(field)}
+      aria-invalid={Boolean(showError(field))}
+      className={inputClass(Boolean(showError(field)), extraClass)}
+      {...props}
+    />
+  );
 
   return (
     <PermissionGate module="products" action={existing ? 'edit' : 'create'}>
@@ -481,7 +681,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
         <PageHeader
           eyebrow={`Tenant Owned by ${profile.name}`}
           title={existing ? `Edit: ${existing.name}` : 'Add a product'}
-          subtitle="Work through the steps. You can save a draft at any time."
+          subtitle="Work through the steps. You can come back to any finished step."
           actions={
             <Link href="/dashboard/products">
               <Button variant="outline" size="sm" className="gap-1.5">
@@ -546,236 +746,367 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
           </ol>
         </nav>
 
-        {quotaInfo && !existing && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-            <span>
-              Catalog Plan Quota (<strong className="text-slate-900">{quotaInfo.plan}</strong>):{' '}
-              <strong className="text-slate-900">{quotaInfo.used}</strong> / {quotaInfo.limit} SKUs used
-            </span>
-            <span className="font-semibold text-emerald-700">{quotaInfo.remaining} slots remaining</span>
-          </div>
-        )}
-
         {errorMessage && <ErrorBanner message={errorMessage} onDismiss={() => setErrorMessage(null)} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-8 space-y-6">
+            {/* 1. BASICS */}
             {step === 0 && (
-              <>
-            <SectionCard title="Basic information">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Garment Title *</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Elysian Mulberry Silk Dress" className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Owning Brand Tenant (Locked)</label>
-                  <input value={profile.name} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold" />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Category *</label>
-                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                    <option value="">Select a category</option>
-                    {categoryOptions.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    {customCategories.length > 0 ? 'Your categories. ' : 'No categories added yet, showing standard ones. '}
-                    <Link href="/dashboard/products/categories/new" className="font-semibold text-slate-900 underline">
-                      + Add category
-                    </Link>
-                  </p>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Collection</label>
-                  <select value={collection} onChange={(e) => setCollection(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                    <option value="">No collection</option>
-                    {collectionChoices.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    <Link href="/dashboard/products/collections/new" className="font-semibold text-slate-900 underline">
-                      + Add collection
-                    </Link>
-                  </p>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Short Summary</label>
-                  <input value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} placeholder="Brief editorial hook for catalog cards" className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Description</label>
-                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Tags (comma separated)</label>
-                  <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-              </div>
-            </SectionCard>
+              <SectionCard title="Basic information">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <Field label="Garment title" required className="sm:col-span-2" error={showError('name')} counter={{ value: form.name.trim().length, max: PRODUCT_LIMITS.nameMax }}>
+                    {textInput('name', 'name', { placeholder: 'e.g. Elysian Mulberry Silk Dress', maxLength: PRODUCT_LIMITS.nameMax + 20 })}
+                  </Field>
 
-              </>
+                  <Field
+                    label="Category"
+                    required
+                    error={showError('category')}
+                    hint={
+                      <>
+                        {customCategories.length > 0 ? 'Your categories. ' : 'No categories added yet, showing standard ones. '}
+                        <Link href="/dashboard/products/categories/new" className="font-semibold text-slate-900 underline">
+                          + Add category
+                        </Link>
+                      </>
+                    }
+                  >
+                    <select
+                      value={form.category}
+                      onChange={(e) => set({ category: e.target.value })}
+                      onBlur={() => touch('category')}
+                      className={inputClass(Boolean(showError('category')))}
+                    >
+                      <option value="">Select a category</option>
+                      {categoryOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Field
+                    label="Collection"
+                    error={showError('collection')}
+                    hint={
+                      <Link href="/dashboard/products/collections/new" className="font-semibold text-slate-900 underline">
+                        + Add collection
+                      </Link>
+                    }
+                  >
+                    <select
+                      value={form.collection}
+                      onChange={(e) => set({ collection: e.target.value })}
+                      className={inputClass(Boolean(showError('collection')))}
+                    >
+                      <option value="">No collection</option>
+                      {collectionChoices.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Field
+                    label="Short summary"
+                    className="sm:col-span-2"
+                    error={showError('shortDescription')}
+                    counter={{ value: form.shortDescription.trim().length, max: PRODUCT_LIMITS.shortDescriptionMax }}
+                  >
+                    {textInput('shortDescription', 'shortDescription', { placeholder: 'One line shown on product cards', maxLength: PRODUCT_LIMITS.shortDescriptionMax + 20 })}
+                  </Field>
+
+                  <Field
+                    label="Description"
+                    className="sm:col-span-2"
+                    error={showError('description')}
+                    counter={{ value: form.description.trim().length, max: PRODUCT_LIMITS.descriptionMax }}
+                  >
+                    <textarea
+                      rows={4}
+                      placeholder="Describe the fabric, fit, and how it feels to wear"
+                      value={form.description}
+                      onChange={(e) => set({ description: e.target.value })}
+                      onBlur={() => touch('description')}
+                      className={inputClass(Boolean(showError('description')))}
+                    />
+                  </Field>
+
+                  <Field
+                    label="Tags"
+                    className="sm:col-span-2"
+                    error={showError('tags')}
+                    hint={`Separate with commas. Up to ${PRODUCT_LIMITS.tagsMax} tags, ${PRODUCT_LIMITS.tagMax} characters each. Letters, numbers, spaces, - and _ only.`}
+                  >
+                    {textInput('tags', 'tagsText', { placeholder: 'silk, evening wear, eid' })}
+                  </Field>
+                </div>
+              </SectionCard>
             )}
+
+            {/* 2. IMAGES */}
             {step === 1 && (
-              <>
-            <SectionCard
-              title="Images"
-              subtitle="Upload only. The image links are created automatically."
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <ImageUploadSlot
-                  title="Store Photo (shown to customers)"
-                  description="Your styled or model photo for the storefront and marketplace."
-                  imageUrl={imageUrl}
-                  busy={uploadingSlot === 'display'}
-                  onFile={(f) => void handleUploadImage('display', f)}
-                  onRemove={() => setImageUrl('')}
-                />
-                <ImageUploadSlot
-                  title="AI Reference Image (not shown to customers)"
-                  description="A clear, flat photo of the garment (front view, plain background, nothing covering it). The Virtual Try-On AI uses this so it understands the real product."
-                  imageUrl={aiReferenceUrl}
-                  busy={uploadingSlot === 'ai'}
-                  onFile={(f) => void handleUploadImage('ai', f)}
-                  onRemove={() => setAiReferenceUrl('')}
-                />
-              </div>
-            </SectionCard>
-
-              </>
+              <SectionCard title="Images" subtitle="Upload only. The image links are created automatically.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <ImageUploadSlot
+                    title="Store Photo (shown to customers)"
+                    description="Your styled or model photo for the storefront and marketplace."
+                    imageUrl={form.imageUrl}
+                    busy={uploadingSlot === 'display'}
+                    error={showError('images') || (attemptedSteps.has(1) && !form.imageUrl ? 'Upload a store photo to continue.' : undefined)}
+                    onFile={(f) => void handleUploadImage('display', f)}
+                    onRemove={() => set({ imageUrl: '' })}
+                  />
+                  <ImageUploadSlot
+                    title="AI Reference Image (not shown to customers)"
+                    description="A clear, flat photo of the garment (front view, plain background, nothing covering it). The Virtual Try-On AI uses this so it understands the real product."
+                    imageUrl={form.aiReferenceUrl}
+                    busy={uploadingSlot === 'ai'}
+                    error={showError('aiReferenceImage')}
+                    onFile={(f) => void handleUploadImage('ai', f)}
+                    onRemove={() => set({ aiReferenceUrl: '' })}
+                  />
+                </div>
+              </SectionCard>
             )}
+
+            {/* 3. PRICE & STOCK */}
             {step === 2 && (
               <>
-            <SectionCard title="Pricing" subtitle="The private cost is only visible to your team.">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Selling Price (৳) *</label>
-                  <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold" />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Compare-At (৳)</label>
-                  <input type="number" value={compareAtPrice} onChange={(e) => setCompareAtPrice(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Private Cost (৳)</label>
-                  <input type="number" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <span className="text-[10px] font-bold uppercase text-emerald-700">Est. Margin</span>
-                  <p className="text-lg font-extrabold text-emerald-800">{profitMarginPct}%</p>
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Stock & details">
-              <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div>
-                  <label className="block font-bold mb-1">Master SKU *</label>
-                  <input value={sku} onChange={(e) => setSku(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" />
-                  {skuStatus?.checked && (
-                    <p className={`mt-1 text-[10px] font-semibold ${skuStatus.available ? 'text-emerald-700' : 'text-rose-600'}`}>
-                      {skuStatus.message}
-                    </p>
-                  )}
-                </div>
-                <div><label className="block font-bold mb-1">Total Stock</label><input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Low-Stock Alert</label><input type="number" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Warehouse</label><input value={warehouseLocation} onChange={(e) => setWarehouseLocation(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div className="min-[400px]:col-span-2"><label className="block font-bold mb-1">Material Composition</label><input value={material} onChange={(e) => setMaterial(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Weight</label><input value={weightGsm} onChange={(e) => setWeightGsm(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Fit Type</label><input value={fitType} onChange={(e) => setFitType(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Sub-Category</label><input value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Stretch</label><input value={stretch} onChange={(e) => setStretch(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-              </div>
-            </SectionCard>
-              </>
-            )}
-            {step === 3 && (
-              <>
-            <SectionCard title="Sizes & colours (optional)" right={<Button type="button" size="sm" variant="outline" onClick={generateVariantsMatrix} className="gap-1"><Plus className="w-3.5 h-3.5" /> Generate Variants</Button>}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <input value={variantSizes} onChange={(e) => setVariantSizes(e.target.value)} placeholder="Sizes (XS, S, M, L, XL)" className="px-3 py-2 rounded-xl border border-slate-200" />
-                <input value={variantColors} onChange={(e) => setVariantColors(e.target.value)} placeholder="Colors (Obsidian, Ivory)" className="px-3 py-2 rounded-xl border border-slate-200" />
-              </div>
-              {variants.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-xs">
-                  {variants.map((v) => (
-                    <div key={v.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-bold">{v.size} / {v.color}</span>
-                      <span className="font-mono text-slate-500">{v.sku} ({v.stockQuantity}u)</span>
+                <SectionCard title="Pricing" subtitle="The private cost is only visible to your team.">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                    <Field label="Selling price (৳)" required error={showError('price')}>
+                      {textInput('price', 'price', { type: 'number', inputMode: 'decimal', min: 0.01, max: PRODUCT_LIMITS.priceMax, step: '0.01', placeholder: '0.00' }, 'font-bold')}
+                    </Field>
+                    <Field label="Compare-at (৳)" error={showError('compareAtPrice')} hint="Optional. The crossed-out price.">
+                      {textInput('compareAtPrice', 'compareAtPrice', { type: 'number', inputMode: 'decimal', min: 0, step: '0.01', placeholder: '0.00' })}
+                    </Field>
+                    <Field label="Private cost (৳)" error={showError('costPrice')} hint="Optional. Never shown to shoppers.">
+                      {textInput('costPrice', 'costPrice', { type: 'number', inputMode: 'decimal', min: 0, step: '0.01', placeholder: '0.00' })}
+                    </Field>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
+                      <span className="text-[10px] font-bold uppercase text-emerald-700">Est. margin</span>
+                      <p className="text-lg font-extrabold text-emerald-800">{marginPct === null ? '—' : `${marginPct}%`}</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </SectionCard>
+                  </div>
+                </SectionCard>
 
+                <SectionCard title="Stock & details">
+                  <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <Field
+                      label="Master SKU"
+                      required
+                      error={showError('sku')}
+                      hint={skuStatus?.checked && !skuTaken && !fieldErrors.sku ? <span className="font-semibold text-emerald-700">{skuStatus.message}</span> : undefined}
+                    >
+                      {textInput('sku', 'sku', { maxLength: PRODUCT_LIMITS.skuMax + 10, autoCapitalize: 'characters', placeholder: 'e.g. AUR-1001' }, 'font-mono')}
+                    </Field>
+                    <Field
+                      label="Total stock"
+                      error={showError('stock')}
+                      hint={form.variants.length > 0 ? 'Sum of your sizes & colours.' : undefined}
+                    >
+                      {form.variants.length > 0 ? (
+                        <input readOnly value={form.variants.reduce((s, v) => s + (Number(v.stockQuantity) || 0), 0)} className={inputClass(false, 'bg-slate-100 text-slate-600')} />
+                      ) : (
+                        textInput('stock', 'stock', { type: 'number', inputMode: 'numeric', min: 0, max: PRODUCT_LIMITS.stockMax, step: '1', placeholder: '0' })
+                      )}
+                    </Field>
+                    <Field label="Low-stock alert" error={showError('lowStockThreshold')} hint="Warn me below this many.">
+                      {textInput('lowStockThreshold', 'lowStockThreshold', { type: 'number', inputMode: 'numeric', min: 0, step: '1', placeholder: '5' })}
+                    </Field>
+                    <Field label="Warehouse" error={showError('warehouseLocation')}>
+                      {textInput('warehouseLocation', 'warehouseLocation', { placeholder: 'e.g. Dhaka Main Studio', maxLength: PRODUCT_LIMITS.warehouseMax + 10 })}
+                    </Field>
+                    <Field label="Material" className="min-[400px]:col-span-2" error={showError('specs')}>
+                      {textInput('specs', 'material', { placeholder: 'e.g. 100% Mulberry Silk', maxLength: PRODUCT_LIMITS.specValueMax + 10 })}
+                    </Field>
+                    <Field label="Weight">
+                      {textInput('specs', 'weightGsm', { placeholder: 'e.g. 190 gsm', maxLength: PRODUCT_LIMITS.specValueMax + 10 })}
+                    </Field>
+                    <Field label="Fit type">
+                      {textInput('specs', 'fitType', { placeholder: 'e.g. Tailored', maxLength: PRODUCT_LIMITS.specValueMax + 10 })}
+                    </Field>
+                    <Field label="Sub-category" error={showError('subCategory')}>
+                      {textInput('subCategory', 'subCategory', { placeholder: 'e.g. Womenswear', maxLength: PRODUCT_LIMITS.subCategoryMax + 10 })}
+                    </Field>
+                    <Field label="Stretch">
+                      <select value={form.stretch} onChange={(e) => set({ stretch: e.target.value })} className={inputClass(false)}>
+                        {STRETCH_OPTIONS.map((o) => (
+                          <option key={o} value={o}>
+                            {o === '' ? 'Not set' : o.charAt(0) + o.slice(1).toLowerCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                </SectionCard>
               </>
             )}
+
+            {/* 4. SIZES & COLOURS */}
+            {step === 3 && (
+              <SectionCard
+                title="Sizes & colours (optional)"
+                subtitle="Skip this if the product has a single size and colour."
+                right={
+                  <Button type="button" size="sm" variant="outline" onClick={generateVariants} className="gap-1">
+                    <Plus className="w-3.5 h-3.5" /> Generate
+                  </Button>
+                }
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <Field label="Sizes" hint="Separate with commas.">
+                    <input value={form.variantSizes} onChange={(e) => set({ variantSizes: e.target.value })} placeholder="XS, S, M, L, XL" className={inputClass(false)} />
+                  </Field>
+                  <Field label="Colours" hint="Separate with commas.">
+                    <input value={form.variantColors} onChange={(e) => set({ variantColors: e.target.value })} placeholder="Obsidian, Ivory" className={inputClass(false)} />
+                  </Field>
+                </div>
+                {showError('variants') && (
+                  <p role="alert" className="text-[11px] font-medium text-rose-600">
+                    {showError('variants')}
+                  </p>
+                )}
+                {form.variants.length > 0 && (
+                  <div className="space-y-2 pt-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-slate-700">{form.variants.length} combinations</p>
+                      <button type="button" onClick={() => set({ variants: [] })} className="font-semibold text-rose-600 hover:underline">
+                        Clear all
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {form.variants.map((v) => (
+                        <div key={v.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                          <div className="min-w-0">
+                            <p className="font-bold">
+                              {v.size} / {v.color}
+                            </p>
+                            <p className="truncate font-mono text-[10px] text-slate-500">{v.sku}</p>
+                          </div>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            aria-label={`Stock for ${v.size} ${v.color}`}
+                            value={v.stockQuantity}
+                            onChange={(e) => updateVariantStock(v.id, e.target.value)}
+                            className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </SectionCard>
+            )}
+
+            {/* 5. TRY-ON & PUBLISH */}
             {step === 4 && (
               <>
-            <SectionCard title="Virtual Try-On" subtitle="Let shoppers see this garment on themselves">
-              <div className="space-y-3 text-xs">
-                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer font-bold">
-                  <span className="flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-amber-600" /> Enable Virtual Try-On</span>
-                  <input type="checkbox" checked={isTryOnEligible} onChange={(e) => setIsTryOnEligible(e.target.checked)} className="rounded accent-slate-950" />
-                </label>
+                <SectionCard title="Virtual Try-On" subtitle="Let shoppers see this garment on themselves">
+                  <div className="space-y-3 text-xs">
+                    <label className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-amber-600" /> Enable Virtual Try-On
+                      </span>
+                      <input type="checkbox" checked={form.isTryOnEligible} onChange={(e) => set({ isTryOnEligible: e.target.checked })} className="rounded accent-slate-950" />
+                    </label>
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Garment AI Category</label>
-                  <select value={tryOnCategory} onChange={(e) => setTryOnCategory(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                    <option value="tops">Tops / Shirts / Hoodies</option>
-                    <option value="bottoms">Bottoms / Pants / Jeans</option>
-                    <option value="dresses">Dresses / Sarees / Full</option>
-                    <option value="outerwear">Outerwear / Jackets</option>
-                  </select>
-                </div>
+                    <Field label="Garment type for the AI" error={showError('tryOnCategory')}>
+                      <select
+                        value={form.tryOnCategory}
+                        onChange={(e) => set({ tryOnCategory: e.target.value })}
+                        disabled={!form.isTryOnEligible}
+                        className={inputClass(Boolean(showError('tryOnCategory')), 'disabled:bg-slate-100 disabled:text-slate-400')}
+                      >
+                        <option value="">Select garment type</option>
+                        {TRY_ON_CATEGORIES.map((value) => (
+                          <option key={value} value={value}>
+                            {{ tops: 'Tops / Shirts / Hoodies', bottoms: 'Bottoms / Pants / Jeans', dresses: 'Dresses / Sarees / Full body', outerwear: 'Outerwear / Jackets', all: 'Any garment type' }[value]}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={includeInBrandTryOn} onChange={(e) => setIncludeInBrandTryOn(e.target.checked)} className="rounded accent-slate-950" />
-                  <span>Include in Brand Try-On Page (<code>/try/{profile.slug}</code>)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={includeInMarketplaceTryOn} onChange={(e) => setIncludeInMarketplaceTryOn(e.target.checked)} className="rounded accent-slate-950" />
-                  <span>Include in Marketplace Try-On when published</span>
-                </label>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Where to show this product" subtitle="Choose who can see it">
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">1. Catalog Status</label>
-                  <select value={catalogStatus} onChange={(e) => setCatalogStatus(e.target.value as any)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="DRAFT">DRAFT</option>
-                    <option value="ARCHIVED">ARCHIVED</option>
-                  </select>
-                </div>
-
-                <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer">
-                  <div>
-                    <p className="font-bold text-slate-900">2. Brand Storefront Visible</p>
-                    <p className="text-[11px] text-slate-500">Show on /brands/{profile.slug}</p>
+                    <label className={`flex items-center gap-2 ${form.isTryOnEligible ? 'cursor-pointer' : 'opacity-50'}`}>
+                      <input
+                        type="checkbox"
+                        disabled={!form.isTryOnEligible}
+                        checked={form.isTryOnEligible && form.includeInBrandTryOn}
+                        onChange={(e) => set({ includeInBrandTryOn: e.target.checked })}
+                        className="rounded accent-slate-950"
+                      />
+                      <span>
+                        Include in Brand Try-On Page (<code>/try/{profile.slug}</code>)
+                      </span>
+                    </label>
+                    <label className={`flex items-center gap-2 ${form.isTryOnEligible && form.marketplacePublished && !draftOrArchived ? 'cursor-pointer' : 'opacity-50'}`}>
+                      <input
+                        type="checkbox"
+                        disabled={!form.isTryOnEligible || !form.marketplacePublished || draftOrArchived}
+                        checked={form.isTryOnEligible && form.marketplacePublished && !draftOrArchived && form.includeInMarketplaceTryOn}
+                        onChange={(e) => set({ includeInMarketplaceTryOn: e.target.checked })}
+                        className="rounded accent-slate-950"
+                      />
+                      <span>Include in Marketplace Try-On (needs a marketplace listing)</span>
+                    </label>
                   </div>
-                  <input type="checkbox" checked={brandStorefrontPublished} onChange={(e) => setBrandStorefrontPublished(e.target.checked)} className="rounded accent-slate-950" />
-                </label>
+                </SectionCard>
 
-                <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer">
-                  <div>
-                    <p className="font-bold text-slate-900">3. Global Marketplace Post</p>
-                    <p className="text-[11px] text-slate-500">Explicitly publish globally</p>
+                <SectionCard title="Where to show this product" subtitle="Choose who can see it">
+                  <div className="space-y-3 text-xs">
+                    <Field label="Catalog status" error={showError('catalogStatus')} hint={draftOrArchived ? 'Draft and archived products are hidden from shoppers.' : undefined}>
+                      <select value={form.catalogStatus} onChange={(e) => set({ catalogStatus: e.target.value })} className={inputClass(Boolean(showError('catalogStatus')))}>
+                        {CATALOG_STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s.charAt(0) + s.slice(1).toLowerCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <label className={`flex items-center justify-between rounded-xl border border-slate-200 p-3 ${draftOrArchived ? 'opacity-50' : 'cursor-pointer'}`}>
+                      <div>
+                        <p className="font-bold text-slate-900">Brand storefront</p>
+                        <p className="text-[11px] text-slate-500">Show on /brands/{profile.slug}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        disabled={draftOrArchived}
+                        checked={form.brandStorefrontPublished && !draftOrArchived}
+                        onChange={(e) => set({ brandStorefrontPublished: e.target.checked })}
+                        className="rounded accent-slate-950"
+                      />
+                    </label>
+
+                    <label className={`flex items-center justify-between rounded-xl border border-slate-200 p-3 ${draftOrArchived ? 'opacity-50' : 'cursor-pointer'}`}>
+                      <div>
+                        <p className="font-bold text-slate-900">Global marketplace</p>
+                        <p className="text-[11px] text-slate-500">Also list this product for all shoppers</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        disabled={draftOrArchived}
+                        checked={form.marketplacePublished && !draftOrArchived}
+                        onChange={(e) => set({ marketplacePublished: e.target.checked })}
+                        className="rounded accent-slate-950"
+                      />
+                    </label>
+
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <span className="font-semibold text-slate-600">Will be saved as:</span>
+                      <StatusBadge
+                        status={
+                          draftOrArchived ? 'DRAFT' : form.marketplacePublished ? 'PUBLISHED' : form.brandStorefrontPublished ? 'STOREFRONT_ONLY' : 'DRAFT'
+                        }
+                      />
+                    </div>
                   </div>
-                  <input type="checkbox" checked={marketplacePublished} onChange={(e) => setMarketplacePublished(e.target.checked)} className="rounded accent-slate-950" />
-                </label>
-
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                  <span className="font-semibold text-slate-600">Preview State:</span>
-                  <StatusBadge status={marketplacePublished ? 'PUBLISHED' : brandStorefrontPublished ? 'STOREFRONT_ONLY' : 'DRAFT'} />
-                </div>
-              </div>
-            </SectionCard>
+                </SectionCard>
               </>
             )}
           </div>
@@ -790,7 +1121,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                       type="button"
                       onClick={() => goToStep(c.step)}
                       disabled={!isUnlocked(c.step)}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 disabled:cursor-not-allowed"
                     >
                       <span
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
@@ -816,26 +1147,23 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               Back
             </Button>
             {step < lastStep && (
-              <Button size="sm" disabled={!canContinue} onClick={() => goToStep(step + 1)}>
+              <Button size="sm" onClick={tryNext} aria-disabled={!canContinue} className={canContinue ? '' : 'opacity-60'}>
                 Next
               </Button>
             )}
             {continueHint && <span className="hidden truncate text-xs font-medium text-amber-700 sm:block">{continueHint}</span>}
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={saving} onClick={() => saveProductRecord('draft')}>
-              Save Draft
-            </Button>
+          {step === lastStep && (
             <Button
               size="sm"
               disabled={saving || !allRequiredDone}
-              title={allRequiredDone ? undefined : 'Finish Basics, Images and Price & stock to publish'}
-              onClick={() => saveProductRecord(publishMode)}
+              title={allRequiredDone ? undefined : 'Finish Basics, Images and Price & stock to save'}
+              onClick={() => void saveProduct()}
               className="gap-1.5"
             >
-              <Check className="w-3.5 h-3.5" /> {saving ? 'Saving...' : marketplacePublished ? 'Save & Publish to Marketplace' : 'Save & Publish'}
+              <Check className="w-3.5 h-3.5" /> {saving ? 'Saving...' : existing ? 'Save changes' : 'Save product'}
             </Button>
-          </div>
+          )}
         </div>
       </div>
     </PermissionGate>

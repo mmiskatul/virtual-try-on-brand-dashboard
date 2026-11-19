@@ -91,6 +91,8 @@ export interface Product {
   includeInBrandTryOn?: boolean;
   includeInMarketplaceTryOn?: boolean;
   imageQualityStatus?: 'VERIFIED' | 'NEEDS_CHECK';
+  /** Clear flat photo of the garment for the AI try-on model. Never shown to shoppers. */
+  aiReferenceImage?: string;
   image: string;
   images?: string[];
   videoUrl?: string;
