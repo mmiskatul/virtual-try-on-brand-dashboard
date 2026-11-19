@@ -49,7 +49,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
       { label: 'Products', href: '/dashboard/products', module: 'products' },
       { label: 'Product Categories', href: '/dashboard/products/categories', module: 'products', hidden: true },
       { label: 'Collections', href: '/dashboard/products/collections', module: 'products', hidden: true },
-      { label: 'Attributes & Fabrics', href: '/dashboard/products/attributes', module: 'products', hidden: true },
       { label: 'Bulk Import (CSV)', href: '/dashboard/products/import', module: 'products', hidden: true },
       { label: 'Export Catalog', href: '/dashboard/products/export', module: 'products', hidden: true },
     ],

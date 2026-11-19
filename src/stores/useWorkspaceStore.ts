@@ -7,7 +7,6 @@ import {
   BrandProfile,
   CustomerReview,
   DiscountCode,
-  Fabric,
   InventoryMovement,
   MarketingCampaign,
   MarketplacePost,
@@ -44,7 +43,6 @@ export interface WorkspaceState {
 
   profile: BrandProfile;
   products: Product[];
-  fabrics: Fabric[];
   marketplacePosts: MarketplacePost[];
   orders: Order[];
   returns: ReturnRequest[];
@@ -88,10 +86,6 @@ export interface WorkspaceState {
   deleteProduct: (id: string) => void;
   adjustStock: (id: string, delta: number, reason?: string, location?: string) => void;
 
-  setFabrics: (fabrics: Fabric[]) => void;
-  addFabric: (fabric: Fabric) => void;
-  updateFabric: (id: string, updates: Partial<Fabric>) => void;
-  deleteFabric: (id: string) => void;
 
   addMarketplacePost: (post: MarketplacePost) => void;
   updateMarketplacePost: (id: string, updates: Partial<MarketplacePost>) => void;
@@ -135,7 +129,6 @@ export interface WorkspaceState {
   setBackendOnboardingStatus: (tenantId: string, onboarded: boolean | null) => void;
   saveOnboardingProfileForTenant: (tenantId: string, partial: Partial<BrandProfile>) => void;
   restoreOnboardingDraftSnapshot: (tenantId: string, snapshot: Partial<BrandProfile> | null) => void;
-  addFabricRecord: (fabric: Fabric) => void;
   recordAudit: (action: string, entity: string, details: string) => void;
 }
 
@@ -172,12 +165,6 @@ const workspaceBoundActions = {
   },
   adjustStock: (id: string, delta: number, reason?: string, location?: string) => {
     store.dispatch(workspaceActions.adjustStock({ id, delta, reason, location }));
-  },
-  setFabrics: (fabrics: Fabric[]) => {
-    store.dispatch(workspaceActions.setFabrics(fabrics));
-  },
-  addFabric: (fabric: Fabric) => {
-    store.dispatch(workspaceActions.addFabric(fabric));
   },
   addMarketplacePost: (post: MarketplacePost) => {
     store.dispatch(workspaceActions.addMarketplacePost(post));
@@ -292,15 +279,6 @@ const workspaceBoundActions = {
   },
   restoreOnboardingDraftSnapshot: (tenantId: string, snapshot: Partial<BrandProfile> | null) => {
     store.dispatch(workspaceActions.restoreOnboardingDraftSnapshot({ tenantId, snapshot }));
-  },
-  addFabricRecord: (fabric: Fabric) => {
-    store.dispatch(workspaceActions.addFabricRecord(fabric));
-  },
-  updateFabric: (id: string, updates: Partial<Fabric>) => {
-    store.dispatch(workspaceActions.updateFabric({ id, updates }));
-  },
-  deleteFabric: (id: string) => {
-    store.dispatch(workspaceActions.deleteFabric(id));
   },
   recordAudit: (action: string, entity: string, details: string) => {
     store.dispatch(workspaceActions.recordAudit({ action, entity, details }));

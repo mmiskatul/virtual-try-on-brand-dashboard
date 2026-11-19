@@ -42,16 +42,6 @@ export const storefrontSchema = z.object({
 
 export type StorefrontFormValues = z.infer<typeof storefrontSchema>;
 
-export const fabricSchema = z.object({
-  name: z.string().min(2, 'Fabric name must be at least 2 characters'),
-  composition: z.string().min(3, 'Composition details required (e.g. 100% Organic Silk)'),
-  stretch: z.enum(['NONE', 'LOW', 'MEDIUM', 'HIGH']),
-  thickness: z.enum(['LIGHT', 'MEDIUM', 'HEAVY']),
-  care: z.string().min(3, 'Care instructions required')
-});
-
-export type FabricFormValues = z.infer<typeof fabricSchema>;
-
 // Strict, ASCII-only email format: local@domain.tld (no spaces, emoji, or non-Latin characters).
 const EMAIL_FORMAT =
   /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,24}$/;

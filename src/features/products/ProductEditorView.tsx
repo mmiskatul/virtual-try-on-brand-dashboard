@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, Plus, Sparkles, Upload } from 'lucide-react';
+import { ArrowLeft, Check, ImagePlus, Loader2, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -15,7 +16,6 @@ import {
   SectionCard,
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
-import { ProductsNavTabs } from '../../components/shared/ProductsNavTabs';
 import { Button } from '../../components/ui/button';
 
 const DEFAULT_CATEGORIES = [
@@ -31,6 +31,121 @@ const DEFAULT_CATEGORIES = [
   'Sarees',
   'Accessories',
 ];
+
+const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+function validateImageFile(file: File): string | null {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) return 'Please upload a PNG, JPG or WEBP image.';
+  if (file.size === 0) return 'This file is empty. Please choose a different image.';
+  if (file.size > MAX_IMAGE_BYTES) {
+    return `Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). The maximum size is 10MB.`;
+  }
+  return null;
+}
+
+/** Upload-only image card: no URL typing. The image URL is created automatically by the upload. */
+function ImageUploadSlot({
+  title,
+  description,
+  imageUrl,
+  busy,
+  onFile,
+  onRemove,
+}: {
+  title: string;
+  description: string;
+  imageUrl: string;
+  busy: boolean;
+  onFile: (file: File) => void;
+  onRemove: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <div className="space-y-2">
+      <div>
+        <p className="text-xs font-bold text-slate-800">{title}</p>
+        <p className="text-[11px] text-slate-500 leading-snug">{description}</p>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+          e.currentTarget.value = '';
+        }}
+      />
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f && !busy) onFile(f);
+        }}
+        className={`group relative h-72 w-full overflow-hidden rounded-2xl border transition-colors ${
+          dragging
+            ? 'border-slate-900 bg-slate-50 ring-2 ring-slate-900/10'
+            : imageUrl
+              ? 'border-slate-200 bg-slate-100'
+              : 'border-dashed border-slate-300 bg-slate-50/60 hover:border-slate-500'
+        }`}
+      >
+        {imageUrl ? (
+          <>
+            <SafeImage src={imageUrl} alt={title} fill className="object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/50 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => inputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-900 shadow hover:bg-slate-100 disabled:opacity-60"
+              >
+                <Upload className="h-3.5 w-3.5" /> Replace
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onRemove}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-rose-600 shadow hover:bg-rose-50 disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Remove
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => inputRef.current?.click()}
+            className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
+              <ImagePlus className="h-5 w-5 text-slate-500" />
+            </span>
+            <span className="text-xs font-semibold text-slate-800">Click or drag &amp; drop to upload</span>
+            <span className="text-[11px] text-slate-400">PNG, JPG or WEBP · up to 10MB</span>
+          </button>
+        )}
+        {busy && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/85">
+            <Loader2 className="h-6 w-6 animate-spin text-slate-900" />
+            <span className="text-xs font-semibold text-slate-700">Uploading…</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function formatApiError(err: unknown, fallback: string): string {
   if (err instanceof ServiceError) {
@@ -58,17 +173,18 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   );
 
   const [name, setName] = useState(existing?.name || '');
-  const [slug, setSlug] = useState(existing?.slug || '');
   const [shortDescription, setShortDescription] = useState(existing?.shortDescription || '');
   const [description, setDescription] = useState(existing?.description || '');
-  const [category, setCategory] = useState(existing?.category || 'Dresses');
+  const [category, setCategory] = useState(existing?.category || '');
   const [subCategory, setSubCategory] = useState(existing?.subCategory || 'Womenswear');
-  const [collection, setCollection] = useState(existing?.collections?.[0] || 'Summer Collection');
+  const [collection, setCollection] = useState(existing?.collections?.[0] || '');
   const [tagsText, setTagsText] = useState((existing?.tags || ['editorial']).join(', '));
   const [customCategories, setCustomCategories] = useState<string[]>([]);
 
-  const [imageUrl, setImageUrl] = useState(
-    existing?.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&auto=format&fit=crop&q=80'
+  // Display photo shown to customers, and a separate clear garment photo used only by the AI try-on model.
+  const [imageUrl, setImageUrl] = useState(existing?.image || '');
+  const [aiReferenceUrl, setAiReferenceUrl] = useState(
+    ((existing?.specs as Record<string, string> | undefined)?._aiReferenceImage as string) || ''
   );
   const [price, setPrice] = useState(String(existing?.price ?? 185));
   const [compareAtPrice, setCompareAtPrice] = useState(String(existing?.compareAtPrice ?? ''));
@@ -98,13 +214,12 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
   const [includeInBrandTryOn, setIncludeInBrandTryOn] = useState(existing?.includeInBrandTryOn ?? true);
   const [includeInMarketplaceTryOn, setIncludeInMarketplaceTryOn] = useState(existing?.includeInMarketplaceTryOn ?? false);
 
-  const [uploading, setUploading] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<'display' | 'ai' | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [skuStatus, setSkuStatus] = useState<{ checked: boolean; available: boolean; message: string } | null>(null);
   const [quotaInfo, setQuotaInfo] = useState<{ plan: string; used: number; limit: number; remaining: number } | null>(null);
   const [collectionOptions, setCollectionOptions] = useState<string[]>([]);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -160,9 +275,20 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     };
   }, [existing?.id, sku]);
 
+  // Use the brand's own categories. Only when none have been added yet, offer the standard list.
   const categoryOptions = useMemo(
-    () => Array.from(new Set([...DEFAULT_CATEGORIES, ...customCategories, category].filter(Boolean))),
-    [category, customCategories]
+    () =>
+      Array.from(
+        new Set(
+          [...(customCategories.length > 0 ? customCategories : DEFAULT_CATEGORIES), existing?.category || '']
+            .filter(Boolean)
+        )
+      ),
+    [customCategories, existing?.category]
+  );
+  const collectionChoices = useMemo(
+    () => Array.from(new Set([...collectionOptions, existing?.collections?.[0] || ''].filter(Boolean))),
+    [collectionOptions, existing?.collections]
   );
 
   const numericPrice = Number(price) || 0;
@@ -196,16 +322,28 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     notify(`Generated ${next.length} SKU variant combinations.`);
   };
 
-  const handleUploadImage = async (file: File) => {
-    setUploading(true);
+  const handleUploadImage = async (slot: 'display' | 'ai', file: File) => {
+    const invalid = validateImageFile(file);
+    if (invalid) {
+      setErrorMessage(invalid);
+      notify(invalid);
+      return;
+    }
+    setUploadingSlot(slot);
     setErrorMessage(null);
-    const res = await brandWorkspaceApi.uploadMediaFile(file);
-    setUploading(false);
-    if (res.ok && res.url) {
-      setImageUrl(res.url);
-      notify('Product photograph uploaded.');
-    } else {
-      setErrorMessage(res.error || 'Upload error.');
+    try {
+      const res = await brandWorkspaceApi.uploadMediaFile(file);
+      if (res.ok && res.url) {
+        if (slot === 'display') setImageUrl(res.url);
+        else setAiReferenceUrl(res.url);
+        notify(slot === 'display' ? 'Product photo uploaded.' : 'AI reference image uploaded.');
+      } else {
+        setErrorMessage(res.error || 'Image upload failed. Please try again.');
+      }
+    } catch (err) {
+      setErrorMessage(formatApiError(err, 'Image upload failed. Please try again.'));
+    } finally {
+      setUploadingSlot(null);
     }
   };
 
@@ -213,6 +351,10 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     setErrorMessage(null);
     if (!name.trim() || !sku.trim()) {
       setErrorMessage('Garment title and SKU are required.');
+      return;
+    }
+    if (!category.trim()) {
+      setErrorMessage('Please select a category.');
       return;
     }
 
@@ -229,13 +371,14 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
       price: numericPrice,
       ...(compareAtPrice !== '' ? { compareAtPrice: Number(compareAtPrice) } : {}),
       stock: Math.max(0, Math.floor(Number(stock) || 0)),
-      images: imageUrl.trim() ? [imageUrl.trim()] : [],
+      images: imageUrl ? [imageUrl] : [],
       tags: tagsText.split(',').map((t) => t.trim()).filter(Boolean),
       brandStorefrontPublished: finalStorefront,
       marketplacePublished: finalMarketplace,
       isTryOnEligible,
       tryOnCategory,
-      specs: { material, weightGsm, stretch, fitType },
+      // `_aiReferenceImage` is a reserved key: the clear garment photo given to the AI try-on model (hidden from shoppers).
+      specs: { material, weightGsm, stretch, fitType, ...(aiReferenceUrl ? { _aiReferenceImage: aiReferenceUrl } : {}) },
       ...(variants.length > 0 ? { variants } : {}),
     };
 
@@ -283,6 +426,11 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
           subtitle="Products save to your brand catalog first. Visibility across Brand Storefront, Global Marketplace, and Try-On remains cleanly separated."
           actions={
             <>
+              <Link href="/dashboard/products">
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back to Products
+                </Button>
+              </Link>
               <Button variant="outline" size="sm" disabled={saving} onClick={() => saveProductRecord('draft')}>
                 Save Draft
               </Button>
@@ -294,11 +442,6 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               </Button>
             </>
           }
-        />
-
-        <ProductsNavTabs
-          activeTab={existing ? 'edit' : 'addproduct'}
-          editingProductName={existing?.name}
         />
 
         {quotaInfo && !existing && (
@@ -322,39 +465,40 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="sm:col-span-2">
                   <label className="block font-bold text-slate-700 mb-1">Garment Title *</label>
-                  <input value={name} onChange={(e) => { setName(e.target.value); if (!existing) setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-')); }} placeholder="e.g. Elysian Mulberry Silk Dress" className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">URL Slug</label>
-                  <input value={slug} onChange={(e) => setSlug(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" />
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Elysian Mulberry Silk Dress" className="w-full px-3 py-2 rounded-xl border border-slate-200" />
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Owning Brand Tenant (Locked)</label>
                   <input value={profile.name} readOnly className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-bold" />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Category</label>
+                  <label className="block font-bold text-slate-700 mb-1">Category *</label>
                   <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                    <option value="">Select a category</option>
                     {categoryOptions.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {customCategories.length > 0 ? 'Your categories. ' : 'No categories added yet, showing standard ones. '}
+                    <Link href="/dashboard/products/categories/addcategory" className="font-semibold text-slate-900 underline">
+                      + Add category
+                    </Link>
+                  </p>
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Collection</label>
-                  <input
-                    list="brand-collections-datalist"
-                    value={collection}
-                    onChange={(e) => setCollection(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200"
-                  />
-                  {collectionOptions.length > 0 && (
-                    <datalist id="brand-collections-datalist">
-                      {collectionOptions.map((col) => (
-                        <option key={col} value={col} />
-                      ))}
-                    </datalist>
-                  )}
+                  <select value={collection} onChange={(e) => setCollection(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                    <option value="">No collection</option>
+                    {collectionChoices.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    <Link href="/dashboard/products/collections" className="font-semibold text-slate-900 underline">
+                      + Add collection
+                    </Link>
+                  </p>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block font-bold text-slate-700 mb-1">Short Summary</label>
@@ -371,21 +515,27 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
               </div>
             </SectionCard>
 
-            <SectionCard title="B. Product Media">
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center text-xs">
-                <div className="sm:col-span-4 relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
-                  <SafeImage src={imageUrl} alt="Primary garment image" fill className="object-cover" />
-                </div>
-                <div className="sm:col-span-8 space-y-3">
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadImage(f); }} />
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Primary Image URL</label>
-                    <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                  </div>
-                  <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()} className="gap-1.5">
-                    <Upload className="w-3.5 h-3.5" /> {uploading ? 'Uploading...' : 'Upload Studio Image'}
-                  </Button>
-                </div>
+            <SectionCard
+              title="B. Product Images"
+              subtitle="Upload only. The image links are created automatically."
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <ImageUploadSlot
+                  title="Store Photo (shown to customers)"
+                  description="Your styled or model photo for the storefront and marketplace."
+                  imageUrl={imageUrl}
+                  busy={uploadingSlot === 'display'}
+                  onFile={(f) => void handleUploadImage('display', f)}
+                  onRemove={() => setImageUrl('')}
+                />
+                <ImageUploadSlot
+                  title="AI Reference Image (not shown to customers)"
+                  description="A clear, flat photo of the garment (front view, plain background, nothing covering it). The Virtual Try-On AI uses this so it understands the real product."
+                  imageUrl={aiReferenceUrl}
+                  busy={uploadingSlot === 'ai'}
+                  onFile={(f) => void handleUploadImage('ai', f)}
+                  onRemove={() => setAiReferenceUrl('')}
+                />
               </div>
             </SectionCard>
 

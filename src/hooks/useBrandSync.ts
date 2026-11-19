@@ -16,7 +16,6 @@ export function useBrandSync(preferredTenantId?: string, hasServerVerifiedUser =
   const applySyncedProfile = useWorkspaceStore((s) => s.applySyncedProfile);
   const setProducts = useWorkspaceStore((s) => s.setProducts);
   const setOrders = useWorkspaceStore((s) => s.setOrders);
-  const setFabrics = useWorkspaceStore((s) => s.setFabrics);
   const setBackendOnboardingStatus = useWorkspaceStore((s) => s.setBackendOnboardingStatus);
 
   const markOnboardingStatusForAliases = useCallback(
@@ -73,13 +72,12 @@ export function useBrandSync(preferredTenantId?: string, hasServerVerifiedUser =
       }
 
       try {
-        const [profileRes, analyticsRes, productsRes, ordersRes, fabricsRes] =
+        const [profileRes, analyticsRes, productsRes, ordersRes] =
           await Promise.allSettled([
             brandWorkspaceApi.getProfile(),
             brandWorkspaceApi.getAnalytics(),
             brandWorkspaceApi.getProducts(),
             brandWorkspaceApi.getOrders(),
-            brandWorkspaceApi.getFabrics(),
           ]);
 
         if (profileRes.status === 'fulfilled') {
@@ -106,9 +104,6 @@ export function useBrandSync(preferredTenantId?: string, hasServerVerifiedUser =
           }
           if (ordersRes.status === 'fulfilled' && ordersRes.value.length > 0) {
             setOrders(ordersRes.value);
-          }
-          if (fabricsRes.status === 'fulfilled' && fabricsRes.value.length > 0) {
-            setFabrics(fabricsRes.value);
           }
 
           setAuthInvalid(false);
@@ -148,7 +143,6 @@ export function useBrandSync(preferredTenantId?: string, hasServerVerifiedUser =
     session?.user?.id,
     session?.user?.name,
     session?.user?.tenantId,
-    setFabrics,
     setLiveSync,
     setOrders,
     setProducts,

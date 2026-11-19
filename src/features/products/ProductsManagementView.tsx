@@ -14,7 +14,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { Fabric, Product } from '../../types';
+import { Product } from '../../types';
 import { canPerform } from '../../config/permissions';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -41,7 +41,6 @@ export type ProductsSubView =
   | 'list'
   | 'categories'
   | 'collections'
-  | 'attributes'
   | 'import'
   | 'export';
 
@@ -64,16 +63,11 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
 
   const products = useWorkspaceStore((s) => s.products);
   const setProducts = useWorkspaceStore((s) => s.setProducts);
-  const fabrics = useWorkspaceStore((s) => s.fabrics);
   const activeRole = useWorkspaceStore((s) => s.activeRole);
   const roleOverrides = useWorkspaceStore((s) => s.roleOverrides);
   const updateProduct = useWorkspaceStore((s) => s.updateProduct);
   const deleteProduct = useWorkspaceStore((s) => s.deleteProduct);
   const addProduct = useWorkspaceStore((s) => s.addProduct);
-  const setFabrics = useWorkspaceStore((s) => s.setFabrics);
-  const addFabric = useWorkspaceStore((s) => s.addFabric);
-  const updateFabric = useWorkspaceStore((s) => s.updateFabric);
-  const deleteFabric = useWorkspaceStore((s) => s.deleteFabric);
 
   const showToast = useUiStore((s) => s.showToast);
   const hideToast = useUiStore((s) => s.hideToast);
@@ -102,14 +96,6 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
   const [colTitle, setColTitle] = useState('');
   const [colDesc, setColDesc] = useState('');
   const [editingCollectionId, setEditingCollectionId] = useState<string | null>(null);
-
-  // Attributes & Fabrics state
-  const [fabName, setFabName] = useState('');
-  const [fabComp, setFabComp] = useState('');
-  const [fabStretch, setFabStretch] = useState<Fabric['stretch']>('LOW');
-  const [fabThickness, setFabThickness] = useState<Fabric['thickness']>('MEDIUM');
-  const [fabCare, setFabCare] = useState('');
-  const [editingFabricId, setEditingFabricId] = useState<string | null>(null);
 
   // Import CSV preview state
   const [csvRaw, setCsvRaw] = useState(
@@ -148,7 +134,7 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
     fetchLiveProducts();
   }, [fetchLiveProducts]);
 
-  // Load Categories, Collections & Fabrics when opening relevant tabs
+  // Load Categories & Collections when opening relevant tabs
   useEffect(() => {
     let active = true;
     if (view === 'categories') {
@@ -165,18 +151,11 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
           if (active) setApiCollections(list);
         })
         .catch(() => {});
-    } else if (view === 'attributes') {
-      brandWorkspaceApi
-        .getFabrics()
-        .then((list) => {
-          if (active && list.length > 0) setFabrics(list);
-        })
-        .catch(() => {});
     }
     return () => {
       active = false;
     };
-  }, [setFabrics, view]);
+  }, [view]);
 
   const categories = useMemo(
     () => [
@@ -449,61 +428,6 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
       notify('Collection deleted.');
     } catch (err) {
       setErrorBanner(formatApiError(err, 'Failed to delete collection.'));
-    } finally {
-      setBusyAction(false);
-    }
-  };
-
-  const handleSaveFabric = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fabName.trim() || !fabComp.trim()) {
-      setErrorBanner('Fabric name and composition are required.');
-      return;
-    }
-    setErrorBanner(null);
-    setBusyAction(true);
-    try {
-      if (editingFabricId) {
-        const res = await brandWorkspaceApi.updateFabric(editingFabricId, {
-          name: fabName.trim(),
-          composition: fabComp.trim(),
-          stretch: fabStretch,
-          thickness: fabThickness,
-          careInstructions: fabCare.trim() || 'Dry clean recommended.',
-        } as any);
-        updateFabric(editingFabricId, res.fabric);
-        setEditingFabricId(null);
-        notify(`Fabric "${res.fabric.name}" updated.`);
-      } else {
-        const res = await brandWorkspaceApi.createFabric({
-          name: fabName.trim(),
-          composition: fabComp.trim(),
-          stretch: fabStretch,
-          thickness: fabThickness,
-          careInstructions: fabCare.trim() || 'Gentle wash',
-        } as any);
-        addFabric(res.fabric);
-        notify(`Fabric "${res.fabric.name}" added to library.`);
-      }
-      setFabName('');
-      setFabComp('');
-      setFabCare('');
-    } catch (err) {
-      setErrorBanner(formatApiError(err, 'Failed to save fabric specification.'));
-    } finally {
-      setBusyAction(false);
-    }
-  };
-
-  const handleDeleteFabric = async (id: string) => {
-    setErrorBanner(null);
-    setBusyAction(true);
-    try {
-      await brandWorkspaceApi.deleteFabric(id);
-      deleteFabric(id);
-      notify('Fabric deleted.');
-    } catch (err) {
-      setErrorBanner(formatApiError(err, 'Failed to delete fabric.'));
     } finally {
       setBusyAction(false);
     }
@@ -1018,86 +942,6 @@ export function ProductsManagementView({ initialView = 'list' }: { initialView?:
           </SectionCard>
         )}
 
-        {view === 'attributes' && (
-          <SectionCard title="Fabrics & Material Specifications" subtitle="Reusable textile records attached to apparel garments">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {fabrics.map((f) => (
-                <div key={f.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold text-slate-900">{f.name}</p>
-                    {canEdit && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingFabricId(f.id);
-                            setFabName(f.name);
-                            setFabComp(f.composition);
-                            setFabStretch(f.stretch || 'LOW');
-                            setFabThickness(f.thickness || 'MEDIUM');
-                            setFabCare(f.careInstructions || f.care || '');
-                          }}
-                          className="p-1 text-slate-400 hover:text-slate-900"
-                          aria-label={`Edit fabric ${f.name}`}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteFabric(f.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600"
-                          aria-label={`Delete fabric ${f.name}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-slate-600">{f.composition} • {f.thickness || 'MEDIUM'} • Stretch: {f.stretch || 'NONE'}</p>
-                  <p className="text-[11px] text-slate-500">{f.careInstructions || f.care || 'Standard care'}</p>
-                </div>
-              ))}
-            </div>
-            {canEdit && (
-              <form onSubmit={handleSaveFabric} className="flex flex-col sm:flex-row flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100 text-xs">
-                <input value={fabName} onChange={(e) => setFabName(e.target.value)} placeholder="Fabric name (e.g. Organic Poplin)" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
-                <input value={fabComp} onChange={(e) => setFabComp(e.target.value)} placeholder="Composition (e.g. 100% Cotton)" className="w-full sm:w-auto sm:flex-1 px-3 py-2 rounded-xl border border-slate-200" />
-                <select value={fabStretch} onChange={(e) => setFabStretch(e.target.value as Fabric['stretch'])} className="px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                  <option value="NONE">Stretch: None</option>
-                  <option value="LOW">Stretch: Low</option>
-                  <option value="MEDIUM">Stretch: Medium</option>
-                  <option value="HIGH">Stretch: High</option>
-                </select>
-                <select value={fabThickness} onChange={(e) => setFabThickness(e.target.value as Fabric['thickness'])} className="px-3 py-2 rounded-xl border border-slate-200 bg-white">
-                  <option value="LIGHT">Weight: Light</option>
-                  <option value="MEDIUM">Weight: Medium</option>
-                  <option value="HEAVY">Weight: Heavy</option>
-                </select>
-                <input value={fabCare} onChange={(e) => setFabCare(e.target.value)} placeholder="Care instructions" className="w-full sm:w-44 px-3 py-2 rounded-xl border border-slate-200" />
-                <div className="flex gap-2">
-                  <Button type="submit" size="sm" disabled={busyAction || !fabName.trim()}>
-                    {editingFabricId ? 'Update Fabric' : 'Add Fabric'}
-                  </Button>
-                  {editingFabricId && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingFabricId(null);
-                        setFabName('');
-                        setFabComp('');
-                        setFabCare('');
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </form>
-            )}
-          </SectionCard>
-        )}
 
         {view === 'import' && (
           <SectionCard title="Bulk CSV Product Import" subtitle="Preview parsed columns and duplicate SKU checks before persisting to tenant catalog">

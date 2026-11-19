@@ -8,7 +8,6 @@ import {
   BrandProfile,
   CustomerReview,
   DiscountCode,
-  Fabric,
   InventoryMovement,
   MarketingCampaign,
   MarketplacePost,
@@ -45,7 +44,6 @@ export interface WorkspaceSliceState {
 
   profile: BrandProfile;
   products: Product[];
-  fabrics: Fabric[];
   marketplacePosts: MarketplacePost[];
   orders: Order[];
   returns: ReturnRequest[];
@@ -122,7 +120,6 @@ const initialState: WorkspaceSliceState = {
 
   profile: EMPTY_BRAND_PROFILE,
   products: [],
-  fabrics: [],
   marketplacePosts: [],
   orders: [],
   returns: [],
@@ -296,29 +293,6 @@ export const workspaceSlice = createSlice({
         ...state.inventoryLogs,
       ];
       appendAuditEntry(state, 'INVENTORY_ADJUSTED', target.name, `${delta > 0 ? '+' : ''}${delta} units (${reason})`);
-    },
-
-    setFabrics: (state, action: PayloadAction<Fabric[]>) => {
-      state.fabrics = action.payload;
-    },
-    addFabric: (state, action: PayloadAction<Fabric>) => {
-      state.fabrics = [action.payload, ...state.fabrics];
-    },
-    addFabricRecord: (state, action: PayloadAction<Fabric>) => {
-      const fabric = action.payload;
-      state.fabrics = [
-        fabric,
-        ...state.fabrics.filter(
-          (f) => f.id !== fabric.id && f.name.toLowerCase() !== fabric.name.toLowerCase()
-        ),
-      ];
-    },
-    updateFabric: (state, action: PayloadAction<{ id: string; updates: Partial<Fabric> }>) => {
-      const { id, updates } = action.payload;
-      state.fabrics = state.fabrics.map((f) => (f.id === id ? { ...f, ...updates } : f));
-    },
-    deleteFabric: (state, action: PayloadAction<string>) => {
-      state.fabrics = state.fabrics.filter((f) => f.id !== action.payload);
     },
 
     addMarketplacePost: (state, action: PayloadAction<MarketplacePost>) => {

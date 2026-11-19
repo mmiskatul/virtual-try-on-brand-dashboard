@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 
 export interface ProductNavTab {
-  key: 'list' | 'categories' | 'collections' | 'attributes' | 'import' | 'export';
+  key: 'list' | 'categories' | 'collections' | 'import' | 'export';
   label: string;
   href: string;
   badge?: number;
@@ -24,13 +24,11 @@ export function ProductsNavTabs({
   const prefetchedRef = useRef<Set<string>>(new Set());
 
   const products = useWorkspaceStore((s) => s.products);
-  const fabrics = useWorkspaceStore((s) => s.fabrics);
 
   const tabs: ProductNavTab[] = [
     { key: 'list', label: 'All Products', href: '/dashboard/products', badge: products.length },
     { key: 'categories', label: 'Categories', href: '/dashboard/products/categories' },
     { key: 'collections', label: 'Collections', href: '/dashboard/products/collections' },
-    { key: 'attributes', label: 'Attributes & Fabrics', href: '/dashboard/products/attributes', badge: fabrics.length },
     { key: 'import', label: 'Bulk CSV Import', href: '/dashboard/products/import' },
     { key: 'export', label: 'Export Catalog', href: '/dashboard/products/export' },
   ];

@@ -114,19 +114,6 @@ export interface Product {
   updatedAt?: string;
 }
 
-export interface Fabric {
-  id: string;
-  tenantId?: string;
-  name: string;
-  composition: string;
-  stretch: string;
-  thickness: string;
-  care: string;
-  careInstructions?: string;
-  color?: string;
-  weightGsm?: number;
-}
-
 export interface MarketplacePost {
   id: string;
   tenantId: string;
@@ -509,4 +496,4 @@ export interface BrandProfile {
   };
 }
 
-export type TabType = 'overview' | 'products' | 'fabrics' | 'inventory' | 'storefront' | 'orders' | 'ai';
+export type TabType = 'overview' | 'products' | 'inventory' | 'storefront' | 'orders' | 'ai';

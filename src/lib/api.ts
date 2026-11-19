@@ -230,18 +230,6 @@ export const brandApi = {
     });
   },
 
-  // Fabrics
-  getFabrics: () => {
-    return request<any[]>(`${BRAND_API_URL}/api/v1/fabrics`);
-  },
-
-  createFabric: (fabric: any) => {
-    return request<any>(`${BRAND_API_URL}/api/v1/fabrics`, {
-      method: 'POST',
-      body: JSON.stringify(fabric)
-    });
-  },
-
   // Orders
   getOrders: () => {
     return request<any[]>(`${BRAND_API_URL}/api/v1/brand/orders`);

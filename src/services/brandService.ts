@@ -1,6 +1,6 @@
 import { BRAND_API_URL, brandFetch } from '../lib/api';
 import { normalizeHeaderStyle } from '../features/onboarding/onboardingPresets';
-import { BrandProfile, Fabric, InventoryMovement, Order, Product } from '../types';
+import { BrandProfile, InventoryMovement, Order, Product } from '../types';
 
 const API_BASE = BRAND_API_URL;
 
@@ -763,29 +763,6 @@ export const brandWorkspaceApi = {
       method: 'DELETE',
     }),
 
-  // Fabrics
-  getFabrics: async (): Promise<Fabric[]> => {
-    const res = await apiFetch<{ fabrics: Fabric[] } | Fabric[]>('/api/v1/fabrics');
-    return Array.isArray(res) ? res : res?.fabrics || [];
-  },
-
-  createFabric: (fabric: Partial<Fabric>) =>
-    apiFetch<{ message?: string; fabric: Fabric }>('/api/v1/fabrics', {
-      method: 'POST',
-      body: JSON.stringify(fabric),
-    }),
-
-  updateFabric: (id: string, fabric: Partial<Fabric>) =>
-    apiFetch<{ message?: string; fabric: Fabric }>(`/api/v1/fabrics/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      body: JSON.stringify(fabric),
-    }),
-
-  deleteFabric: (id: string) =>
-    apiFetch<{ message: string }>(`/api/v1/fabrics/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-    }),
-
   // Inventory
   adjustInventory: (payload: { productId: string; variantSku: string; change: number; reason: string }) =>
     apiFetch<{ message: string; newStock: number }>('/api/v1/inventory/adjust', {
@@ -1379,7 +1356,6 @@ export interface BrandIdentityPatchPayload {
 export interface AddProductFormOptions {
   categories: string[];
   collections: string[];
-  fabrics: Array<{ id: string; name: string; composition: string }>;
   tryOnCategories: Array<'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'all'>;
   defaultCurrency: 'BDT';
   suggestedSkuPrefix: string;

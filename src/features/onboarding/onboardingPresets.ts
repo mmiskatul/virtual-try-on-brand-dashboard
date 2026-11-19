@@ -1,4 +1,4 @@
-import { BrandProfile, Fabric, Product } from '../../types';
+import { BrandProfile, Product } from '../../types';
 
 export const ONBOARDING_STEPS = [
   '1. Brand',
@@ -390,7 +390,6 @@ export function buildSampleBrandFormValues(
 
 export function buildSampleStarterCatalog(tenantId: string, brandName: string): {
   products: Product[];
-  fabric: Fabric;
 } {
   const cleanName = brandName.trim() || 'Brand';
   const skuPrefix = toBrandSlug(cleanName).slice(0, 4).toUpperCase().replace(/-/g, '') || 'BRND';
@@ -462,17 +461,5 @@ export function buildSampleStarterCatalog(tenantId: string, brandName: string): 
     },
   ];
 
-  const fabric: Fabric = {
-    id: `fab_sample_${Date.now()}`,
-    tenantId,
-    name: `${cleanName} Mulberry Silk Crepe`,
-    composition: '85% Mulberry Silk, 15% Elastane Blend',
-    color: 'Champagne Ivory',
-    weightGsm: 145,
-    stretch: 'Slight',
-    thickness: 'Lightweight',
-    care: 'Cold gentle hand wash or eco dry clean.',
-  };
-
-  return { products, fabric };
+  return { products };
 }
