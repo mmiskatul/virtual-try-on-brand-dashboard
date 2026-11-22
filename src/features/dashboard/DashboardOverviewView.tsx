@@ -52,9 +52,9 @@ const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: str
   { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/new' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },
   { id: 'chk_storefront', label: 'Publish your brand storefront', href: '/dashboard/settings/store' },
-  { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on/configuration' },
+  { id: 'chk_tryon', label: 'Configure Virtual Try-On experience', href: '/dashboard/virtual-try-on' },
   { id: 'chk_publish', label: 'Publish first product to global marketplace', href: '/dashboard/marketplace/create' },
-  { id: 'chk_test_tryon', label: 'Test public Virtual Try-On studio', href: '/dashboard/virtual-try-on/studio' },
+  { id: 'chk_test_tryon', label: 'Test public Virtual Try-On studio', href: '/dashboard/virtual-try-on' },
 ];
 
 export function DashboardOverviewView() {
@@ -292,7 +292,7 @@ export function DashboardOverviewView() {
     attention.push({ id: 'stock', text: `${lowStockProducts.length} product${lowStockProducts.length === 1 ? '' : 's'} running low on stock`, href: '/dashboard/inventory', tone: 'warn' });
   }
   if (failedTryOns > 0) {
-    attention.push({ id: 'failed', text: `${failedTryOns} try-on${failedTryOns === 1 ? '' : 's'} failed. Check the customer photos`, href: '/dashboard/virtual-try-on/history', tone: 'warn' });
+    attention.push({ id: 'failed', text: `${failedTryOns} try-on${failedTryOns === 1 ? '' : 's'} failed. Check the customer photos`, href: '/dashboard/try-on-sessions', tone: 'warn' });
   }
   if (tryOnQuota > 0 && creditsRemaining / tryOnQuota < 0.2) {
     attention.push({ id: 'credits', text: `AI credits are running low (${creditsRemaining} left)`, href: '/dashboard/billing', tone: 'warn' });

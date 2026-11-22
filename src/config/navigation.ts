@@ -69,13 +69,9 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'Sparkles',
     items: [
       { label: 'Virtual Try-On', href: '/dashboard/virtual-try-on', module: 'tryon' },
-      { label: 'Try-On Studio', href: '/dashboard/virtual-try-on/studio', module: 'tryon', hidden: true },
-      { label: 'Configuration', href: '/dashboard/virtual-try-on/configuration', module: 'tryon', hidden: true },
-      { label: 'Garment Eligibility', href: '/dashboard/virtual-try-on/products', module: 'tryon', hidden: true },
-      { label: 'Appearance Editor', href: '/dashboard/virtual-try-on/appearance', module: 'tryon', hidden: true },
-      { label: 'Widget & Embed', href: '/dashboard/virtual-try-on/embedding', module: 'tryon', hidden: true },
-      { label: 'Generation History', href: '/dashboard/virtual-try-on/history', module: 'tryon', hidden: true },
-      { label: 'Privacy & Consent', href: '/dashboard/virtual-try-on/privacy', module: 'tryon', hidden: true },
+      { label: 'Garments', href: '/dashboard/try-on-garments', module: 'tryon', hidden: true },
+      { label: 'Look & Feel', href: '/dashboard/try-on-look', module: 'tryon', hidden: true },
+      { label: 'Sessions', href: '/dashboard/try-on-sessions', module: 'tryon', hidden: true },
     ],
   },
   {

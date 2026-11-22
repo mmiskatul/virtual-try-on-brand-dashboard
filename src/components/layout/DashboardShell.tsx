@@ -85,6 +85,7 @@ const NAV_EXTRA_PREFIXES: Record<string, string[]> = {
     '/dashboard/marketplace-analytics',
     '/dashboard/try-on-reports',
   ],
+  '/dashboard/virtual-try-on': ['/dashboard/try-on-garments', '/dashboard/try-on-look', '/dashboard/try-on-sessions'],
   '/dashboard/billing': [
     '/dashboard/subscription-plan',
     '/dashboard/ai-usage',
@@ -942,8 +943,8 @@ export function DashboardShell({
                   </Link>
                   )}
                   {canPerform(activeRole, 'tryon', 'view', roleOverrides) && (
-                  <Link href="/dashboard/virtual-try-on/studio" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
-                    Open Try-On Studio
+                  <Link href="/dashboard/virtual-try-on" onClick={() => setQuickCreateOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold">
+                    Open Virtual Try-On
                   </Link>
                   )}
                 </div>
@@ -1094,10 +1095,10 @@ export function DashboardShell({
                       <Store className="w-3.5 h-3.5 text-slate-600" />
                       <span>Brand Profile</span>
                     </Link>
-                    <Link href="/dashboard/virtual-try-on/studio" onClick={() => setAccountMenuOpen(false)} className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                    <Link href="/dashboard/virtual-try-on" onClick={() => setAccountMenuOpen(false)} className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
                       <span className="inline-flex items-center gap-2.5">
                         <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Virtual Try-On Test Studio</span>
+                        <span>Virtual Try-On</span>
                       </span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">Test</span>
                     </Link>
@@ -1225,7 +1226,7 @@ export function DashboardShell({
             { label: 'Overview', href: '/dashboard', icon: LayoutDashboard, match: (p: string) => p === '/dashboard' },
             { label: 'Products', href: '/dashboard/products', icon: ShoppingBag, match: (p: string) => p.startsWith('/dashboard/products') },
             { label: 'Orders', href: '/dashboard/orders', icon: PackageCheck, match: (p: string) => p.startsWith('/dashboard/orders') },
-            { label: 'Try-On', href: '/dashboard/virtual-try-on', icon: Sparkles, match: (p: string) => p.startsWith('/dashboard/virtual-try-on') },
+            { label: 'Try-On', href: '/dashboard/virtual-try-on', icon: Sparkles, match: (p: string) => p.startsWith('/dashboard/virtual-try-on') || p.startsWith('/dashboard/try-on-garments') || p.startsWith('/dashboard/try-on-look') || p.startsWith('/dashboard/try-on-sessions') },
           ].map((nav) => {
             const NavIcon = nav.icon;
             const active = pendingHref ? pendingHref === nav.href : nav.match(pathname);
