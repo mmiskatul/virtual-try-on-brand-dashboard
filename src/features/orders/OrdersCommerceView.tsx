@@ -642,7 +642,7 @@ export function OrdersCommerceView({
                 <Link href="/dashboard/integrations" className="underline font-bold">
                   Integrations
                 </Link>
-                . The "Log Follow-Up" button below only saves a note in this browser that you contacted the shopper yourself (for example by phone or WhatsApp). It does not send anything.
+                . The &quot;Log Follow-Up&quot; button below only saves a note in this browser that you contacted the shopper yourself (for example by phone or WhatsApp). It does not send anything.
               </p>
             </div>
 
