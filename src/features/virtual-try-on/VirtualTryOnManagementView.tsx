@@ -18,6 +18,7 @@ import {
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
+import { resolveBrandLook } from '../../lib/brand-look';
 
 export type TryOnTab = 'overview' | 'products' | 'appearance' | 'history';
 
@@ -153,6 +154,8 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
       .slice(0, 5);
   }, [sessions]);
 
+  // The try-on page copies the brand's own look (Settings > Onboarding), so no separate colours here.
+  const brandLook = useMemo(() => resolveBrandLook(profile, { logo: profile.logo, banner: profile.banner }), [profile]);
   const isOn = tryOnConfig.enabled && tryOnConfig.publicPageActive;
   const checklist = [
     {
@@ -477,8 +480,26 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
 
         {tab === 'appearance' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <SectionCard title="How your try-on page looks" subtitle="Words and colours shoppers see." className="lg:col-span-7">
+            <SectionCard title="How your try-on page looks" subtitle="Words shoppers see. Colours, logo and banner follow your brand." className="lg:col-span-7">
               <div className="space-y-3 text-xs">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2.5">
+                  <p className="font-bold text-slate-900">Matches your brand automatically</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {([['Main', brandLook.primary], ['Accent', brandLook.accent], ['Background', brandLook.background], ['Text', brandLook.text]] as const).map(([label, c]) => (
+                      <span key={label} className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+                        <span className="h-5 w-5 rounded-full border border-slate-300" style={{ backgroundColor: c }} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Change them in{' '}
+                    <Link href="/dashboard/settings/onboarding/identity" className="font-bold text-slate-900 underline">Theme &amp; Identity</Link>
+                    {' '}or{' '}
+                    <Link href="/dashboard/settings/onboarding/media" className="font-bold text-slate-900 underline">Logos &amp; Brand Media</Link>.
+                    The try-on page updates by itself.
+                  </p>
+                </div>
                 <div>
                   <label className="block font-bold mb-1">Page title</label>
                   <input value={appearance.pageTitle} onChange={(e) => setAppearance({ ...appearance, pageTitle: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
@@ -500,38 +521,41 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                     <label className="block font-bold mb-1">Generate button text</label>
                     <input value={appearance.generateBtnText} onChange={(e) => setAppearance({ ...appearance, generateBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
                   </div>
-                  <div>
-                    <label className="block font-bold mb-1">Brand colour</label>
-                    <input type="color" value={appearance.accentColor} onChange={(e) => setAppearance({ ...appearance, accentColor: e.target.value })} className="w-16 h-8 rounded border border-slate-200" />
-                  </div>
                 </div>
                 <label className="flex items-center gap-2 pt-1">
                   <input type="checkbox" checked={appearance.showPrices} onChange={(e) => setAppearance({ ...appearance, showPrices: e.target.checked })} /> Show prices
                 </label>
-                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance }, 'Saved. Your try-on page now uses this look.')}>
+                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance: { ...appearance, accentColor: brandLook.accent, backgroundColor: brandLook.background } }, 'Saved. Your try-on page now uses this look.')}>
                   Save look
                 </Button>
               </div>
             </SectionCard>
 
             <SectionCard title="Live preview" className="lg:col-span-5">
-              <div className="rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4" style={{ backgroundColor: appearance.backgroundColor }}>
+              <div className="rounded-2xl border border-slate-200 overflow-hidden" style={{ backgroundColor: brandLook.background, color: brandLook.text }}>
+                {brandLook.banner && (
+                  <div className="relative h-20 w-full">
+                    <SafeImage src={brandLook.banner} alt="" fill className="object-cover" />
+                  </div>
+                )}
+                <div className="p-4 sm:p-5 space-y-4">
                 <div className="flex items-center gap-2.5">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-300 shrink-0">
                     <SafeImage src={profile.logo} alt={profile.name} fill className="object-cover" />
                   </div>
-                  <span className="font-bold text-sm text-slate-950 truncate">{profile.name}</span>
+                  <span className="font-bold text-sm truncate">{profile.name}</span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-base text-slate-950">{appearance.pageTitle}</h4>
-                  <p className="text-xs text-slate-600 mt-1">{appearance.pageDescription}</p>
+                  <h4 className="font-bold text-base">{appearance.pageTitle}</h4>
+                  <p className="text-xs opacity-70 mt-1">{appearance.pageDescription}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 text-[11px] text-slate-500">{appearance.uploadInstructions}</div>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-4 py-2 rounded-full text-white text-xs font-bold" style={{ backgroundColor: appearance.accentColor }}>
+                  <span className="px-4 py-2 text-white text-xs font-bold" style={{ backgroundColor: brandLook.accent, borderRadius: brandLook.buttonRadius }}>
                     {appearance.generateBtnText}
                   </span>
-                  <span className="px-4 py-2 rounded-full border border-slate-300 bg-white text-xs font-bold">{appearance.primaryBtnText}</span>
+                  <span className="px-4 py-2 border border-slate-300 bg-white text-xs font-bold" style={{ borderRadius: brandLook.buttonRadius }}>{appearance.primaryBtnText}</span>
+                </div>
                 </div>
               </div>
             </SectionCard>

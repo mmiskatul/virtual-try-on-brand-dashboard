@@ -9,6 +9,7 @@ import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
 import { Button } from '../../../components/ui/button';
+import { BrandLook, resolveBrandLook } from '../../../lib/brand-look';
 
 const SAMPLE_MODELS = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80',
@@ -23,7 +24,7 @@ export default function DedicatedBrandPublicTryOnPage() {
   const [loading, setLoading] = useState(true);
   const [brandName, setBrandName] = useState('');
   const [brandLogo, setBrandLogo] = useState('');
-  const [accentColor, setAccentColor] = useState('#0F172A');
+  const [look, setLook] = useState<BrandLook>(() => resolveBrandLook(undefined, {}));
   const [eligibleGarments, setEligibleGarments] = useState<Product[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [personImg, setPersonImg] = useState<string>(SAMPLE_MODELS[0]);
@@ -58,7 +59,12 @@ export default function DedicatedBrandPublicTryOnPage() {
         const res = await brandWorkspaceApi.getPublicStorefront(brandSlug);
         setBrandName(res.tenant.name);
         setBrandLogo(res.tenant.logoUrl || '');
-        setAccentColor(res.tenant.storefrontSettings?.accentColor || '#0F172A');
+        setLook(
+          resolveBrandLook(res.tenant.storefrontSettings, {
+            logo: res.tenant.logoUrl,
+            banner: res.tenant.bannerUrl || res.tenant.storefrontSettings?.bannerImage,
+          })
+        );
         const list = res.products.filter((p) => p.isTryOnEligible && p.brandStorefrontPublished);
         setEligibleGarments(list);
         if (list[0]) setSelectedId(list[0].id);
@@ -129,7 +135,7 @@ export default function DedicatedBrandPublicTryOnPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: appearance.backgroundColor }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: look.background, color: look.text }}>
       {/* Customer Header Strictly Isolated to This Brand */}
       <header className="bg-white border-b border-slate-200 px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -147,10 +153,16 @@ export default function DedicatedBrandPublicTryOnPage() {
         </Link>
       </header>
 
+      {look.banner && (
+        <div className="relative h-24 sm:h-40 w-full overflow-hidden">
+          <SafeImage src={look.banner} alt="" fill className="object-cover" />
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-8 w-full flex-1 space-y-5 sm:space-y-6">
         <div className="space-y-1">
-          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-950">{appearance.pageTitle}</h1>
-          <p className="text-xs sm:text-sm text-slate-600">{appearance.pageDescription}</p>
+          <h1 className="text-xl sm:text-3xl font-extrabold" style={{ color: look.text }}>{appearance.pageTitle}</h1>
+          <p className="text-xs sm:text-sm opacity-70">{appearance.pageDescription}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
@@ -261,8 +273,8 @@ export default function DedicatedBrandPublicTryOnPage() {
             <button
               type="button"
               onClick={handleGenerate}
-              style={{ backgroundColor: appearance.accentColor }}
-              className="w-full py-3 rounded-full text-white text-xs font-bold flex items-center justify-center gap-2 shadow"
+              style={{ backgroundColor: look.accent, borderRadius: look.buttonRadius }}
+              className="w-full py-3 text-white text-xs font-bold flex items-center justify-center gap-2 shadow"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
               {appearance.generateBtnText}
