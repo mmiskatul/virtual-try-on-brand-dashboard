@@ -15,6 +15,7 @@ import {
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { useMounted } from '../../hooks/useMounted';
+import { useTryOnSessions } from '../../hooks/useTryOnSessions';
 import {
   KpiCard,
   PageHeader,
@@ -52,7 +53,7 @@ export function AnalyticsReportsView({
   const orders = useWorkspaceStore((s) => s.orders);
   const customers = useWorkspaceStore((s) => s.customers);
   const marketplacePosts = useWorkspaceStore((s) => s.marketplacePosts);
-  const tryOnSessions = useWorkspaceStore((s) => s.tryOnSessions);
+  const { sessions: tryOnSessions } = useTryOnSessions();
   const showToast = useUiStore((s) => s.showToast);
 
   const [tab, setTab] = useState<AnalyticsTab>(initialTab);

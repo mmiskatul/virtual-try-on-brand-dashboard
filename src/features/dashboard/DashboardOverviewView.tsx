@@ -33,6 +33,7 @@ import {
 } from '../../services/brandService';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useMounted } from '../../hooks/useMounted';
+import { useTryOnSessions } from '../../hooks/useTryOnSessions';
 import {
   ErrorBanner,
   KpiCard,
@@ -64,7 +65,7 @@ export function DashboardOverviewView() {
   const orders = useWorkspaceStore((s) => s.orders);
   const customers = useWorkspaceStore((s) => s.customers);
   const marketplacePosts = useWorkspaceStore((s) => s.marketplacePosts);
-  const tryOnSessions = useWorkspaceStore((s) => s.tryOnSessions);
+  const { sessions: tryOnSessions } = useTryOnSessions();
   const activityLogs = useWorkspaceStore((s) => s.activityLogs);
   const isLiveBackend = useWorkspaceStore((s) => s.isLiveBackend);
   const onboardingCompletedIds = useWorkspaceStore((s) => s.onboardingCompletedIds);

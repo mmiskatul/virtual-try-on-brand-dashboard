@@ -15,6 +15,7 @@ import {
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { useMounted } from '../../hooks/useMounted';
+import { useTryOnSessions } from '../../hooks/useTryOnSessions';
 import { brandWorkspaceApi } from '../../services/brandService';
 import {
   ConfirmDialog,
@@ -84,7 +85,7 @@ export function BillingCreditsView({
   const roleOverrides = useWorkspaceStore((s) => s.roleOverrides);
   const profile = useWorkspaceStore((s) => s.profile);
   const invoices = useWorkspaceStore((s) => s.invoices);
-  const tryOnSessions = useWorkspaceStore((s) => s.tryOnSessions);
+  const { sessions: tryOnSessions } = useTryOnSessions();
   const showToast = useUiStore((s) => s.showToast);
 
   const [tab, setTab] = useState<BillingTab>(initialTab);
