@@ -18,181 +18,17 @@ import {
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
-import { resolveBrandLook } from '../../lib/brand-look';
 import { useTryOnSessions } from '../../hooks/useTryOnSessions';
-import { TRY_ON_LAYOUTS, TryOnLayoutId, layoutIdFor } from '../../lib/try-on-layouts';
 
-export type TryOnTab = 'overview' | 'products' | 'appearance' | 'history';
+export type TryOnTab = 'overview' | 'products' | 'history';
 
 const TABS: Array<{ id: TryOnTab; label: string; href: string }> = [
   { id: 'overview', label: 'Overview', href: '/dashboard/virtual-try-on' },
   { id: 'products', label: 'Garments', href: '/dashboard/try-on-garments' },
-  { id: 'appearance', label: 'Look & Feel', href: '/dashboard/try-on-look' },
   { id: 'history', label: 'Sessions', href: '/dashboard/try-on-sessions' },
 ];
 
 type GarmentFilter = 'all' | 'on' | 'off' | 'attention';
-
-/** A small wireframe of each try-on page design, so brands can pick by how it looks. */
-function LayoutWireframe({ id, accent }: { id: TryOnLayoutId; accent: string }) {
-  const panel = 'rounded bg-slate-200';
-  const garment = 'rounded-sm bg-slate-300';
-  return (
-    <div className="h-16 w-full rounded-lg border border-slate-200 bg-white p-1 flex flex-col gap-0.5">
-      <div className="h-2 w-1/3 rounded bg-slate-300" />
-      {id === 'classic' && (
-        <div className="flex-1 grid grid-cols-3 gap-1">
-          <div className={panel} />
-          <div className={panel} />
-          <div className="flex flex-col gap-1">
-            <div className="flex-1 rounded bg-slate-300" />
-            <div className="flex-1 rounded bg-slate-300" />
-            <div className="h-2 rounded" style={{ backgroundColor: accent }} />
-          </div>
-        </div>
-      )}
-      {id === 'grid' && (
-        <div className="flex-1 grid grid-cols-3 gap-1">
-          <div className={panel} />
-          <div className={panel} />
-          <div className="grid grid-cols-2 gap-0.5 content-start">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={`${garment} h-4`} />
-            ))}
-          </div>
-        </div>
-      )}
-      {id === 'showcase' && (
-        <div className="flex-1 flex flex-col gap-1">
-          <div className="flex-1 grid grid-cols-2 gap-1">
-            <div className={panel} />
-            <div className={panel} />
-          </div>
-          <div className="grid grid-cols-4 gap-0.5">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={`${garment} h-4`} />
-            ))}
-          </div>
-        </div>
-      )}
-      {id === 'editorial' && (
-        <div className="flex-1 flex flex-col gap-1">
-          <div className="flex-1 grid grid-cols-2 gap-1">
-            <div className={panel} />
-            <div className={panel} />
-          </div>
-          <div className="grid grid-cols-3 gap-1">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className={`${garment} h-6`} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** A scaled-down copy of the public try-on page in the chosen design, using the brand look. */
-function DesignPreview({
-  id,
-  look,
-  brandName,
-  title,
-  subtitle,
-  generateText,
-  garments,
-}: {
-  id: TryOnLayoutId;
-  look: ReturnType<typeof resolveBrandLook>;
-  brandName: string;
-  title: string;
-  subtitle: string;
-  generateText: string;
-  garments: Array<{ id: string; name: string; image: string }>;
-}) {
-  const wide = id === 'showcase' || id === 'editorial';
-  const card = 'rounded-xl bg-white border border-slate-200 p-3 space-y-2';
-  const photoBox = (label: string) => (
-    <div className={card}>
-      <p className="text-[11px] font-bold text-slate-900">{label}</p>
-      <div className="aspect-[4/5] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] text-slate-400">Photo</div>
-    </div>
-  );
-  const garmentGrid =
-    id === 'grid' ? 'grid grid-cols-2 gap-1.5' : id === 'showcase' ? 'grid grid-cols-4 gap-2' : id === 'editorial' ? 'grid grid-cols-3 gap-3' : 'space-y-1.5';
-  const button = (extra: string) => (
-    <div className={`px-3 py-1.5 text-center text-[11px] font-bold text-white ${extra}`} style={{ backgroundColor: look.accent, borderRadius: look.buttonRadius }}>
-      {generateText}
-    </div>
-  );
-  return (
-    <div className="rounded-2xl border border-slate-200 overflow-hidden" style={{ backgroundColor: look.background, color: look.text }}>
-      <div className="flex items-center gap-2 bg-white border-b border-slate-200 px-3 py-2">
-        <div className="relative h-6 w-6 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-          {look.logo && <SafeImage src={look.logo} alt={brandName} fill className="object-cover" />}
-        </div>
-        <span className="text-xs font-bold text-slate-900 truncate">{brandName}</span>
-      </div>
-      {look.banner && (
-        <div className="relative h-10 w-full">
-          <SafeImage src={look.banner} alt="" fill className="object-cover" />
-        </div>
-      )}
-      <div className="p-3 space-y-2.5">
-        <div>
-          <h4 className="text-sm font-extrabold">{title}</h4>
-          <p className="text-xs opacity-70">{subtitle}</p>
-        </div>
-        <div className={`grid gap-3 ${wide ? 'grid-cols-1' : 'grid-cols-2'}`}>
-          <div className={wide ? 'mx-auto w-40' : ''}>{photoBox('1. Upload your photo')}</div>
-          {!wide && (
-            <div className={card}>
-              <p className="text-[11px] font-bold text-slate-900">2. Choose a garment</p>
-              <div className={garmentGrid}>
-                {garments.slice(0, id === 'grid' ? 4 : 3).map((g) => (
-                  <GarmentThumb key={g.id} g={g} row={id === 'classic'} />
-                ))}
-              </div>
-              {button('')}
-            </div>
-          )}
-        </div>
-        {wide && (
-          <div className={card}>
-            <p className="text-[11px] font-bold text-slate-900">2. Choose a garment</p>
-            <div className={garmentGrid}>
-              {garments.slice(0, id === 'showcase' ? 4 : 3).map((g) => (
-                <GarmentThumb key={g.id} g={g} tall={id === 'editorial'} />
-              ))}
-            </div>
-            {button('mx-auto w-48')}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function GarmentThumb({ g, row, tall }: { g: { name: string; image: string }; row?: boolean; tall?: boolean }) {
-  if (row) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-slate-200 p-1.5">
-        <div className="relative h-9 w-7 shrink-0 overflow-hidden rounded bg-slate-100">
-          <SafeImage src={g.image} alt={g.name} fill className="object-cover" />
-        </div>
-        <span className="truncate text-[10px] font-semibold text-slate-800">{g.name}</span>
-      </div>
-    );
-  }
-  return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <div className={`relative w-full ${tall ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-slate-100`}>
-        <SafeImage src={g.image} alt={g.name} fill className="object-cover" />
-      </div>
-      <p className="truncate p-1.5 text-[10px] font-semibold text-slate-800">{g.name}</p>
-    </div>
-  );
-}
 
 export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initialTab?: TryOnTab }) {
   const tab = initialTab;
@@ -210,7 +46,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
   const [engineOk, setEngineOk] = useState<boolean | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [appearance, setAppearance] = useState(tryOnConfig.appearance);
   const [filter, setFilter] = useState<GarmentFilter>('all');
 
   const notify = (msg: string) => {
@@ -235,7 +70,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
       .then((cfg) => {
         if (cancelled) return;
         updateTryOnConfig(cfg);
-        setAppearance(cfg.appearance);
         setServerReady(true);
       })
       .catch(() => {
@@ -252,7 +86,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
     try {
       const saved = await brandWorkspaceApi.saveTryOnConfig(patch);
       updateTryOnConfig(saved);
-      setAppearance(saved.appearance);
       notify(okMessage);
     } catch (err: any) {
       notify(err?.message || 'Could not save your settings.');
@@ -317,8 +150,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
       .slice(0, 5);
   }, [sessions]);
 
-  // The try-on page copies the brand's own look (Settings > Onboarding), so no separate colours here.
-  const brandLook = useMemo(() => resolveBrandLook(profile, { logo: profile.logo, banner: profile.banner }), [profile]);
   const isOn = tryOnConfig.enabled && tryOnConfig.publicPageActive;
   const checklist = [
     {
@@ -352,7 +183,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
   ];
   const doneCount = checklist.filter((c) => c.done).length;
 
-  const embedSnippet = `<a href="${publicTryOnUrl}" target="_blank" rel="noopener">${appearance.primaryBtnText}</a>`;
+  const embedSnippet = `<a href="${publicTryOnUrl}" target="_blank" rel="noopener">Try it on</a>`;
 
   return (
     <PermissionGate module="tryon" action="view">
@@ -641,82 +472,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
           </SectionCard>
         )}
 
-        {tab === 'appearance' && (
-          <div className="space-y-6">
-            <SectionCard
-              title="Page design"
-              subtitle="Pick a design to see how your try-on page will look. Colours, logo and banner follow your brand."
-            >
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {TRY_ON_LAYOUTS.map((opt) => {
-                  const selected = layoutIdFor(appearance.previewLayout, appearance.gridStyle) === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setAppearance({ ...appearance, previewLayout: opt.previewLayout, gridStyle: opt.gridStyle })}
-                      className={`text-left rounded-2xl border p-2.5 space-y-2 transition-colors ${
-                        selected ? 'border-slate-950 ring-2 ring-slate-950/15 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <LayoutWireframe id={opt.id} accent={brandLook.accent} />
-                      <div className="px-0.5">
-                        <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                          {opt.label}
-                          {selected && <Check className="h-3.5 w-3.5 text-emerald-600" />}
-                        </p>
-                        <p className="text-[11px] text-slate-500 leading-snug">{opt.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="mt-4 text-[11px] text-slate-500">
-                Colours and logo come from{' '}
-                <Link href="/dashboard/settings/onboarding/identity" className="font-bold text-slate-900 underline">Theme &amp; Identity</Link>
-                {' '}and{' '}
-                <Link href="/dashboard/settings/onboarding/media" className="font-bold text-slate-900 underline">Logos &amp; Brand Media</Link>.
-              </p>
-            </SectionCard>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <SectionCard
-              title={`Preview: ${TRY_ON_LAYOUTS.find((o) => o.id === layoutIdFor(appearance.previewLayout, appearance.gridStyle))?.label}`}
-              subtitle="How shoppers will see your try-on page."
-            >
-              <div className="max-w-md mx-auto">
-                <DesignPreview
-                  id={layoutIdFor(appearance.previewLayout, appearance.gridStyle)}
-                  look={brandLook}
-                  brandName={profile.name}
-                  title={appearance.pageTitle}
-                  subtitle={appearance.pageDescription}
-                  generateText={appearance.generateBtnText}
-                  garments={(eligibleProducts.length > 0 ? eligibleProducts : products).slice(0, 6).map((p) => ({ id: p.id, name: p.name, image: p.image }))}
-                />
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Page title and subtitle" subtitle="The words at the top of your try-on page.">
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-bold mb-1">Page title</label>
-                  <input value={appearance.pageTitle} onChange={(e) => setAppearance({ ...appearance, pageTitle: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div>
-                  <label className="block font-bold mb-1">Page subtitle</label>
-                  <textarea rows={2} value={appearance.pageDescription} onChange={(e) => setAppearance({ ...appearance, pageDescription: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance: { ...appearance, accentColor: brandLook.accent, backgroundColor: brandLook.background } }, 'Saved. Your try-on page now uses this design.')}>
-                  Save look
-                </Button>
-              </div>
-            </SectionCard>
-            </div>
-          </div>
-        )}
         {tab === 'history' && (
           <SectionCard
             title="Sessions"
