@@ -77,13 +77,6 @@ const NAV_EXTRA_PREFIXES: Record<string, string[]> = {
   '/dashboard/integrations': ['/dashboard/developer'],
   '/dashboard/products': ['/dashboard/categories', '/dashboard/collections'],
   '/dashboard/inventory': ['/dashboard/warehouses', '/dashboard/stock-adjustments', '/dashboard/inventory-history'],
-  '/dashboard/analytics': [
-    '/dashboard/sales-reports',
-    '/dashboard/product-performance',
-    '/dashboard/customer-analytics',
-    '/dashboard/marketplace-analytics',
-    '/dashboard/try-on-reports',
-  ],
   '/dashboard/virtual-try-on': ['/dashboard/try-on-garments', '/dashboard/try-on-sessions'],
   '/dashboard/billing': [
     '/dashboard/subscription-plan',

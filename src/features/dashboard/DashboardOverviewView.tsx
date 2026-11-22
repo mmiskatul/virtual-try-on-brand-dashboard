@@ -498,7 +498,7 @@ export function DashboardOverviewView() {
               title="From try-on to sale"
               subtitle="How many customers go from trying on to buying"
               right={
-                <Link href="/dashboard/try-on-reports" className="text-xs font-bold underline whitespace-nowrap">
+                <Link href="/dashboard/analytics#try-on" className="text-xs font-bold underline whitespace-nowrap">
                   Full report &rarr;
                 </Link>
               }

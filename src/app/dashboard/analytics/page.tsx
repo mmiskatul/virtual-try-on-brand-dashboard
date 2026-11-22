@@ -1,5 +1,5 @@
-import { AnalyticsReportsView } from '@/features/analytics/AnalyticsReportsView';
+import { ReportsView } from '@/features/analytics/ReportsView';
 
 export default function Page() {
-  return <AnalyticsReportsView initialTab="overview" />;
+  return <ReportsView />;
 }

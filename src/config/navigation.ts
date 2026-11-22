@@ -117,11 +117,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'BarChart3',
     items: [
       { label: 'Analytics', href: '/dashboard/analytics', module: 'analytics' },
-      { label: 'Sales Reports', href: '/dashboard/sales-reports', module: 'analytics', hidden: true },
-      { label: 'Product Performance', href: '/dashboard/product-performance', module: 'analytics', hidden: true },
-      { label: 'Customer Analytics', href: '/dashboard/customer-analytics', module: 'analytics', hidden: true },
-      { label: 'Marketplace Analytics', href: '/dashboard/marketplace-analytics', module: 'analytics', hidden: true },
-      { label: 'Virtual Try-On Reports', href: '/dashboard/try-on-reports', module: 'analytics', hidden: true },
     ],
   },
   {
