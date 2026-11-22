@@ -154,9 +154,9 @@ export function AnalyticsReportsView({
     <PermissionGate module="analytics" action="view">
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Business Intelligence"
-          title="Analytics & Performance Reports"
-          subtitle="Sales performance, product conversion, customer lifetime spend, marketplace attribution, and virtual try-on ROI."
+          eyebrow="Reports"
+          title="Reports"
+          subtitle="Your sales, best products, customers, marketplace results and virtual try-on results."
           actions={
             <Button variant="outline" size="sm" onClick={handleExportReport} className="gap-1.5">
               <Download className="w-3.5 h-3.5" /> Export Report CSV
@@ -193,7 +193,7 @@ export function AnalyticsReportsView({
 
             <SectionCard
               title="Revenue Trend"
-              subtitle="Sample time-series visualization across tenant orders"
+              subtitle="Your sales over time"
               right={
                 <div className="flex gap-1.5 text-xs">
                   {(['today', '7d', '30d', '90d'] as const).map((p) => (
@@ -221,7 +221,7 @@ export function AnalyticsReportsView({
         {(tab === 'overview' || tab === 'products') && (
           <SectionCard
             title="Top Performing Garments"
-            subtitle="Ranked by units sold from your brand catalog"
+            subtitle="Your products, ranked by how many were sold"
           >
             <div className="sm:hidden space-y-2.5 text-xs">
               {topProducts.map((p) => {
@@ -298,7 +298,7 @@ export function AnalyticsReportsView({
               <KpiCard label="Repeat / High-Value Buyers" value={returningCustomers} icon={<Users className="w-4 h-4" />} />
               <KpiCard label="Average Customer Value" value={`৳${avgClv.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
             </div>
-            <SectionCard title="Top Patrons by Lifetime Spend">
+            <SectionCard title="Best customers (by total spent)">
               <div className="space-y-2 text-xs">
                 {[...safeCustomers]
                   .sort((a, b) => b.totalSpend - a.totalSpend)
@@ -333,7 +333,7 @@ export function AnalyticsReportsView({
               />
               <KpiCard label="Marketplace Revenue" value={`৳${mktRevenue.toFixed(2)}`} icon={<ShoppingBag className="w-4 h-4" />} />
             </div>
-            <SectionCard title="Post-by-Post Marketplace Performance">
+            <SectionCard title="Marketplace results by post">
               <div className="sm:hidden space-y-2.5 text-xs">
                 {safePosts.map((p) => (
                   <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
@@ -400,7 +400,7 @@ export function AnalyticsReportsView({
               <KpiCard label="Cart Conversions" value={tryOnCartAdds} icon={<ShoppingBag className="w-4 h-4" />} />
               <KpiCard label="Try-On Attributed Sales" value={`৳${tryOnAttributedRevenue.toFixed(2)}`} icon={<TrendingUp className="w-4 h-4" />} />
             </div>
-            <SectionCard title="Daily Virtual Try-On Volume">
+            <SectionCard title="Try-ons each day">
               <SvgBarChart data={series} valueKey="tryOns" color="#d97706" />
             </SectionCard>
           </div>

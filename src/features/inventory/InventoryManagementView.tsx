@@ -136,9 +136,9 @@ export function InventoryManagementView({
     <PermissionGate module="inventory" action="view">
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Stock & Fulfillment"
-          title="Inventory, Warehouses & Stock Ledger"
-          subtitle="Monitor garment stock levels, avoid overselling, and audit stock movements across locations."
+          eyebrow="Stock"
+          title="Inventory"
+          subtitle="See how much stock you have, avoid selling what you do not have, and track every stock change."
           actions={
             <Button
               variant="outline"
@@ -169,10 +169,10 @@ export function InventoryManagementView({
                 a.download = 'inventory-ledger.csv';
                 a.click();
                 URL.revokeObjectURL(url);
-                showToast('Exported inventory ledger CSV.');
+                showToast('Downloaded your stock list.');
               }}
             >
-              <Download className="w-3.5 h-3.5" /> Export Ledger CSV
+              <Download className="w-3.5 h-3.5" /> Download stock list (CSV)
             </Button>
           }
         />
@@ -213,8 +213,8 @@ export function InventoryManagementView({
 
         {tab === 'overview' && (
           <SectionCard
-            title="Catalog Inventory Status"
-            subtitle="Quick +5 / -1 stock controls or route directly to batch adjustments."
+            title="Stock by product"
+            subtitle="Add or remove a few pieces quickly, or change many at once."
             right={
               <div className="relative w-full sm:w-56">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -228,7 +228,7 @@ export function InventoryManagementView({
             }
           >
             {filteredProducts.length === 0 ? (
-              <EmptyState title="No products found" description="Create apparel SKUs in Product Management." />
+              <EmptyState title="No products found" description="Add your products first, then their stock shows here." />
             ) : (
               <>
                 <div className="sm:hidden space-y-2.5 text-xs">
@@ -358,8 +358,8 @@ export function InventoryManagementView({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <SectionCard
               className="lg:col-span-7"
-              title="Registered Warehouses & Fulfillment Studios"
-              subtitle="Inventory pools available to your brand tenant."
+              title="Your stock locations"
+              subtitle="The places where you keep your stock."
             >
               <div className="space-y-3 text-xs">
                 {safeWarehouses.map((w) => (
@@ -381,8 +381,8 @@ export function InventoryManagementView({
 
             <SectionCard
               className="lg:col-span-5"
-              title="Add Warehouse Location"
-              subtitle="Register another studio, retail backroom, or regional hub."
+              title="Add a stock location"
+              subtitle="For example another studio, shop back room or city hub."
             >
               <form onSubmit={handleAddWarehouse} className="space-y-3 text-xs">
                 <label className="block space-y-1">
@@ -426,8 +426,8 @@ export function InventoryManagementView({
 
         {tab === 'adjustments' && (
           <SectionCard
-            title="Manual Stock Adjustment"
-            subtitle="Record incoming factory shipments, damaged write-offs, or cycle-count corrections."
+            title="Change stock by hand"
+            subtitle="Add new stock from your factory, remove damaged pieces, or fix a wrong count."
           >
             <form onSubmit={handleAdjustSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <label className="block space-y-1">
@@ -493,9 +493,9 @@ export function InventoryManagementView({
         )}
 
         {tab === 'history' && (
-          <SectionCard title="Inventory Movement History" subtitle="Immutable audit trail of stock changes.">
+          <SectionCard title="Stock history" subtitle="A record of every stock change. It cannot be edited.">
             {safeLogs.length === 0 ? (
-              <EmptyState title="No movements recorded yet" description="Stock adjustments and fulfillment deductions appear here." />
+              <EmptyState title="No stock changes yet" description="When stock is added, removed or sold, it shows up here." />
             ) : (
               <>
                 <div className="sm:hidden space-y-2.5 text-xs">
