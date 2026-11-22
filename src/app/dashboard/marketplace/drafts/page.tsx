@@ -1,5 +1,5 @@
-import { MarketplacePublishingView } from '@/features/marketplace/MarketplacePublishingView';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <MarketplacePublishingView initialTab="drafts" />;
+  redirect('/dashboard/marketplace');
 }

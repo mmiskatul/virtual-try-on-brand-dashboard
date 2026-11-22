@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Calendar, Eye, Globe, MousePointerClick, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { Calendar, Eye, Globe, MousePointerClick, ShoppingBag, Trash2 } from 'lucide-react';
 import { PublicationStatus } from '../../types';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -123,37 +123,7 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
           eyebrow="Global Marketplace Channel"
           title="Marketplace Publishing & Posts"
           subtitle="Explicitly promote selected catalog items to the public marketplace without creating duplicate SKUs."
-          actions={
-            <PermissionGate module="marketplace" action="publish">
-              <Button size="sm" onClick={() => setTab('create')} className="gap-1.5">
-                <Plus className="w-3.5 h-3.5" /> Create Marketplace Post
-              </Button>
-            </PermissionGate>
-          }
         />
-
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-bold">
-          {(
-            [
-              ['overview', `All Posts (${posts.length})`],
-              ['posts', 'Published'],
-              ['drafts', 'Drafts & Unpublished'],
-              ['scheduled', 'Scheduled'],
-              ['create', '+ Create Post'],
-            ] as Array<[MarketplaceTab, string]>
-          ).map(([k, lbl]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setTab(k)}
-              className={`px-3.5 py-2 rounded-xl border whitespace-nowrap ${
-                tab === k ? 'bg-slate-950 text-white border-slate-950' : 'bg-white text-slate-600 border-slate-200'
-              }`}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
 
         {tab === 'create' ? (
           <SectionCard title="Create Marketplace Post from Existing Product" subtitle="Links directly to your original catalog item rather than duplicating it">
@@ -215,9 +185,7 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
         ) : visiblePosts.length === 0 ? (
           <EmptyState
             title="No marketplace posts in this view"
-            description="Select any catalog garment to craft a Marketplace publication post."
-            actionLabel="Create Marketplace Post"
-            onAction={() => setTab('create')}
+            description="Use the + button at the top to create a post from a catalog garment."
           />
         ) : (
           <SectionCard>
