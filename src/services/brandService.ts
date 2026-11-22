@@ -259,6 +259,7 @@ export function normalizeBackendProduct(raw: any): Product {
     shortDescription: raw.shortDescription ?? '',
     collections: raw.collection ? [raw.collection] : [],
     tags: Array.isArray(raw.tags) ? raw.tags : [],
+    audience: raw.audience === 'WOMEN' || raw.audience === 'MEN' || raw.audience === 'UNISEX' ? raw.audience : undefined,
     price: Number(raw.price ?? 0),
     compareAtPrice: raw.compareAtPrice ? Number(raw.compareAtPrice) : undefined,
     costPrice: raw.costPrice != null ? Number(raw.costPrice) : undefined,
@@ -1077,6 +1078,8 @@ export const brandWorkspaceApi = {
     /** Who is trying it on, and the size they usually wear. The picture is made to fit them. */
     gender?: 'female' | 'male';
     size?: string;
+    /** The size of the garment they chose, so the picture shows how it fits compared with their own size. */
+    garmentSize?: string;
   }): Promise<{ mode: 'live_ai' | 'unavailable'; resultUrl?: string; message?: string }> => {
     // 1. Create a try-on job. The backend makes the picture with Gemini and we wait for it.
     let jobId: string | undefined;
@@ -1091,6 +1094,7 @@ export const brandWorkspaceApi = {
           category: params.category,
           ...(params.gender ? { gender: params.gender } : {}),
           ...(params.size ? { size: params.size } : {}),
+          ...(params.garmentSize ? { garmentSize: params.garmentSize } : {}),
         }),
       });
       const job = submitRes?.data || submitRes;

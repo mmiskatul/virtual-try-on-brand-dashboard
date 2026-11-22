@@ -22,8 +22,35 @@ const LETTER_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 const WAIST_SIZES = ['28', '30', '32', '34', '36', '38', '40', '42'];
 const price = (n: number) => `৳${n.toLocaleString()}`;
 
-/** Which shoppers a garment is meant for, read from its tags, sub-category and category. */
+const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
+const sizeRank = (s: string) => {
+  const i = SIZE_ORDER.indexOf(s.trim().toUpperCase());
+  return i >= 0 ? i : 1000 + (Number(s) || 0);
+};
+
+/** A plain sentence about how the garment's size compares with the shopper's own size. */
+function fitNote(mine: string, garment: string): string | null {
+  if (!mine || !garment) return null;
+  const a = SIZE_ORDER.indexOf(mine);
+  const b = SIZE_ORDER.indexOf(garment);
+  const waist = /^\d+$/.test(mine) && /^\d+$/.test(garment);
+  if ((a < 0 || b < 0) && !waist) return null;
+  const step = waist ? Number(garment) - Number(mine) : b - a;
+  if (step === 0) return 'Same as your size, so it should fit you true to size.';
+  const unit = waist ? (Math.abs(step) === 1 ? 'inch' : 'inches') : Math.abs(step) === 1 ? 'size' : 'sizes';
+  return step > 0
+    ? `${Math.abs(step)} ${unit} bigger than your size, so it will look looser and longer.`
+    : `${Math.abs(step)} ${unit} smaller than your size, so it will look tighter and shorter.`;
+}
+
+/**
+ * Which shoppers a garment is for. The brand chooses this on the product (Women, Men or Both).
+ * Older products without a choice fall back to reading their tags and category, and count as both when unclear.
+ */
 function garmentAudience(p: Product): Gender | 'all' {
+  if (p.audience === 'WOMEN') return 'female';
+  if (p.audience === 'MEN') return 'male';
+  if (p.audience === 'UNISEX') return 'all';
   const text = [...(p.tags || []), p.subCategory || '', p.category || ''].join(' ').toLowerCase();
   if (/\b(unisex|all genders)\b/.test(text)) return 'all';
   if (/\b(women|womens|woman|female|ladies|girls?)\b/.test(text)) return 'female';
@@ -48,6 +75,7 @@ export default function BrandTryOnPage() {
   const [gender, setGender] = useState<Gender | ''>('');
   const [size, setSize] = useState('');
   const [selectedId, setSelectedId] = useState('');
+  const [garmentSizePick, setGarmentSizePick] = useState<{ id: string; value: string } | null>(null);
 
   const [personImg, setPersonImg] = useState('');
   const [consent, setConsent] = useState(false);
@@ -96,18 +124,39 @@ export default function BrandTryOnPage() {
     loadBrand();
   }, [brandSlug]);
 
-  // Garments meant for the shopper's choice. If the brand did not mark any, show everything.
+  // Only the clothes made for the shopper's choice (plus the ones for both). Men never see women's clothes, and women never see men's.
   const garments = useMemo(() => {
     if (!gender) return eligibleGarments;
-    const matching = eligibleGarments.filter((p) => {
+    return eligibleGarments.filter((p) => {
       const a = garmentAudience(p);
       return a === 'all' || a === gender;
     });
-    return matching.length > 0 ? matching : eligibleGarments;
   }, [eligibleGarments, gender]);
 
   const activeGarment = garments.find((p) => p.id === selectedId);
   const showWaist = activeGarment?.tryOnCategory === 'bottoms';
+
+  // The sizes this garment comes in (sold-out sizes are shown but cannot be chosen).
+  const garmentSizes = useMemo(() => {
+    const seen = new Map<string, boolean>();
+    for (const v of activeGarment?.variants || []) {
+      if (!v.size) continue;
+      seen.set(v.size, (seen.get(v.size) || false) || (v.stockQuantity ?? 0) > 0);
+    }
+    return Array.from(seen.entries())
+      .map(([name, inStock]) => ({ name, inStock }))
+      .sort((a, b) => sizeRank(a.name) - sizeRank(b.name));
+  }, [activeGarment]);
+
+  // What is selected: the shopper's tap, otherwise the garment size that matches their own size, otherwise the first one in stock.
+  const garmentSize = (() => {
+    if (garmentSizes.length === 0) return '';
+    const picked = garmentSizePick && garmentSizePick.id === activeGarment?.id ? garmentSizePick.value : '';
+    if (picked && garmentSizes.some((g) => g.name === picked && g.inStock)) return picked;
+    if (size && garmentSizes.some((g) => g.name === size && g.inStock)) return size;
+    return garmentSizes.find((g) => g.inStock)?.name || '';
+  })();
+  const compare = fitNote(size, garmentSize);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading the try-on page...</div>;
@@ -157,7 +206,7 @@ export default function BrandTryOnPage() {
   };
 
   // What is still missing before the picture can be made
-  const missing = !personImg ? 'Add your photo' : !size ? 'Choose your size' : !activeGarment ? 'Choose a garment' : tryOnCfg.requireConsent && !consent ? 'Accept the privacy note' : '';
+  const missing = !personImg ? 'Add your photo' : !size ? 'Choose your size' : !activeGarment ? 'Choose a garment' : garmentSizes.length > 0 && !garmentSize ? 'Choose the garment size' : tryOnCfg.requireConsent && !consent ? 'Accept the privacy note' : '';
 
   const handleGenerate = async () => {
     if (missing || !activeGarment || !gender) {
@@ -173,6 +222,7 @@ export default function BrandTryOnPage() {
       category: activeGarment.tryOnCategory || 'tops',
       gender,
       size,
+      ...(garmentSize ? { garmentSize } : {}),
     });
     if (res.mode === 'live_ai' && res.resultUrl) {
       setResultUrl(res.resultUrl);
@@ -258,7 +308,7 @@ export default function BrandTryOnPage() {
                         <Check className="h-3.5 w-3.5" /> Looks great
                       </span>
                     </div>
-                    {activeGarment && <p className="text-[13px] text-slate-500">{activeGarment.name} · size {size}</p>}
+                    {activeGarment && <p className="text-[13px] text-slate-500">{activeGarment.name}{garmentSize ? ` · size ${garmentSize}` : ''} · you wear {size}</p>}
                     <div className="flex gap-2.5">
                       <button type="button" onClick={() => { setPhase('ready'); setNotice(null); }} className="flex-1 rounded-full border border-stone-200 bg-white py-3 text-sm font-bold">Try another</button>
                       <Link href={`/brands/${brandSlug}`} style={accentBtn} className="flex-1 border py-3 text-center text-sm font-bold text-white">View in store</Link>
@@ -297,7 +347,7 @@ export default function BrandTryOnPage() {
                     <div className="space-y-2 border-t border-stone-100 pt-4">
                       <div>
                         <h2 className="text-base font-bold">2. Your size</h2>
-                        <p className="text-xs text-slate-500">The picture is made to fit this size.</p>
+                        <p className="text-xs text-slate-500">The size you usually wear.</p>
                       </div>
                       <div className="flex flex-wrap gap-2" role="group" aria-label="Your size">
                         {LETTER_SIZES.map((s) => (
@@ -334,7 +384,7 @@ export default function BrandTryOnPage() {
                 <p className="mb-4 mt-0.5 text-xs text-slate-500">Tap the one you want to try on.</p>
 
                 {garments.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-slate-500">No clothes are ready for try-on yet. Please check back soon.</p>
+                  <p className="py-10 text-center text-sm text-slate-500">No {gender === 'male' ? "men's" : "women's"} clothes are ready for try-on yet. Please check back soon.</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
                     {garments.map((item) => {
@@ -363,6 +413,40 @@ export default function BrandTryOnPage() {
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {activeGarment && garmentSizes.length > 0 && (
+                  <div className="mt-5 space-y-2 border-t border-stone-200 pt-5">
+                    <div>
+                      <h3 className="text-sm font-bold">Garment size</h3>
+                      <p className="text-xs text-slate-500">The size of {activeGarment.name} you want to try on.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Garment size">
+                      {garmentSizes.map((g) => (
+                        <button
+                          key={g.name}
+                          type="button"
+                          disabled={!g.inStock}
+                          aria-pressed={garmentSize === g.name}
+                          onClick={() => setGarmentSizePick({ id: activeGarment.id, value: g.name })}
+                          className={`min-w-[48px] rounded-xl border px-3.5 py-2.5 text-center text-sm font-bold ${
+                            !g.inStock
+                              ? 'cursor-not-allowed border-stone-200 bg-stone-50 text-stone-300 line-through'
+                              : garmentSize === g.name
+                                ? 'border-slate-950 bg-slate-950 text-white'
+                                : 'border-stone-200 bg-white text-slate-800 hover:border-slate-400'
+                          }`}
+                        >
+                          {g.name}
+                        </button>
+                      ))}
+                    </div>
+                    {size && garmentSize && (
+                      <p className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900">
+                        You wear <strong>{size}</strong> and chose garment size <strong>{garmentSize}</strong>.{compare ? ` ${compare}` : ''}
+                      </p>
+                    )}
                   </div>
                 )}
 

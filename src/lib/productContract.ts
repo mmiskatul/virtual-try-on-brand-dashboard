@@ -38,6 +38,10 @@ export const CATALOG_STATUSES = ['ACTIVE', 'DRAFT', 'ARCHIVED'] as const;
 export type TryOnCategory = (typeof TRY_ON_CATEGORIES)[number];
 export type CatalogStatus = (typeof CATALOG_STATUSES)[number];
 
+/** Who a garment is for. UNISEX means both men and women. */
+export const PRODUCT_AUDIENCES = ['WOMEN', 'MEN', 'UNISEX'] as const;
+export type ProductAudience = (typeof PRODUCT_AUDIENCES)[number];
+
 /** Letters, numbers, dot, dash, underscore. No spaces, no emoji. */
 export const SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 /** Tags: letters (any language), numbers, spaces, dash, underscore. No emoji or symbols. */
@@ -240,6 +244,7 @@ export const productFormSchema = z
     includeInMarketplaceTryOn: z.boolean(),
     tryOnCategory: z.enum(TRY_ON_CATEGORIES, { error: 'Please choose the garment type for the AI try-on.' }),
     catalogStatus: z.enum(CATALOG_STATUSES, { error: `Catalog status must be one of: ${CATALOG_STATUSES.join(', ')}.` }),
+    audience: z.enum(PRODUCT_AUDIENCES, { error: 'Choose who this is for: women, men or both.' }),
   })
   .superRefine((data, ctx) => {
     // Sizes & colours share out the total stock: what is assigned to them must add up to it exactly.
@@ -267,7 +272,7 @@ export type ProductFieldName = keyof ProductFormValues;
 
 export const PRODUCT_STEP_FIELDS: ProductFieldName[][] = [
   // 1. Basics
-  ['name', 'category', 'subCategory', 'collection', 'shortDescription', 'description', 'tags'],
+  ['name', 'category', 'audience', 'subCategory', 'collection', 'shortDescription', 'description', 'tags'],
   // 2. Images
   ['images', 'aiReferenceImage'],
   // 3. Price & stock

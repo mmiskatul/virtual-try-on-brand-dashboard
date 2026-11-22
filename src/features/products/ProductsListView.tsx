@@ -521,6 +521,7 @@ export function ProductsListView() {
                                 </Link>
                                 <p className="text-[11px] text-slate-500">
                                   <span className="font-mono">{p.sku}</span> · {p.category}
+                                  {p.audience ? ` · ${p.audience === 'WOMEN' ? 'Women' : p.audience === 'MEN' ? 'Men' : 'Both'}` : ''}
                                 </p>
                               </div>
                             </div>

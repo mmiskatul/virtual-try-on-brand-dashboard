@@ -92,6 +92,8 @@ export interface Product {
   warehouseLocation?: string;
   allowBackorder?: boolean;
   catalogStatus?: CatalogStatus;
+  /** Who the garment is for: women, men or both. Missing on older products, which count as both. */
+  audience?: 'WOMEN' | 'MEN' | 'UNISEX';
   brandStorefrontPublished: boolean;
   marketplacePublished: boolean;
   isTryOnEligible: boolean;

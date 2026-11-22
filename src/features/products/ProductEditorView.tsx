@@ -319,6 +319,8 @@ interface FormState {
   includeInMarketplaceTryOn: boolean;
   tryOnCategory: string;
   catalogStatus: string;
+  /** WOMEN, MEN or UNISEX. Empty until the brand chooses. */
+  audience: string;
 }
 
 const STRETCH_OPTIONS = ['', 'NONE', 'LOW', 'MEDIUM', 'HIGH'];
@@ -381,6 +383,7 @@ function toContractValues(form: FormState): Record<string, unknown> {
     // When try-on is off the garment type does not matter; otherwise the brand must choose one.
     tryOnCategory: form.tryOnCategory || (form.isTryOnEligible ? '' : 'all'),
     catalogStatus: form.catalogStatus,
+    audience: form.audience,
   };
 }
 
@@ -443,6 +446,8 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     includeInMarketplaceTryOn: existing?.includeInMarketplaceTryOn ?? false,
     tryOnCategory: existing?.tryOnCategory || '',
     catalogStatus: existing?.catalogStatus || 'ACTIVE',
+    // A new product must be set to women, men or both. Older products without a value already count as both.
+    audience: existing ? existing.audience || 'UNISEX' : '',
   }));
   const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
@@ -1027,6 +1032,32 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                         </option>
                       ))}
                     </select>
+                  </Field>
+
+                  <Field
+                    label="Who is it for?"
+                    error={showError('audience')}
+                    hint="Women: shown to women only. Men: shown to men only. Both: shown to everyone."
+                  >
+                    <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Who is it for?">
+                      {([['WOMEN', 'Women'], ['MEN', 'Men'], ['UNISEX', 'Both']] as const).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="radio"
+                          aria-checked={form.audience === value}
+                          onClick={() => {
+                            set({ audience: value });
+                            touch('audience');
+                          }}
+                          className={`rounded-xl border px-3 py-2.5 text-sm font-bold ${
+                            form.audience === value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </Field>
 
                   <Field
