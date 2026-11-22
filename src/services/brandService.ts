@@ -153,6 +153,35 @@ export interface TeamMember {
   isOwner: boolean;
   emailVerified: boolean;
   joinedAt: number;
+  /** Access given to this person on top of their role. */
+  extraPermissions: string[];
+  /** Everything they can do: the role's fixed access plus the extras. */
+  effectivePermissions: string[];
+  mustChangePassword: boolean;
+  disabled: boolean;
+}
+
+export interface GrantableAccess {
+  key: string;
+  label: string;
+  help: string;
+  ownerOnly?: boolean;
+}
+
+export interface NewTeamMember {
+  name: string;
+  email: string;
+  role: string;
+  password?: string;
+  mustChangePassword?: boolean;
+  extraPermissions?: string[];
+}
+
+export interface TeamMemberPatch {
+  name?: string;
+  role?: string;
+  extraPermissions?: string[];
+  disabled?: boolean;
 }
 
 export interface TeamInvite {
@@ -170,46 +199,8 @@ export interface TeamRoleInfo {
   name: string;
   description: string;
   permissions: string[];
-}
-
-export type ApiScope = 'products:read' | 'products:write' | 'orders:read' | 'orders:write';
-
-export interface ApiKeyInfo {
-  id: string;
-  name: string;
-  display: string;
-  last4: string;
-  scopes: ApiScope[];
-  createdAt: number;
-  expiresAt: number | null;
-  lastUsedAt: number | null;
-  status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
-}
-
-export type WebhookEvent = 'order.created' | 'order.status_changed' | 'inventory.low_stock';
-
-export interface WebhookInfo {
-  id: string;
-  url: string;
-  description?: string;
-  events: WebhookEvent[];
-  active: boolean;
-  createdAt: number;
-  consecutiveFailures: number;
-  lastDeliveryAt: number | null;
-  lastStatus: 'SUCCESS' | 'FAILED' | null;
-  disabledReason?: string;
-}
-
-export interface WebhookDelivery {
-  id: string;
-  type: string;
-  attempt: number;
-  ok: boolean;
-  httpStatus: number | null;
-  durationMs: number;
-  error?: string;
-  at: number;
+  /** The owner role is fixed and cannot be changed. */
+  fixed?: boolean;
 }
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -226,6 +217,14 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
+      if (
+        res.status === 403 &&
+        (errJson?.code === 'PASSWORD_CHANGE_REQUIRED' || errJson?.error === 'PasswordChangeRequired') &&
+        typeof window !== 'undefined' &&
+        !window.location.pathname.startsWith('/change-password')
+      ) {
+        window.location.assign('/change-password');
+      }
       throw new ServiceError(
         res.status,
         errJson?.message || `Request failed (${res.status})`,
@@ -1012,8 +1011,34 @@ export const brandWorkspaceApi = {
 
   // --- Team ---
   getTeam: async () => {
-    return apiFetch<{ members: TeamMember[]; invites: TeamInvite[]; roles: TeamRoleInfo[] }>('/api/v1/brand/team');
+    return apiFetch<{
+      members: TeamMember[];
+      invites: TeamInvite[];
+      roles: TeamRoleInfo[];
+      grantable: GrantableAccess[];
+      canGrantOwnerOnly: boolean;
+      canCreateAdmins: boolean;
+    }>('/api/v1/brand/team');
   },
+
+  // Add a person straight away with an email and a password.
+  createTeamMember: async (input: NewTeamMember) =>
+    apiFetch<{ member: TeamMember; temporaryPassword?: string }>('/api/v1/brand/team/members', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  updateTeamMember: async (id: string, patch: TeamMemberPatch) =>
+    apiFetch<{ member: TeamMember }>(`/api/v1/brand/team/members/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  resetTeamMemberPassword: async (id: string, password?: string) =>
+    apiFetch<{ reset: boolean; temporaryPassword?: string }>(`/api/v1/brand/team/members/${encodeURIComponent(id)}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify(password ? { password } : {}),
+    }),
 
   inviteTeamMember: async (email: string, role: string) => {
     return apiFetch<{ invite: TeamInvite; inviteUrl: string; emailDelivered: boolean }>('/api/v1/brand/team/invites', {
@@ -1042,40 +1067,6 @@ export const brandWorkspaceApi = {
       method: 'POST',
       body: JSON.stringify({ token, name, password }),
     });
-  },
-
-  // --- Developers: API keys ---
-  getApiKeys: async () => apiFetch<{ keys: ApiKeyInfo[]; scopes: ApiScope[] }>('/api/v1/brand/api-keys'),
-
-  createApiKey: async (input: { name: string; scopes: ApiScope[]; expiresInDays?: number | null }) =>
-    apiFetch<{ key: string; record: ApiKeyInfo }>('/api/v1/brand/api-keys', { method: 'POST', body: JSON.stringify(input) }),
-
-  revokeApiKey: async (id: string) => {
-    await apiFetch<any>(`/api/v1/brand/api-keys/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  },
-
-  // --- Developers: webhooks ---
-  getWebhooks: async () => apiFetch<{ webhooks: WebhookInfo[]; events: WebhookEvent[] }>('/api/v1/brand/webhooks'),
-
-  createWebhook: async (input: { url: string; events: WebhookEvent[]; description?: string }) =>
-    apiFetch<{ webhook: WebhookInfo; secret: string }>('/api/v1/brand/webhooks', { method: 'POST', body: JSON.stringify(input) }),
-
-  updateWebhook: async (id: string, patch: { active?: boolean; events?: WebhookEvent[]; url?: string; description?: string }) =>
-    apiFetch<{ webhook: WebhookInfo }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
-
-  deleteWebhook: async (id: string) => {
-    await apiFetch<any>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  },
-
-  rotateWebhookSecret: async (id: string) =>
-    apiFetch<{ secret: string }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}/rotate-secret`, { method: 'POST', body: JSON.stringify({}) }),
-
-  testWebhook: async (id: string) =>
-    apiFetch<{ delivery: WebhookDelivery }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}/test`, { method: 'POST', body: JSON.stringify({}) }),
-
-  getWebhookDeliveries: async (id: string) => {
-    const res = await apiFetch<{ deliveries: WebhookDelivery[] }>(`/api/v1/brand/webhooks/${encodeURIComponent(id)}/deliveries`);
-    return res.deliveries;
   },
 
   executeTryOn: async (params: {
