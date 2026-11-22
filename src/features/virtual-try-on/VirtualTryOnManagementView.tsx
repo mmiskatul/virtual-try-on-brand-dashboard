@@ -99,7 +99,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
   const updateProduct = useWorkspaceStore((s) => s.updateProduct);
   const tryOnConfig = useWorkspaceStore((s) => s.tryOnConfig);
   const updateTryOnConfig = useWorkspaceStore((s) => s.updateTryOnConfig);
-  const sessions = useWorkspaceStore((s) => s.tryOnSessions);
+  const [serverJobs, setServerJobs] = useState<Awaited<ReturnType<typeof brandWorkspaceApi.getTryOnJobs>> | null>(null);
 
   const showToast = useUiStore((s) => s.showToast);
   const hideToast = useUiStore((s) => s.hideToast);
@@ -109,6 +109,43 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
   const [copiedCode, setCopiedCode] = useState(false);
   const [appearance, setAppearance] = useState(tryOnConfig.appearance);
   const [filter, setFilter] = useState<GarmentFilter>('all');
+
+  // Sessions come from the server (every shopper try-on), not from this browser.
+  useEffect(() => {
+    let cancelled = false;
+    brandWorkspaceApi
+      .getTryOnJobs()
+      .then((jobs) => {
+        if (!cancelled) setServerJobs(jobs);
+      })
+      .catch(() => {
+        if (!cancelled) setServerJobs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sessions = useMemo(
+    () =>
+      (serverJobs || []).map((j) => {
+        const status: 'COMPLETED' | 'FAILED' | 'PROCESSING' | 'CANCELLED' =
+          j.status === 'COMPLETED' ? 'COMPLETED' : j.status === 'FAILED' ? 'FAILED' : j.status === 'CANCELLED' ? 'CANCELLED' : 'PROCESSING';
+        return {
+          id: j.jobId,
+          tenantId: profile.id || '',
+          productId: j.productId || '',
+          productName: products.find((p) => p.id === j.productId)?.name || 'Removed product',
+          category: j.category || '',
+          status,
+          durationMs: j.latencyMs || 0,
+          creditsUsed: status === 'COMPLETED' ? 1 : 0,
+          errorReason: status === 'FAILED' ? j.errorMessage || 'The try-on did not complete.' : undefined,
+          createdAt: j.createdAt ? new Date(j.createdAt).toLocaleString() : '',
+        };
+      }),
+    [serverJobs, products, profile.id]
+  );
 
   const notify = (msg: string) => {
     showToast(msg);
@@ -671,7 +708,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                     <tr>
                       <th className="p-3">Garment</th>
                       <th className="p-3">Result</th>
-                      <th className="p-3">Purchase</th>
+                      <th className="p-3">Details</th>
                       <th className="p-3 text-right">When</th>
                     </tr>
                   </thead>
@@ -683,7 +720,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                           <StatusBadge status={s.status} />
                         </td>
                         <td className="p-3 text-slate-600">
-                          {s.attributedOrderId ? `Order ${s.attributedOrderId} (৳${s.attributedRevenue})` : s.errorReason || 'No purchase yet'}
+                          {s.errorReason || (s.status === 'COMPLETED' ? 'Completed' : '-')}
                         </td>
                         <td className="p-3 text-right text-slate-500">{s.createdAt}</td>
                       </tr>

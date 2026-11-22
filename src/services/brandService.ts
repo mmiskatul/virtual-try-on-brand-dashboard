@@ -831,6 +831,13 @@ export const brandWorkspaceApi = {
     };
   },
 
+  // Real try-on sessions for this brand (from the server, newest first).
+  getTryOnJobs: async (limit = 100): Promise<Array<{ jobId: string; productId?: string; category?: string; status: string; errorCode?: string; errorMessage?: string; latencyMs?: number; createdAt?: number }>> => {
+    const res = await apiFetch<any>(`/api/v1/try-on/jobs?limit=${limit}`);
+    const jobs = res?.data?.jobs || res?.jobs || [];
+    return Array.isArray(jobs) ? jobs.filter(Boolean) : [];
+  },
+
   // Try-On Provider Status & Execution
   getTryOnProviderStatus: () =>
     apiFetch<{ mode: string; provider: string; status: string }>('/api/v1/try-on/provider'),
