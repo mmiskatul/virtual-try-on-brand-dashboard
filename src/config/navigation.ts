@@ -70,7 +70,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Virtual Try-On', href: '/dashboard/virtual-try-on', module: 'tryon' },
       { label: 'Garments', href: '/dashboard/try-on-garments', module: 'tryon', hidden: true },
-      { label: 'Look & Feel', href: '/dashboard/try-on-look', module: 'tryon', hidden: true },
       { label: 'Sessions', href: '/dashboard/try-on-sessions', module: 'tryon', hidden: true },
     ],
   },

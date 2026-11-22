@@ -84,7 +84,7 @@ const NAV_EXTRA_PREFIXES: Record<string, string[]> = {
     '/dashboard/marketplace-analytics',
     '/dashboard/try-on-reports',
   ],
-  '/dashboard/virtual-try-on': ['/dashboard/try-on-garments', '/dashboard/try-on-look', '/dashboard/try-on-sessions'],
+  '/dashboard/virtual-try-on': ['/dashboard/try-on-garments', '/dashboard/try-on-sessions'],
   '/dashboard/billing': [
     '/dashboard/subscription-plan',
     '/dashboard/ai-usage',
@@ -1225,7 +1225,7 @@ export function DashboardShell({
             { label: 'Overview', href: '/dashboard', icon: LayoutDashboard, match: (p: string) => p === '/dashboard' },
             { label: 'Products', href: '/dashboard/products', icon: ShoppingBag, match: (p: string) => p.startsWith('/dashboard/products') },
             { label: 'Orders', href: '/dashboard/orders', icon: PackageCheck, match: (p: string) => p.startsWith('/dashboard/orders') },
-            { label: 'Try-On', href: '/dashboard/virtual-try-on', icon: Sparkles, match: (p: string) => p.startsWith('/dashboard/virtual-try-on') || p.startsWith('/dashboard/try-on-garments') || p.startsWith('/dashboard/try-on-look') || p.startsWith('/dashboard/try-on-sessions') },
+            { label: 'Try-On', href: '/dashboard/virtual-try-on', icon: Sparkles, match: (p: string) => p.startsWith('/dashboard/virtual-try-on') || p.startsWith('/dashboard/try-on-garments') || p.startsWith('/dashboard/try-on-sessions') },
           ].map((nav) => {
             const NavIcon = nav.icon;
             const active = pendingHref ? pendingHref === nav.href : nav.match(pathname);

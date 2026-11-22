@@ -70,6 +70,7 @@ const nextConfig = {
       { source: '/dashboard/abandoned-carts', destination: '/dashboard/orders', permanent: false },
       { source: '/dashboard/returns', destination: '/dashboard/orders', permanent: false },
       { source: '/dashboard/refunds', destination: '/dashboard/orders', permanent: false },
+      { source: '/dashboard/try-on-look', destination: '/dashboard/virtual-try-on', permanent: false },
       { source: '/dashboard/marketing/coupons', destination: '/dashboard/marketing/discounts', permanent: true },
       { source: '/dashboard/marketplace/analytics', destination: '/dashboard/marketplace-analytics', permanent: true },
       { source: '/dashboard/virtual-try-on/analytics', destination: '/dashboard/try-on-reports', permanent: true },
