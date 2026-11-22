@@ -21,6 +21,7 @@ import { brandWorkspaceApi } from '../../services';
 import {
   ConfirmDialog,
   ErrorBanner,
+  KpiCard,
   PageHeader,
   PermissionGate,
   SafeImage,
@@ -28,7 +29,7 @@ import {
 } from '../../components/shared/UiPrimitives';
 import { ProductsNavTabs } from '../../components/shared/ProductsNavTabs';
 import { Button } from '../../components/ui/button';
-import { Drawer, Switch, formatApiError, useNotify } from './shared';
+import { Drawer, formatApiError, useNotify } from './shared';
 import { lowSizesOfVariants } from './variantPlan';
 import { DraftsPanel } from './DraftsPanel';
 
@@ -273,9 +274,9 @@ export function ProductsListView() {
     <PermissionGate module="products" action="view">
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Product Management"
+          eyebrow="Products"
           title="Products"
-          subtitle="Add garments, control where they are visible, and keep stock up to date."
+          subtitle="Add your clothes, choose where shoppers can see them, and keep stock up to date."
           actions={
             <>
               <Button
@@ -333,6 +334,15 @@ export function ProductsListView() {
         <ProductsNavTabs />
 
         {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
+
+        {products.length > 0 && (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <KpiCard label="All products" value={counts.ALL} />
+            <KpiCard label="Shown to shoppers" value={counts.LIVE} />
+            <KpiCard label="Hidden" value={counts.DRAFT} positive={counts.DRAFT === 0} />
+            <KpiCard label="Out of stock" value={counts.OUT_OF_STOCK} positive={counts.OUT_OF_STOCK === 0} />
+          </div>
+        )}
 
         <SectionCard>
           {loading && products.length === 0 ? (
@@ -482,9 +492,7 @@ export function ProductsListView() {
                         <th className="px-3 py-3">Product</th>
                         <th className="px-3 py-3">Price</th>
                         <th className="px-3 py-3">Stock</th>
-                        <th className="px-3 py-3 text-center">Storefront</th>
-                        <th className="px-3 py-3 text-center">Marketplace</th>
-                        <th className="px-3 py-3 text-center">Try-On</th>
+                        <th className="px-3 py-3">Shown on</th>
                         <th className="px-3 py-3 text-right" />
                       </tr>
                     </thead>
@@ -528,38 +536,28 @@ export function ProductsListView() {
                           <td className="px-3 py-3">
                             <StockLabel p={p} />
                           </td>
-                          <td className="px-3 py-3 text-center">
-                            <Switch
-                              label={`Storefront visibility for ${p.name}`}
-                              checked={p.brandStorefrontPublished}
-                              disabled={!canEdit}
-                              onChange={() => void toggleVisibility(p, 'brandStorefrontPublished')}
-                            />
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            <Switch
-                              label={`Marketplace visibility for ${p.name}`}
-                              checked={p.marketplacePublished}
-                              disabled={!canEdit}
-                              onChange={() => void toggleVisibility(p, 'marketplacePublished')}
-                            />
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            <button
-                              type="button"
-                              disabled={!canEdit}
-                              onClick={() => void toggleVisibility(p, 'isTryOnEligible')}
-                              aria-label={`Try-on for ${p.name}`}
-                              aria-pressed={p.isTryOnEligible}
-                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold disabled:opacity-50 ${
-                                p.isTryOnEligible
-                                  ? 'border-amber-200 bg-amber-50 text-amber-800'
-                                  : 'border-slate-200 bg-slate-100 text-slate-500'
-                              }`}
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              {p.isTryOnEligible ? 'On' : 'Off'}
-                            </button>
+                          <td className="px-3 py-3">
+                            <div className="flex flex-wrap gap-1.5">
+                              {([
+                                ['brandStorefrontPublished', 'Store', p.brandStorefrontPublished],
+                                ['marketplacePublished', 'Marketplace', p.marketplacePublished],
+                                ['isTryOnEligible', 'Try-on', p.isTryOnEligible],
+                              ] as const).map(([field, label, on]) => (
+                                <button
+                                  key={field}
+                                  type="button"
+                                  disabled={!canEdit}
+                                  onClick={() => void toggleVisibility(p, field)}
+                                  aria-label={`${label} for ${p.name}: ${on ? 'on' : 'off'}`}
+                                  aria-pressed={on}
+                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold disabled:opacity-50 ${
+                                    on ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-400 line-through'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
                           </td>
                           <td className="px-3 py-3 text-right">
                             <div className="inline-flex items-center gap-1.5">

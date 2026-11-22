@@ -209,16 +209,6 @@ export function DashboardOverviewView() {
       ? (safeSessions.reduce((s, t) => s + t.durationMs, 0) / safeSessions.length / 1000).toFixed(2)
       : '0.00';
 
-  const publishedPostsCount =
-    summary?.marketplaceActivity.publishedPosts ?? safePosts.filter((p) => p.status === 'PUBLISHED').length;
-  const draftOrScheduledPostsCount =
-    summary?.marketplaceActivity.draftOrScheduled ??
-    safePosts.filter((p) => p.status === 'DRAFT' || p.status === 'SCHEDULED').length;
-  const totalPostClicks =
-    summary?.marketplaceActivity.totalClicks ?? safePosts.reduce((s, p) => s + p.clicks, 0);
-  const postRevenue =
-    summary?.marketplaceActivity.postRevenue ?? safePosts.reduce((s, p) => s + p.revenue, 0);
-
   const lowStockProducts =
     summary?.lowStockProducts ??
     safeProducts
@@ -283,7 +273,6 @@ export function DashboardOverviewView() {
   const isNewShop = totalProductsCount === 0 && totalOrdersCount === 0;
   const chartTotal = chartData.reduce((sum, d) => sum + (Number((d as Record<string, unknown>)[chartMetric]) || 0), 0);
   const nextSteps = checklistItems.filter((i) => !i.completed).slice(0, 4);
-  const showMarketplace = publishedPostsCount > 0 || draftOrScheduledPostsCount > 0;
 
   const attention: Array<{ id: string; text: string; href: string; tone: 'warn' | 'info' }> = [];
   if (pendingOrders > 0) {
@@ -634,32 +623,6 @@ export function DashboardOverviewView() {
               )}
             </SectionCard>
           </div>
-
-          {/* Marketplace: only when the brand actually uses it */}
-          {showMarketplace && (
-            <SectionCard
-              title="Marketplace"
-              right={
-                <Link href="/dashboard/marketplace" className="text-xs font-bold underline whitespace-nowrap">
-                  Manage &rarr;
-                </Link>
-              }
-            >
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                {[
-                  ['Published', publishedPostsCount],
-                  ['Draft / scheduled', draftOrScheduledPostsCount],
-                  ['Clicks', totalPostClicks],
-                  ['Revenue', `৳${postRevenue.toLocaleString()}`],
-                ].map(([k, v]) => (
-                  <div key={String(k)} className="rounded-xl bg-slate-50 border border-slate-200/70 p-3">
-                    <p className="text-xs text-slate-500">{k}</p>
-                    <p className="text-lg font-extrabold text-slate-950 mt-0.5 tabular-nums">{v}</p>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
 
           {/* Remaining setup (compact) */}
           {checklistPct < 100 && nextSteps.length > 0 && (
