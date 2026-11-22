@@ -132,12 +132,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: 'integrations',
-    label: 'DEVELOPERS',
-    icon: 'Plug',
-    items: [{ label: 'Developers', href: '/dashboard/integrations', module: 'integrations' }],
-  },
-  {
     id: 'settings',
     label: 'SETTINGS',
     icon: 'Settings',

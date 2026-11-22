@@ -74,7 +74,6 @@ export interface VerifiedBrandShellUser {
 
 /** Extra URL prefixes that belong to a module whose root link lives elsewhere. */
 const NAV_EXTRA_PREFIXES: Record<string, string[]> = {
-  '/dashboard/integrations': ['/dashboard/developer'],
   '/dashboard/products': ['/dashboard/categories', '/dashboard/collections'],
   '/dashboard/inventory': ['/dashboard/inventory-history'],
   '/dashboard/virtual-try-on': ['/dashboard/try-on-garments', '/dashboard/try-on-sessions'],
