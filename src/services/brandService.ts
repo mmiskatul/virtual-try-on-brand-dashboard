@@ -1074,8 +1074,12 @@ export const brandWorkspaceApi = {
     personImage: string;
     garmentImage: string;
     category: string;
+    /** Who is trying it on, and the size they usually wear. The picture is made to fit them. */
+    gender?: 'female' | 'male';
+    size?: string;
   }): Promise<{ mode: 'live_ai' | 'unavailable'; resultUrl?: string; message?: string }> => {
-    // 1. Prefer enterprise async job orchestrator (Outbox -> Worker/AI Service -> Signed Result URL)
+    // 1. Create a try-on job. The backend makes the picture with Gemini and we wait for it.
+    let jobId: string | undefined;
     try {
       const submitRes = await apiFetch<any>('/api/v1/try-on/jobs', {
         method: 'POST',
@@ -1085,27 +1089,34 @@ export const brandWorkspaceApi = {
           personImageUrl: params.personImage,
           garmentImageUrl: params.garmentImage,
           category: params.category,
+          ...(params.gender ? { gender: params.gender } : {}),
+          ...(params.size ? { size: params.size } : {}),
         }),
       });
       const job = submitRes?.data || submitRes;
-      if (job?.jobId) {
+      jobId = job?.jobId;
+      if (jobId) {
         if (job.status === 'COMPLETED' && job.resultUrl) {
           return { mode: 'live_ai', resultUrl: job.resultUrl };
         }
-        for (let i = 0; i < 15; i++) {
-          await new Promise((r) => setTimeout(r, 1000));
-          const statusRes = await apiFetch<any>(`/api/v1/try-on/jobs/${encodeURIComponent(job.jobId)}`);
+        // Gemini can take about half a minute, so wait up to a minute.
+        for (let i = 0; i < 40; i++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          const statusRes = await apiFetch<any>(`/api/v1/try-on/jobs/${encodeURIComponent(jobId)}`);
           const poll = statusRes?.data || statusRes;
           if (poll?.status === 'COMPLETED' && poll?.resultUrl) {
             return { mode: 'live_ai', resultUrl: poll.resultUrl };
           }
           if (poll?.status === 'FAILED' || poll?.status === 'CANCELLED') {
-            return { mode: 'unavailable', message: poll.errorMessage || 'AI try-on generation failed.' };
+            return { mode: 'unavailable', message: poll.errorMessage || 'The try-on could not be created. Please try again.' };
           }
         }
+        // A job exists, so do not start a second one (it would use another try-on credit).
+        return { mode: 'unavailable', message: 'This is taking longer than usual. Please try again in a moment.' };
       }
-    } catch {
-      // Fallback transparently to synchronous /direct endpoint if async job orchestrator is unreachable
+    } catch (err: any) {
+      if (jobId) return { mode: 'unavailable', message: err?.message || 'Could not check on your try-on. Please try again.' };
+      // No job was created, so the one-step route below is safe to try.
     }
 
     try {
