@@ -132,7 +132,7 @@ export function BillingCreditsView({
   const downloadInvoiceText = (inv: typeof safeInvoices[number]) => {
     const content = [
       `INVOICE ${inv.id}`,
-      `Tenant: ${profile.name} (${profile.slug})`,
+      `Brand: ${profile.name} (${profile.slug})`,
       `Plan: ${inv.plan}`,
       `Billing Period: ${inv.period}`,
       `Issued: ${inv.issuedAt}`,
@@ -190,7 +190,7 @@ export function BillingCreditsView({
 
         {(tab === 'overview' || tab === 'usage') && (
           <SectionCard
-            title="Monthly AI Compute Quota"
+            title="Try-ons this month"
             subtitle={`${quotaUsed.toLocaleString()} of ${quotaMax.toLocaleString()} credits used (${pct}%)`}
             right={<StatusBadge status={pct > 85 ? 'PENDING' : 'ACTIVE'} />}
           >
@@ -256,7 +256,7 @@ export function BillingCreditsView({
 
         {(tab === 'overview' || tab === 'plan') && (
           <SectionCard
-            title="Subscription Tiers"
+            title="Plans"
             subtitle="Compare what each plan includes."
           >
             <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2.5">
@@ -319,7 +319,7 @@ export function BillingCreditsView({
         )}
 
         {(tab === 'overview' || tab === 'invoices') && (
-          <SectionCard title="Billing Invoices" subtitle="Monthly SaaS subscription and credit pack receipts.">
+          <SectionCard title="Invoices" subtitle="Your monthly plan and credit pack receipts.">
             <div className="sm:hidden space-y-2.5 text-xs">
               {safeInvoices.map((inv) => (
                 <div key={inv.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2.5">
@@ -388,8 +388,8 @@ export function BillingCreditsView({
 
         {tab === 'payment-methods' && (
           <SectionCard
-            title="Payment Methods on File"
-            subtitle="Configured SaaS billing methods for automatic plan renewal."
+            title="Payment methods"
+            subtitle="How your plan is paid for each month."
           >
             <div className="rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-600">
               <p className="font-bold text-slate-900">No payment method on file</p>
@@ -415,7 +415,7 @@ export function BillingCreditsView({
                 subject: `Plan change request: ${target.name}`,
                 category: 'BILLING',
                 priority: 'MEDIUM',
-                message: `Please switch the workspace "${profile.name}" from ${currentPlan} to ${target.id}.`,
+                message: `Please switch the brand "${profile.name}" from ${currentPlan} to ${target.id}.`,
               });
               showToast('Request sent. We will contact you to switch your plan.');
             } catch {

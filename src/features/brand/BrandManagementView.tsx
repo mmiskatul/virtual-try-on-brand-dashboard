@@ -747,7 +747,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
               </div>
             </SectionCard>
 
-            <SectionCard title="Platform Verification & Tenant Status" className="lg:col-span-4">
+            <SectionCard title="Verification and account status" className="lg:col-span-4">
               <div className="space-y-3 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-bold text-slate-800">Current Badge</span>
@@ -790,7 +790,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                     </ul>
                   )}
                   <div className="pt-2 border-t border-slate-200 space-y-1 font-mono text-[11px] text-slate-500">
-                    <p>Tenant ID: {profile.id || 'local'}</p>
+                    <p>Account ID: {profile.id || 'local'}</p>
                     <p>Slug: /brands/{profile.slug}</p>
                     <p>Storefront: {profile.storeStatus || 'LIVE'}</p>
                   </div>
@@ -988,7 +988,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
 
             {/* Choose or Switch Active Storefront UI Design right inside /dashboard/settings/onboarding/media */}
             <SectionCard
-              title="Storefront UI Design & Media Workspace"
+              title="Store design, logos and images"
               subtitle={`Active Design: ${
                 STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label || 'Editorial Split'
               } — Switch layouts below and edit media directly inside your selected UI`}

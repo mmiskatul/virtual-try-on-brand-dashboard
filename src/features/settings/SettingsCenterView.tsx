@@ -107,7 +107,7 @@ export function SettingsCenterView({
           bannerUrl: form.banner,
         });
       }
-      showToast('Saved workspace settings.');
+      showToast('Settings saved.');
     } catch (err: any) {
       showToast(err?.message || 'Saved locally, but backend sync failed.');
     } finally {
@@ -139,9 +139,9 @@ export function SettingsCenterView({
     <PermissionGate module="settings" action="view">
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Workspace Control Center"
-          title="Brand Settings & Configuration"
-          subtitle="Configure domain routing, checkout taxes, shipping thresholds, privacy retention, and security."
+          eyebrow="Settings"
+          title="Settings"
+          subtitle="Your web address, taxes, delivery charges, customer photo privacy and account security."
           actions={
             tab === 'security' || tab === 'onboarding' ? undefined : (
             <Button size="sm" disabled={!canManage || saving} onClick={() => handleSave()} className="gap-1.5">
@@ -178,13 +178,13 @@ export function SettingsCenterView({
             {tab === 'overview' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { id: 'onboarding', title: 'Onboarding', desc: 'Brand profile, verification, theme & assets from setup', icon: Palette },
-                  { id: 'general', title: 'General Profile', desc: 'Brand display name, slogan, support contact', icon: Settings },
-                  { id: 'business', title: 'Business & Legal', desc: 'Trade license, legal entity, headquarters', icon: Building2 },
-                  { id: 'store', title: 'Store Availability', desc: 'Public boutique & marketplace status', icon: Store },
-                  { id: 'domains', title: 'Domains & SSL', desc: 'Subdomain and custom domain verification', icon: Globe },
-                  { id: 'tax', title: 'Currency & Taxes', desc: 'Checkout currency and VAT calculation', icon: Coins },
-                  { id: 'privacy', title: 'Privacy & Security', desc: 'Photo retention rules and 2FA protection', icon: Lock },
+                  { id: 'onboarding', title: 'Onboarding', desc: 'Brand profile, verification, colours and logos', icon: Palette },
+                  { id: 'general', title: 'General', desc: 'Brand name, slogan, support contact', icon: Settings },
+                  { id: 'business', title: 'Business details', desc: 'Trade licence, company name, head office', icon: Building2 },
+                  { id: 'store', title: 'Store Availability', desc: 'Show or pause your store and marketplace', icon: Store },
+                  { id: 'domains', title: 'Web address', desc: 'Your store address and custom domain', icon: Globe },
+                  { id: 'tax', title: 'Currency & Taxes', desc: 'Checkout currency and VAT', icon: Coins },
+                  { id: 'privacy', title: 'Privacy & security', desc: 'How long customer photos are kept, and extra sign-in protection', icon: Lock },
                 ].map((card) => {
                   const Icon = card.icon;
                   const targetHref = SETTINGS_NAV.find((n) => n.id === card.id)?.href || '/dashboard/settings';
@@ -207,7 +207,7 @@ export function SettingsCenterView({
             )}
 
             {(tab === 'general' || tab === 'overview') && (
-              <SectionCard title="General Workspace Settings" subtitle="Primary tenant identity and support email.">
+              <SectionCard title="General settings" subtitle="Your brand name and support email.">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Brand Display Name</span>
@@ -247,7 +247,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'business' && (
-              <SectionCard title="Registered Business Entity" subtitle="Corporate registration and fiscal address details.">
+              <SectionCard title="Business details" subtitle="Your company registration and business address.">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Legal Entity Name</span>
@@ -297,7 +297,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'store' && (
-              <SectionCard title="Storefront & Marketplace Visibility" subtitle="Toggle storefront maintenance mode or pause global marketplace discovery.">
+              <SectionCard title="Store and marketplace" subtitle="Close your store for maintenance, or hide your products from the marketplace.">
                 <div className="space-y-4 text-xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200">
                     <div className="min-w-0">
@@ -335,7 +335,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'domains' && (
-              <SectionCard title="Domains & SSL Certificates" subtitle="Default platform path and custom domain DNS setup.">
+              <SectionCard title="Web address" subtitle="Your store address, and how to use your own domain.">
                 <div className="space-y-4 text-xs">
                   <div className="p-4 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div>
@@ -372,7 +372,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'seo' && (
-              <SectionCard title="Storefront SEO & Open Graph" subtitle="Search engine indexing titles and social preview metadata.">
+              <SectionCard title="Search and sharing" subtitle="How your store looks in Google and when someone shares your link.">
                 <div className="space-y-3 text-xs">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Meta Title</span>
@@ -412,7 +412,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'localization' && (
-              <SectionCard title="Regional Localization" subtitle="Timezone, date format, and workspace interface language.">
+              <SectionCard title="Region and language" subtitle="Time zone, date style and language.">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Timezone</span>
@@ -451,7 +451,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'tax' && (
-              <SectionCard title="Currency & Checkout Taxes" subtitle="Display currency, VAT/GST rate, and tax-inclusive pricing mode.">
+              <SectionCard title="Currency and tax" subtitle="Your currency, VAT or GST rate, and whether prices already include tax.">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Store Currency</span>
@@ -487,7 +487,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'shipping' && (
-              <SectionCard title="Storefront Shipping Rules" subtitle="Configure default delivery charges and free-shipping thresholds.">
+              <SectionCard title="Delivery charges" subtitle="Your standard delivery fee and the order amount that gets free delivery.">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Default Flat Shipping Fee (৳)</span>
@@ -514,7 +514,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'notifications' && (
-              <SectionCard title="Merchant Alert Preferences" subtitle="Select workspace alerts displayed and forwarded when SMTP is active.">
+              <SectionCard title="Alerts" subtitle="Choose which alerts you want to see. Email alerts only work once an email service is connected.">
                 <div className="space-y-3 text-xs">
                   {(
                     [
@@ -539,7 +539,7 @@ export function SettingsCenterView({
             )}
 
             {tab === 'privacy' && (
-              <SectionCard title="Customer Privacy & Photo Retention Policy" subtitle="Compliance controls for uploaded try-on customer photos.">
+              <SectionCard title="Customer photo privacy" subtitle="How long shoppers' try-on photos are kept, and whether they must agree first.">
                 <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2 mb-3">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
                   <p>
@@ -573,7 +573,7 @@ export function SettingsCenterView({
             {tab === 'security' && <SecurityPanel />}
 
             {tab === 'account' && (
-              <SectionCard title="Owner Account Summary" subtitle="Primary tenant administrator record.">
+              <SectionCard title="Owner account" subtitle="The main person who runs this shop.">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Account Owner Name</span>
@@ -584,7 +584,7 @@ export function SettingsCenterView({
                     />
                   </label>
                   <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Workspace Tenant Slug</span>
+                    <span className="font-semibold text-slate-700">Your store name in the web address</span>
                     <input
                       disabled
                       value={form.slug}
