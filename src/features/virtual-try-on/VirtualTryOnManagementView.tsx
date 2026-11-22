@@ -19,6 +19,7 @@ import {
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
 import { resolveBrandLook } from '../../lib/brand-look';
+import { useTryOnSessions } from '../../hooks/useTryOnSessions';
 import { TRY_ON_LAYOUTS, TryOnLayoutId, layoutIdFor } from '../../lib/try-on-layouts';
 
 export type TryOnTab = 'overview' | 'products' | 'appearance' | 'history';
@@ -202,7 +203,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
   const updateProduct = useWorkspaceStore((s) => s.updateProduct);
   const tryOnConfig = useWorkspaceStore((s) => s.tryOnConfig);
   const updateTryOnConfig = useWorkspaceStore((s) => s.updateTryOnConfig);
-  const [serverJobs, setServerJobs] = useState<Awaited<ReturnType<typeof brandWorkspaceApi.getTryOnJobs>> | null>(null);
+  const { sessions } = useTryOnSessions();
 
   const showToast = useUiStore((s) => s.showToast);
   const hideToast = useUiStore((s) => s.hideToast);
@@ -212,43 +213,6 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
   const [copiedCode, setCopiedCode] = useState(false);
   const [appearance, setAppearance] = useState(tryOnConfig.appearance);
   const [filter, setFilter] = useState<GarmentFilter>('all');
-
-  // Sessions come from the server (every shopper try-on), not from this browser.
-  useEffect(() => {
-    let cancelled = false;
-    brandWorkspaceApi
-      .getTryOnJobs()
-      .then((jobs) => {
-        if (!cancelled) setServerJobs(jobs);
-      })
-      .catch(() => {
-        if (!cancelled) setServerJobs([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const sessions = useMemo(
-    () =>
-      (serverJobs || []).map((j) => {
-        const status: 'COMPLETED' | 'FAILED' | 'PROCESSING' | 'CANCELLED' =
-          j.status === 'COMPLETED' ? 'COMPLETED' : j.status === 'FAILED' ? 'FAILED' : j.status === 'CANCELLED' ? 'CANCELLED' : 'PROCESSING';
-        return {
-          id: j.jobId,
-          tenantId: profile.id || '',
-          productId: j.productId || '',
-          productName: products.find((p) => p.id === j.productId)?.name || 'Removed product',
-          category: j.category || '',
-          status,
-          durationMs: j.latencyMs || 0,
-          creditsUsed: status === 'COMPLETED' ? 1 : 0,
-          errorReason: status === 'FAILED' ? j.errorMessage || 'The try-on did not complete.' : undefined,
-          createdAt: j.createdAt ? new Date(j.createdAt).toLocaleString() : '',
-        };
-      }),
-    [serverJobs, products, profile.id]
-  );
 
   const notify = (msg: string) => {
     showToast(msg);
