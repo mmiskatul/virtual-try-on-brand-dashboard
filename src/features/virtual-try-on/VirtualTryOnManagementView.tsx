@@ -91,6 +91,109 @@ function LayoutWireframe({ id, accent }: { id: TryOnLayoutId; accent: string }) 
   );
 }
 
+/** A scaled-down copy of the public try-on page in the chosen design, using the brand look. */
+function DesignPreview({
+  id,
+  look,
+  brandName,
+  title,
+  subtitle,
+  generateText,
+  garments,
+}: {
+  id: TryOnLayoutId;
+  look: ReturnType<typeof resolveBrandLook>;
+  brandName: string;
+  title: string;
+  subtitle: string;
+  generateText: string;
+  garments: Array<{ id: string; name: string; image: string }>;
+}) {
+  const wide = id === 'showcase' || id === 'editorial';
+  const card = 'rounded-xl bg-white border border-slate-200 p-3 space-y-2';
+  const photoBox = (label: string) => (
+    <div className={card}>
+      <p className="text-[11px] font-bold text-slate-900">{label}</p>
+      <div className="aspect-[3/4] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] text-slate-400">Photo</div>
+    </div>
+  );
+  const garmentGrid =
+    id === 'grid' ? 'grid grid-cols-2 gap-1.5' : id === 'showcase' ? 'grid grid-cols-4 gap-2' : id === 'editorial' ? 'grid grid-cols-3 gap-3' : 'space-y-1.5';
+  const button = (extra: string) => (
+    <div className={`px-3 py-1.5 text-center text-[11px] font-bold text-white ${extra}`} style={{ backgroundColor: look.accent, borderRadius: look.buttonRadius }}>
+      {generateText}
+    </div>
+  );
+  return (
+    <div className="rounded-2xl border border-slate-200 overflow-hidden" style={{ backgroundColor: look.background, color: look.text }}>
+      <div className="flex items-center gap-2 bg-white border-b border-slate-200 px-3 py-2">
+        <div className="relative h-6 w-6 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+          {look.logo && <SafeImage src={look.logo} alt={brandName} fill className="object-cover" />}
+        </div>
+        <span className="text-xs font-bold text-slate-900 truncate">{brandName}</span>
+      </div>
+      {look.banner && (
+        <div className="relative h-16 w-full">
+          <SafeImage src={look.banner} alt="" fill className="object-cover" />
+        </div>
+      )}
+      <div className="p-4 space-y-3">
+        <div>
+          <h4 className="text-base font-extrabold">{title}</h4>
+          <p className="text-xs opacity-70">{subtitle}</p>
+        </div>
+        <div className={`grid gap-3 ${wide ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {photoBox('1. Upload your photo')}
+          {photoBox('2. Try-On Result')}
+          {!wide && (
+            <div className={card}>
+              <p className="text-[11px] font-bold text-slate-900">3. Select garment</p>
+              <div className={garmentGrid}>
+                {garments.slice(0, id === 'grid' ? 4 : 3).map((g) => (
+                  <GarmentThumb key={g.id} g={g} row={id === 'classic'} />
+                ))}
+              </div>
+              {button('')}
+            </div>
+          )}
+        </div>
+        {wide && (
+          <div className={card}>
+            <p className="text-[11px] font-bold text-slate-900">3. Select garment</p>
+            <div className={garmentGrid}>
+              {garments.slice(0, id === 'showcase' ? 4 : 3).map((g) => (
+                <GarmentThumb key={g.id} g={g} tall={id === 'editorial'} />
+              ))}
+            </div>
+            {button('mx-auto w-48')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GarmentThumb({ g, row, tall }: { g: { name: string; image: string }; row?: boolean; tall?: boolean }) {
+  if (row) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-slate-200 p-1.5">
+        <div className="relative h-9 w-7 shrink-0 overflow-hidden rounded bg-slate-100">
+          <SafeImage src={g.image} alt={g.name} fill className="object-cover" />
+        </div>
+        <span className="truncate text-[10px] font-semibold text-slate-800">{g.name}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className={`relative w-full ${tall ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-slate-100`}>
+        <SafeImage src={g.image} alt={g.name} fill className="object-cover" />
+      </div>
+      <p className="truncate p-1.5 text-[10px] font-semibold text-slate-800">{g.name}</p>
+    </div>
+  );
+}
+
 export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initialTab?: TryOnTab }) {
   const tab = initialTab;
   const pathname = usePathname();
@@ -577,55 +680,61 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
 
         {tab === 'appearance' && (
           <div className="space-y-6">
-          <SectionCard title="Page design" subtitle="Choose how your try-on page is laid out. Colours and logo still follow your brand.">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {TRY_ON_LAYOUTS.map((opt) => {
-                const selected = layoutIdFor(appearance.previewLayout, appearance.gridStyle) === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setAppearance({ ...appearance, previewLayout: opt.previewLayout, gridStyle: opt.gridStyle })}
-                    className={`text-left rounded-2xl border p-2.5 space-y-2 transition-colors ${
-                      selected ? 'border-slate-950 ring-2 ring-slate-950/15 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <LayoutWireframe id={opt.id} accent={brandLook.accent} />
-                    <div className="px-0.5">
-                      <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        {opt.label}
-                        {selected && <Check className="h-3.5 w-3.5 text-emerald-600" />}
-                      </p>
-                      <p className="text-[11px] text-slate-500 leading-snug">{opt.description}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-3 text-[11px] text-slate-500">Press Save look below to publish your choice.</p>
-          </SectionCard>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <SectionCard title="How your try-on page looks" subtitle="Words shoppers see. Colours, logo and banner follow your brand." className="lg:col-span-7">
-              <div className="space-y-3 text-xs">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2.5">
-                  <p className="font-bold text-slate-900">Matches your brand automatically</p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    {([['Main', brandLook.primary], ['Accent', brandLook.accent], ['Background', brandLook.background], ['Text', brandLook.text]] as const).map(([label, c]) => (
-                      <span key={label} className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
-                        <span className="h-5 w-5 rounded-full border border-slate-300" style={{ backgroundColor: c }} />
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Change them in{' '}
-                    <Link href="/dashboard/settings/onboarding/identity" className="font-bold text-slate-900 underline">Theme &amp; Identity</Link>
-                    {' '}or{' '}
-                    <Link href="/dashboard/settings/onboarding/media" className="font-bold text-slate-900 underline">Logos &amp; Brand Media</Link>.
-                    The try-on page updates by itself.
-                  </p>
-                </div>
+            <SectionCard
+              title="Page design"
+              subtitle="Pick a design to see how your try-on page will look. Colours, logo and banner follow your brand."
+            >
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {TRY_ON_LAYOUTS.map((opt) => {
+                  const selected = layoutIdFor(appearance.previewLayout, appearance.gridStyle) === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setAppearance({ ...appearance, previewLayout: opt.previewLayout, gridStyle: opt.gridStyle })}
+                      className={`text-left rounded-2xl border p-2.5 space-y-2 transition-colors ${
+                        selected ? 'border-slate-950 ring-2 ring-slate-950/15 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <LayoutWireframe id={opt.id} accent={brandLook.accent} />
+                      <div className="px-0.5">
+                        <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          {opt.label}
+                          {selected && <Check className="h-3.5 w-3.5 text-emerald-600" />}
+                        </p>
+                        <p className="text-[11px] text-slate-500 leading-snug">{opt.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-bold text-slate-700">
+                  Preview: {TRY_ON_LAYOUTS.find((o) => o.id === layoutIdFor(appearance.previewLayout, appearance.gridStyle))?.label}
+                </p>
+                <DesignPreview
+                  id={layoutIdFor(appearance.previewLayout, appearance.gridStyle)}
+                  look={brandLook}
+                  brandName={profile.name}
+                  title={appearance.pageTitle}
+                  subtitle={appearance.pageDescription}
+                  generateText={appearance.generateBtnText}
+                  garments={(eligibleProducts.length > 0 ? eligibleProducts : products).slice(0, 6).map((p) => ({ id: p.id, name: p.name, image: p.image }))}
+                />
+              </div>
+
+              <p className="mt-4 text-[11px] text-slate-500">
+                Colours and logo come from{' '}
+                <Link href="/dashboard/settings/onboarding/identity" className="font-bold text-slate-900 underline">Theme &amp; Identity</Link>
+                {' '}and{' '}
+                <Link href="/dashboard/settings/onboarding/media" className="font-bold text-slate-900 underline">Logos &amp; Brand Media</Link>.
+              </p>
+            </SectionCard>
+
+            <SectionCard title="Page title and subtitle" subtitle="The words at the top of your try-on page.">
+              <div className="space-y-3 text-xs max-w-2xl">
                 <div>
                   <label className="block font-bold mb-1">Page title</label>
                   <input value={appearance.pageTitle} onChange={(e) => setAppearance({ ...appearance, pageTitle: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
@@ -634,61 +743,13 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                   <label className="block font-bold mb-1">Page subtitle</label>
                   <textarea rows={2} value={appearance.pageDescription} onChange={(e) => setAppearance({ ...appearance, pageDescription: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
                 </div>
-                <div>
-                  <label className="block font-bold mb-1">Photo upload instructions</label>
-                  <input value={appearance.uploadInstructions} onChange={(e) => setAppearance({ ...appearance, uploadInstructions: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-bold mb-1">Try-on button text</label>
-                    <input value={appearance.primaryBtnText} onChange={(e) => setAppearance({ ...appearance, primaryBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                  </div>
-                  <div>
-                    <label className="block font-bold mb-1">Generate button text</label>
-                    <input value={appearance.generateBtnText} onChange={(e) => setAppearance({ ...appearance, generateBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-                  </div>
-                </div>
-                <label className="flex items-center gap-2 pt-1">
-                  <input type="checkbox" checked={appearance.showPrices} onChange={(e) => setAppearance({ ...appearance, showPrices: e.target.checked })} /> Show prices
-                </label>
-                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance: { ...appearance, accentColor: brandLook.accent, backgroundColor: brandLook.background } }, 'Saved. Your try-on page now uses this look.')}>
+                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance: { ...appearance, accentColor: brandLook.accent, backgroundColor: brandLook.background } }, 'Saved. Your try-on page now uses this design.')}>
                   Save look
                 </Button>
               </div>
             </SectionCard>
-
-            <SectionCard title="Live preview" className="lg:col-span-5">
-              <div className="rounded-2xl border border-slate-200 overflow-hidden" style={{ backgroundColor: brandLook.background, color: brandLook.text }}>
-                {brandLook.banner && (
-                  <div className="relative h-20 w-full">
-                    <SafeImage src={brandLook.banner} alt="" fill className="object-cover" />
-                  </div>
-                )}
-                <div className="p-4 sm:p-5 space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-300 shrink-0">
-                    <SafeImage src={profile.logo} alt={profile.name} fill className="object-cover" />
-                  </div>
-                  <span className="font-bold text-sm truncate">{profile.name}</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-base">{appearance.pageTitle}</h4>
-                  <p className="text-xs opacity-70 mt-1">{appearance.pageDescription}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 text-[11px] text-slate-500">{appearance.uploadInstructions}</div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-4 py-2 text-white text-xs font-bold" style={{ backgroundColor: brandLook.accent, borderRadius: brandLook.buttonRadius }}>
-                    {appearance.generateBtnText}
-                  </span>
-                  <span className="px-4 py-2 border border-slate-300 bg-white text-xs font-bold" style={{ borderRadius: brandLook.buttonRadius }}>{appearance.primaryBtnText}</span>
-                </div>
-                </div>
-              </div>
-            </SectionCard>
-          </div>
           </div>
         )}
-
         {tab === 'history' && (
           <SectionCard
             title="Sessions"
