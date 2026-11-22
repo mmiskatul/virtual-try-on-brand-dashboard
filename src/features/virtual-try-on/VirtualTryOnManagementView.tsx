@@ -143,12 +143,11 @@ function DesignPreview({
           <h4 className="text-sm font-extrabold">{title}</h4>
           <p className="text-xs opacity-70">{subtitle}</p>
         </div>
-        <div className={`grid gap-3 ${wide ? 'grid-cols-2' : 'grid-cols-3'}`}>
-          {photoBox('1. Upload your photo')}
-          {photoBox('2. Try-On Result')}
+        <div className={`grid gap-3 ${wide ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          <div className={wide ? 'mx-auto w-40' : ''}>{photoBox('1. Upload your photo')}</div>
           {!wide && (
             <div className={card}>
-              <p className="text-[11px] font-bold text-slate-900">3. Select garment</p>
+              <p className="text-[11px] font-bold text-slate-900">2. Choose a garment</p>
               <div className={garmentGrid}>
                 {garments.slice(0, id === 'grid' ? 4 : 3).map((g) => (
                   <GarmentThumb key={g.id} g={g} row={id === 'classic'} />
@@ -160,7 +159,7 @@ function DesignPreview({
         </div>
         {wide && (
           <div className={card}>
-            <p className="text-[11px] font-bold text-slate-900">3. Select garment</p>
+            <p className="text-[11px] font-bold text-slate-900">2. Choose a garment</p>
             <div className={garmentGrid}>
               {garments.slice(0, id === 'showcase' ? 4 : 3).map((g) => (
                 <GarmentThumb key={g.id} g={g} tall={id === 'editorial'} />
