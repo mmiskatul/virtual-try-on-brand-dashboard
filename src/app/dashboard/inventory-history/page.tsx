@@ -1,5 +1,5 @@
-import { InventoryManagementView } from '@/features/inventory/InventoryManagementView';
+import { InventoryView } from '@/features/inventory/InventoryView';
 
 export default function Page() {
-  return <InventoryManagementView initialTab="history" />;
+  return <InventoryView initialTab="history" />;
 }
