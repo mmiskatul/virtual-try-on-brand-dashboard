@@ -26,7 +26,7 @@ import {
   collectFieldErrors,
   productFormSchema,
 } from '../../lib/productContract';
-import { formatApiError, useNotify } from './shared';
+import { formatApiError, slugify, useNotify } from './shared';
 import {
   DRAFT_VERSION,
   deleteDraft,
@@ -58,6 +58,62 @@ const DEFAULT_CATEGORIES = [
   'Sarees',
   'Accessories',
 ];
+
+const DEFAULT_COLLECTIONS = [
+  'New Arrivals',
+  'Best Sellers',
+  'Summer Collection',
+  'Winter Collection',
+  'Eid Collection',
+  'Party Wear',
+  'Casual Everyday',
+  'Sale',
+];
+
+const CATEGORY_TRY_ON = ['tops', 'bottoms', 'dresses', 'outerwear', 'all', 'none'] as const;
+
+// Make sure the category and collection a product uses also exist in the brand's own lists,
+// so a default one picked on a product shows up under Categories / Collections afterwards.
+async function ensureCatalogEntries(category: string, collection: string, tryOnCategory?: string) {
+  const cleanCategory = category.trim();
+  const cleanCollection = collection.trim();
+  if (cleanCategory) {
+    try {
+      const cats = await brandWorkspaceApi.getCategories();
+      const has = cats.some((c) => c.tenantId && c.name.trim().toLowerCase() === cleanCategory.toLowerCase());
+      if (!has) {
+        let slug = slugify(cleanCategory);
+        try {
+          const check = await brandWorkspaceApi.checkCategorySlug(slug, cleanCategory);
+          if (!check.available && check.suggestedSlug) slug = check.suggestedSlug;
+        } catch {
+          // the server validates the slug again on save
+        }
+        const tryOn = (CATEGORY_TRY_ON as readonly string[]).includes(tryOnCategory || '')
+          ? (tryOnCategory as (typeof CATEGORY_TRY_ON)[number])
+          : 'none';
+        await brandWorkspaceApi.addCategory({
+          name: cleanCategory,
+          slug,
+          tryOnCategory: tryOn,
+          sortOrder: cats.filter((c) => c.tenantId).length + 1,
+          active: true,
+        });
+      }
+    } catch {
+      // best effort: the product itself is already saved
+    }
+  }
+  if (cleanCollection) {
+    try {
+      const cols = await brandWorkspaceApi.getCollections();
+      const has = cols.some((c) => c.tenantId && c.title.trim().toLowerCase() === cleanCollection.toLowerCase());
+      if (!has) await brandWorkspaceApi.createCollection({ title: cleanCollection });
+    } catch {
+      // best effort: the product itself is already saved
+    }
+  }
+}
 
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -574,7 +630,12 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     [customCategories, existing?.category]
   );
   const collectionChoices = useMemo(
-    () => Array.from(new Set([...collectionOptions, existing?.collections?.[0] || ''].filter(Boolean))),
+    () =>
+      Array.from(
+        new Set(
+          [...(collectionOptions.length > 0 ? collectionOptions : DEFAULT_COLLECTIONS), existing?.collections?.[0] || ''].filter(Boolean)
+        )
+      ),
     [collectionOptions, existing?.collections]
   );
 
@@ -790,6 +851,8 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
         addProduct(created);
         notify('Product created.');
       }
+      // Add the category / collection used here to the brand's own lists if they are not there yet.
+      await ensureCatalogEntries(finalForm.category, finalForm.collection, payload.tryOnCategory);
       // Saved for real: the draft and any photos left in the browser are no longer needed.
       await deleteDraft(scopeId);
       router.push('/dashboard/products');
