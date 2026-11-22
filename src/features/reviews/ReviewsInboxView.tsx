@@ -31,7 +31,7 @@ export function ReviewsInboxView() {
   const [reviews, setReviews] = useState<BrandReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'unanswered'>('all');
+  const [filter, setFilter] = useState<'all' | 'unanswered' | 'low'>('all');
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -53,8 +53,10 @@ export function ReviewsInboxView() {
   }, [load]);
 
   const unanswered = useMemo(() => reviews.filter((r) => !r.brandReply), [reviews]);
-  const visible = filter === 'unanswered' ? unanswered : reviews;
+  const lowRated = useMemo(() => reviews.filter((r) => r.rating <= 2), [reviews]);
+  const visible = filter === 'unanswered' ? unanswered : filter === 'low' ? lowRated : reviews;
   const average = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+  const perStar = useMemo(() => [5, 4, 3, 2, 1].map((n) => ({ n, count: reviews.filter((r) => r.rating === n).length })), [reviews]);
 
   const sendReply = async (id: string) => {
     const text = draft.trim();
@@ -86,7 +88,7 @@ export function ReviewsInboxView() {
           }
           actions={
             <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm font-semibold" role="group" aria-label="Filter reviews">
-              {(['all', 'unanswered'] as const).map((f) => (
+              {(['all', 'unanswered', 'low'] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -94,7 +96,7 @@ export function ReviewsInboxView() {
                   aria-pressed={filter === f}
                   className={`px-4 py-2 ${filter === f ? 'bg-slate-950 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
                 >
-                  {f === 'all' ? 'All' : `Needs reply (${unanswered.length})`}
+                  {f === 'all' ? 'All' : f === 'unanswered' ? `Needs reply (${unanswered.length})` : `1-2 stars (${lowRated.length})`}
                 </button>
               ))}
             </div>
@@ -103,13 +105,46 @@ export function ReviewsInboxView() {
 
         {error && <ErrorBanner message={error} onRetry={() => void load()} />}
 
+        {reviews.length > 0 && (
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold text-slate-500">Average rating</p>
+              <p className="mt-1 text-3xl font-extrabold tracking-tight text-slate-950">{average.toFixed(1)}<span className="text-base font-bold text-slate-400"> / 5</span></p>
+              <div className="mt-1"><Stars value={Math.round(average)} /></div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold text-slate-500">Waiting for your reply</p>
+              <p className="mt-1 text-3xl font-extrabold tracking-tight text-slate-950">{unanswered.length}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{unanswered.length === 0 ? 'All caught up' : 'Replying builds trust'}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-2">
+              <p className="mb-2 text-xs font-semibold text-slate-500">How customers rated you</p>
+              <div className="space-y-1.5">
+                {perStar.map(({ n, count }) => (
+                  <div key={n} className="flex items-center gap-2 text-[11px]">
+                    <span className="w-8 text-slate-500">{n} star</span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${reviews.length ? (count / reviews.length) * 100 : 0}%` }} />
+                    </div>
+                    <span className="w-6 text-right tabular-nums text-slate-600">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <SectionCard>
           {loading ? (
-            <p className="py-8 text-center text-sm text-slate-500">Loading reviews...</p>
+            <div className="space-y-3" aria-busy="true" aria-label="Loading reviews">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
+              ))}
+            </div>
           ) : visible.length === 0 && !error ? (
             <div className="py-12 text-center text-sm text-slate-500">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-              {filter === 'unanswered' ? 'You have replied to every review.' : 'No reviews yet. They will show up here when customers rate your products.'}
+              {filter === 'unanswered' ? 'You have replied to every review.' : filter === 'low' ? 'No low-rated reviews. Great news.' : 'No reviews yet. They will show up here when customers rate your products.'}
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">

@@ -2,12 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, Users } from 'lucide-react';
+import { Download, Search, Users } from 'lucide-react';
 import { brandWorkspaceApi, type BrandCustomer, type CustomerOrderRow } from '../../services/brandService';
 import { ErrorBanner, KpiCard, PageHeader, PermissionGate, SectionCard, StatusBadge } from '../../components/shared/UiPrimitives';
 
 const money = (n: number) => `৳${Math.round(n).toLocaleString()}`;
 const day = (ms: number) => (ms ? new Date(ms).toLocaleDateString() : '-');
+
+type Sort = 'spent' | 'recent' | 'orders';
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 export function CustomersView() {
   const [customers, setCustomers] = useState<BrandCustomer[]>([]);
@@ -16,6 +19,9 @@ export function CustomersView() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<'ALL' | 'NEW' | 'RETURNING'>('ALL');
+  const [sort, setSort] = useState<Sort>('spent');
+  // Taken once when the page opens, so "new this month" does not change while you look.
+  const [now] = useState(() => Date.now());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,12 +43,31 @@ export function CustomersView() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return customers.filter(
+    const list = customers.filter(
       (c) =>
         (group === 'ALL' || c.group === group) &&
         (!q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.city.toLowerCase().includes(q))
     );
-  }, [customers, query, group]);
+    return [...list].sort((a, b) =>
+      sort === 'recent' ? b.lastOrderAt - a.lastOrderAt : sort === 'orders' ? b.orderCount - a.orderCount : b.totalSpent - a.totalSpent
+    );
+  }, [customers, query, group, sort]);
+
+  const newThisMonth = useMemo(() => customers.filter((c) => c.firstOrderAt && now - c.firstOrderAt < THIRTY_DAYS).length, [customers, now]);
+
+  const downloadCsv = () => {
+    const rows = [
+      ['Name', 'Email', 'City', 'Orders', 'Total spent', 'First order', 'Last order'],
+      ...visible.map((c) => [c.name, c.email, c.city, c.orderCount, c.totalSpent.toFixed(2), day(c.firstOrderAt), day(c.lastOrderAt)]),
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customers-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <PermissionGate module="customers" action="view">
@@ -51,12 +76,18 @@ export function CustomersView() {
           eyebrow="Customers"
           title="Your customers"
           subtitle="Everyone who has bought from you. This list builds itself from your orders."
+          actions={
+            <button type="button" onClick={downloadCsv} disabled={visible.length === 0} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              <Download className="h-4 w-4" /> Download list (CSV)
+            </button>
+          }
         />
 
         {error && <ErrorBanner message={error} onRetry={() => void load()} />}
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KpiCard label="Customers" value={totals.customers} icon={<Users className="w-4 h-4" />} />
+          <KpiCard label="New this month" value={newThisMonth} />
           <KpiCard label="Came back to buy again" value={totals.returning} />
           <KpiCard label="Total spent" value={money(totals.revenue)} />
         </div>
@@ -75,6 +106,11 @@ export function CustomersView() {
                   className="h-10 pl-9 pr-3 rounded-xl border border-slate-200 text-sm w-56 focus:outline-none focus:border-slate-950"
                 />
               </div>
+              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort customers" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
+                <option value="spent">Best customers first</option>
+                <option value="recent">Latest order first</option>
+                <option value="orders">Most orders first</option>
+              </select>
               <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm font-semibold" role="group" aria-label="Filter customers">
                 {(['ALL', 'NEW', 'RETURNING'] as const).map((g) => (
                   <button
@@ -92,7 +128,11 @@ export function CustomersView() {
           }
         >
           {loading ? (
-            <p className="py-8 text-center text-sm text-slate-500">Loading customers...</p>
+            <div className="space-y-2" aria-busy="true" aria-label="Loading customers">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-14 animate-pulse rounded-xl bg-slate-100" />
+              ))}
+            </div>
           ) : visible.length === 0 ? (
             <div className="py-12 text-center text-sm text-slate-500">
               <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
@@ -171,13 +211,17 @@ export function CustomerDetailView({ email }: { email: string }) {
         </Link>
         {error && <ErrorBanner message={error} onRetry={() => void load()} />}
         {loading ? (
-          <p className="text-sm text-slate-500">Loading...</p>
+          <div className="space-y-3" aria-busy="true" aria-label="Loading customer">
+            <div className="h-16 animate-pulse rounded-2xl bg-slate-100" />
+            <div className="h-40 animate-pulse rounded-2xl bg-slate-100" />
+          </div>
         ) : customer ? (
           <>
             <PageHeader eyebrow="Customer" title={customer.name} subtitle={`${customer.email}${customer.city ? ` · ${customer.city}` : ''}`} />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               <KpiCard label="Orders" value={customer.orderCount} />
               <KpiCard label="Total spent" value={money(customer.totalSpent)} />
+              <KpiCard label="Average order" value={money(customer.orderCount ? customer.totalSpent / customer.orderCount : 0)} />
               <KpiCard label="Customer since" value={day(customer.firstOrderAt)} />
               <KpiCard label="Last order" value={day(customer.lastOrderAt)} />
             </div>
