@@ -41,7 +41,7 @@ const ORDER_TABS: Array<{ id: OrdersTab; label: string; href: string }> = [
   { id: 'orders', label: 'Orders', href: '/dashboard/orders' },
   { id: 'abandoned', label: 'Abandoned Carts', href: '/dashboard/abandoned-carts' },
   { id: 'returns', label: 'Returns', href: '/dashboard/returns' },
-  { id: 'refunds', label: 'Refunds & Ledger', href: '/dashboard/refunds' },
+  { id: 'refunds', label: 'Refunds', href: '/dashboard/refunds' },
 ];
 
 const BACKEND_COMPATIBLE_STATUSES = new Set([
@@ -151,9 +151,9 @@ export function OrdersCommerceView({
       <PermissionGate module="orders" action="view">
         <div className="space-y-6">
           <PageHeader
-            eyebrow="Commerce & Fulfillment"
+            eyebrow="Orders"
             title={order ? `Order ${order.id}` : `Order ${orderId}`}
-            subtitle="Inspect customer shipping details, garment variants, payment settlement, and dispatch timeline."
+            subtitle="See what the customer ordered, where it goes, the payment, and the delivery steps."
             actions={
               <>
                 <Link href="/dashboard/orders">
@@ -177,8 +177,8 @@ export function OrdersCommerceView({
 
           {!order ? (
             <EmptyState
-              title="Order not found in tenant workspace"
-              description="This order ID does not belong to your active brand tenant or has not been synced yet."
+              title="We could not find this order"
+              description="This order is not in your shop, or it has not loaded yet. Go back to Orders and try again."
               actionLabel="Return to Orders"
               onAction={() => router.push('/dashboard/orders')}
             />
@@ -237,7 +237,7 @@ export function OrdersCommerceView({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Fulfillment Timeline" subtitle="Audit history of order state transitions">
+                <SectionCard title="Delivery steps" subtitle="Every change made to this order">
                   <div className="space-y-3">
                     {(order.timeline || [{ label: 'Order created', at: order.date }]).map((ev, i) => (
                       <div key={i} className="flex items-start gap-3 text-xs">
@@ -253,7 +253,7 @@ export function OrdersCommerceView({
               </div>
 
               <div className="lg:col-span-4 space-y-6">
-                <SectionCard title="Customer & Shipping" subtitle="Verified buyer contact details">
+                <SectionCard title="Customer & delivery" subtitle="Who ordered and where to send it">
                   <div className="space-y-2 text-xs">
                     <p className="font-bold text-slate-900">{order.customerName}</p>
                     <p className="text-slate-600">{order.customerEmail}</p>
@@ -274,7 +274,7 @@ export function OrdersCommerceView({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Fulfillment Controls" subtitle="Update dispatch state & courier tracking">
+                <SectionCard title="Update this order" subtitle="Change the order status and add a tracking number">
                   <div className="space-y-3 text-xs">
                     <label className="block space-y-1">
                       <span className="font-semibold text-slate-700">Order Status</span>
@@ -286,7 +286,7 @@ export function OrdersCommerceView({
                           if (val === 'CANCELLED' || val === 'REFUNDED') {
                             setConfirmAction({
                               title: `${val === 'CANCELLED' ? 'Cancel' : 'Refund'} Order ${order.id}?`,
-                              description: `Changing this order to ${val} updates financial metrics and customer order history.`,
+                              description: `This changes the order to ${val}. It will update your sales numbers and the customer's order history.`,
                               confirmLabel: `Mark as ${val}`,
                               onRun: () => {
                                 handleStatusUpdate(order, val);
@@ -304,7 +304,7 @@ export function OrdersCommerceView({
                         <option value="SHIPPED">Shipped</option>
                         <option value="DELIVERED">Delivered</option>
                         <option value="CANCELLED">Cancelled</option>
-                        {!isLiveBackend && <option value="REFUNDED">Refunded (Demo Ledger)</option>}
+                        {!isLiveBackend && <option value="REFUNDED">Refunded (demo)</option>}
                       </select>
                     </label>
 
@@ -385,8 +385,8 @@ export function OrdersCommerceView({
       <div className="space-y-6">
         <PageHeader
           eyebrow="Commerce & Orders"
-          title="Orders, Fulfillment & Returns"
-          subtitle="Manage tenant customer orders, track courier dispatches, process return approvals, and audit refunds."
+          title="Orders"
+          subtitle="See your orders, send them out, and handle returns and refunds."
           actions={
             canExportOrders ? (
               <Button
@@ -411,7 +411,7 @@ export function OrdersCommerceView({
                   showToast(`Exported ${filteredOrders.length} orders to CSV.`);
                 }}
               >
-                <Download className="w-3.5 h-3.5" /> Export Orders CSV
+                <Download className="w-3.5 h-3.5" /> Download orders (CSV)
               </Button>
             ) : undefined
           }
@@ -442,23 +442,23 @@ export function OrdersCommerceView({
 
         {/* Summary KPI Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard label="Net Merchandise Revenue" value={`৳${paidRevenue.toLocaleString()}`} icon={<Package className="w-4 h-4" />} />
+          <KpiCard label="Sales (paid)" value={`৳${paidRevenue.toLocaleString()}`} icon={<Package className="w-4 h-4" />} />
           <KpiCard label="Total Orders" value={safeOrders.length} icon={<ShoppingCart className="w-4 h-4" />} />
-          <KpiCard label="Pending / Processing" value={pendingCount} icon={<Truck className="w-4 h-4" />} />
-          <KpiCard label="Refunded Value" value={`৳${refundedTotal.toFixed(2)}`} icon={<RotateCcw className="w-4 h-4" />} />
+          <KpiCard label="Waiting to send" value={pendingCount} icon={<Truck className="w-4 h-4" />} />
+          <KpiCard label="Money refunded" value={`৳${refundedTotal.toFixed(2)}`} icon={<RotateCcw className="w-4 h-4" />} />
         </div>
 
         {tab === 'orders' && (
           <SectionCard
-            title="Tenant Order Directory"
-            subtitle="Only orders containing garments owned by this brand tenant appear here."
+            title="All orders"
+            subtitle="Only orders for your own products show here."
             right={
               <div className="relative w-full sm:w-64">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search order ID, name, email..."
+                  placeholder="Search order number, name or email"
                   className="w-full rounded-xl border border-slate-200 pl-8 pr-3 py-1.5 text-xs"
                 />
               </div>
@@ -485,8 +485,8 @@ export function OrdersCommerceView({
 
             {filteredOrders.length === 0 ? (
               <EmptyState
-                title="No matching orders"
-                description="Try clearing search filters or check again once shoppers complete checkout."
+                title="No orders found"
+                description="Try a different search or status. New orders show up here after a shopper pays."
               />
             ) : (
               <>
@@ -519,7 +519,7 @@ export function OrdersCommerceView({
                             if (val === 'CANCELLED' || val === 'REFUNDED') {
                               setConfirmAction({
                                 title: `${val === 'CANCELLED' ? 'Cancel' : 'Refund'} ${o.id}?`,
-                                description: `This action will mark order ${o.id} (৳${o.total.toFixed(2)}) as ${val}.`,
+                                description: `This will mark order ${o.id} (৳${o.total.toFixed(2)}) as ${val}.`,
                                 confirmLabel: `Confirm ${val}`,
                                 onRun: () => {
                                   handleStatusUpdate(o, val);
@@ -593,7 +593,7 @@ export function OrdersCommerceView({
                                 if (val === 'CANCELLED' || val === 'REFUNDED') {
                                   setConfirmAction({
                                     title: `${val === 'CANCELLED' ? 'Cancel' : 'Refund'} ${o.id}?`,
-                                    description: `This action will mark order ${o.id} (৳${o.total.toFixed(2)}) as ${val}.`,
+                                    description: `This will mark order ${o.id} (৳${o.total.toFixed(2)}) as ${val}.`,
                                     confirmLabel: `Confirm ${val}`,
                                     onRun: () => {
                                       handleStatusUpdate(o, val);
@@ -632,22 +632,22 @@ export function OrdersCommerceView({
 
         {tab === 'abandoned' && (
           <SectionCard
-            title="Abandoned Storefront Checkouts"
-            subtitle="Track shoppers who added tenant items without completing payment."
+            title="Unfinished checkouts"
+            subtitle="Shoppers who added your products to their cart but did not pay."
           >
             <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
               <p>
-                <strong>SMTP / Email Provider Notice:</strong> Automated cart-recovery email dispatch requires connecting an authorized email provider under{' '}
+                <strong>No emails are sent from here yet.</strong> To email shoppers automatically, an email service must be connected first. You can set that up under{' '}
                 <Link href="/dashboard/integrations" className="underline font-bold">
                   Integrations
                 </Link>
-                . Marking an entry below records a manual outreach flag locally without claiming an automated email was transmitted.
+                . The "Log Follow-Up" button below only saves a note in this browser that you contacted the shopper yourself (for example by phone or WhatsApp). It does not send anything.
               </p>
             </div>
 
             {safeAbandoned.length === 0 ? (
-              <EmptyState title="No abandoned checkouts" description="Checkouts left incomplete will appear here." />
+              <EmptyState title="No unfinished checkouts" description="When a shopper leaves without paying, they will show up here." />
             ) : (
               <>
                 <div className="sm:hidden space-y-3">
@@ -671,7 +671,7 @@ export function OrdersCommerceView({
                         onClick={() => {
                           markAbandonedRecovered(c.id);
                           recordAudit('ABANDONED_CART_LOGGED', c.customerEmail, 'Logged manual follow-up');
-                          showToast(`Recorded manual follow-up for ${c.customerName}.`);
+                          showToast(`Saved a note that you followed up with ${c.customerName}.`);
                         }}
                         className="w-full justify-center gap-1.5 text-xs"
                       >
@@ -714,7 +714,7 @@ export function OrdersCommerceView({
                             onClick={() => {
                               markAbandonedRecovered(c.id);
                               recordAudit('ABANDONED_CART_LOGGED', c.customerEmail, 'Logged manual follow-up');
-                              showToast(`Recorded manual follow-up for ${c.customerName}.`);
+                              showToast(`Saved a note that you followed up with ${c.customerName}.`);
                             }}
                             className="gap-1.5 text-xs"
                           >
@@ -735,10 +735,10 @@ export function OrdersCommerceView({
         {tab === 'returns' && (
           <SectionCard
             title="Customer Return Requests"
-            subtitle="Review garment fit issues, authorize returns, or reject ineligible items."
+            subtitle="Look at each return request and approve it or say no."
           >
             {safeReturns.length === 0 ? (
-              <EmptyState title="No return requests" description="Active RMA and return requests will appear here." />
+              <EmptyState title="No return requests" description="When a customer asks to return an item, it will show up here." />
             ) : (
               <>
                 <div className="sm:hidden space-y-2.5 text-xs">
@@ -796,7 +796,7 @@ export function OrdersCommerceView({
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                        <th className="py-2.5 pr-4">RMA ID</th>
+                        <th className="py-2.5 pr-4">Return no.</th>
                         <th className="py-2.5 pr-4">Order</th>
                         <th className="py-2.5 pr-4">Customer</th>
                         <th className="py-2.5 pr-4">Product & Reason</th>
@@ -863,14 +863,14 @@ export function OrdersCommerceView({
 
         {tab === 'refunds' && (
           <SectionCard
-            title="Refunds & Financial Adjustments Ledger"
-            subtitle="Settled refunds across cancelled orders and approved RMAs."
+            title="Refunds"
+            subtitle="Money you have given back for cancelled orders and approved returns."
           >
             {safeOrders.filter((o) => o.status === 'REFUNDED' || o.paymentStatus === 'REFUNDED').length === 0 &&
             safeReturns.filter((r) => r.status === 'REFUNDED').length === 0 ? (
               <EmptyState
-                title="No settled refunds recorded"
-                description="When you refund an order or approve a return refund, the settlement entry appears here."
+                title="No refunds yet"
+                description="When you refund an order or approve a return, it will show up here."
               />
             ) : (
               <div className="space-y-2 text-xs">
@@ -902,7 +902,7 @@ export function OrdersCommerceView({
                     >
                       <div>
                         <p className="font-bold text-slate-900">
-                          RMA {r.id} ({r.orderId}) — {r.customerName}
+                          Return {r.id} (order {r.orderId}) — {r.customerName}
                         </p>
                         <p className="text-slate-500">
                           {r.productName} • {r.reason}
