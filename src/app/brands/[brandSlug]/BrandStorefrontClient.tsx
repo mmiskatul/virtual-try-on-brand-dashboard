@@ -22,6 +22,7 @@ export default function BrandStorefrontClient() {
   const [brandBanner, setBrandBanner] = useState('');
   const [brandDesc, setBrandDesc] = useState('');
   const [announcement, setAnnouncement] = useState('');
+  const [storeOpen, setStoreOpen] = useState(true);
   const [accentColor, setAccentColor] = useState('#0F172A');
   const [primaryColor, setPrimaryColor] = useState('#0F172A');
   const [headerStyle, setHeaderStyle] = useState<StorefrontHeaderStyle>('split');
@@ -45,6 +46,7 @@ export default function BrandStorefrontClient() {
         setBrandBanner(res.tenant.bannerUrl || res.tenant.storefrontSettings?.bannerImage || '');
         setBrandDesc(res.tenant.description || '');
         setAnnouncement(res.tenant.storefrontSettings?.announcement || '');
+        setStoreOpen(res.tenant.storefrontSettings?.store?.open !== false);
         setAccentColor(res.tenant.storefrontSettings?.accentColor || '#0F172A');
         setPrimaryColor(res.tenant.storefrontSettings?.primaryColor || '#0F172A');
         setHeaderStyle(normalizeHeaderStyle(res.tenant.storefrontSettings?.headerStyle));
@@ -88,6 +90,11 @@ export default function BrandStorefrontClient() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-slate-900 flex flex-col">
+      {!storeOpen && (
+        <div role="status" className="bg-slate-900 px-4 py-2.5 text-center text-xs font-bold text-white">
+          This store is closed for now. You can look around, but orders are paused until it opens again.
+        </div>
+      )}
       {announcement && (
         <div className="py-2 px-4 text-center text-xs font-bold text-white" style={{ backgroundColor: accentColor }}>
           {announcement}

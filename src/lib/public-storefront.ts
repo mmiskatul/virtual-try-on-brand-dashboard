@@ -11,6 +11,10 @@ export interface PublicStorefront {
   announcement: string;
   about: string;
   accent: string;
+  /** False when the brand has closed its store for now. */
+  open: boolean;
+  seoTitle: string;
+  seoDescription: string;
   products: Array<{
     id: string;
     name: string;
@@ -53,6 +57,9 @@ export async function fetchPublicStorefront(slug: string): Promise<PublicStorefr
       announcement: s.announcement || '',
       about: s.aboutText || t.description || '',
       accent: s.accentColor || s.primaryColor || '#0F172A',
+      open: s.store?.open !== false,
+      seoTitle: s.store?.seo?.title || '',
+      seoDescription: s.store?.seo?.description || '',
       products: products
         .filter((p: any) => p.brandStorefrontPublished)
         .map((p: any) => ({
