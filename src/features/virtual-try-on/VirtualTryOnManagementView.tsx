@@ -37,7 +37,7 @@ function LayoutWireframe({ id, accent }: { id: TryOnLayoutId; accent: string }) 
   const panel = 'rounded bg-slate-200';
   const garment = 'rounded-sm bg-slate-300';
   return (
-    <div className="h-24 w-full rounded-lg border border-slate-200 bg-white p-1.5 flex flex-col gap-1">
+    <div className="h-16 w-full rounded-lg border border-slate-200 bg-white p-1 flex flex-col gap-0.5">
       <div className="h-2 w-1/3 rounded bg-slate-300" />
       {id === 'classic' && (
         <div className="flex-1 grid grid-cols-3 gap-1">
@@ -114,7 +114,7 @@ function DesignPreview({
   const photoBox = (label: string) => (
     <div className={card}>
       <p className="text-[11px] font-bold text-slate-900">{label}</p>
-      <div className="aspect-[3/4] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] text-slate-400">Photo</div>
+      <div className="aspect-[4/5] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] text-slate-400">Photo</div>
     </div>
   );
   const garmentGrid =
@@ -133,13 +133,13 @@ function DesignPreview({
         <span className="text-xs font-bold text-slate-900 truncate">{brandName}</span>
       </div>
       {look.banner && (
-        <div className="relative h-16 w-full">
+        <div className="relative h-10 w-full">
           <SafeImage src={look.banner} alt="" fill className="object-cover" />
         </div>
       )}
-      <div className="p-4 space-y-3">
+      <div className="p-3 space-y-2.5">
         <div>
-          <h4 className="text-base font-extrabold">{title}</h4>
+          <h4 className="text-sm font-extrabold">{title}</h4>
           <p className="text-xs opacity-70">{subtitle}</p>
         </div>
         <div className={`grid gap-3 ${wide ? 'grid-cols-2' : 'grid-cols-3'}`}>
@@ -710,10 +710,20 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                 })}
               </div>
 
-              <div className="mt-5">
-                <p className="mb-2 text-xs font-bold text-slate-700">
-                  Preview: {TRY_ON_LAYOUTS.find((o) => o.id === layoutIdFor(appearance.previewLayout, appearance.gridStyle))?.label}
-                </p>
+              <p className="mt-4 text-[11px] text-slate-500">
+                Colours and logo come from{' '}
+                <Link href="/dashboard/settings/onboarding/identity" className="font-bold text-slate-900 underline">Theme &amp; Identity</Link>
+                {' '}and{' '}
+                <Link href="/dashboard/settings/onboarding/media" className="font-bold text-slate-900 underline">Logos &amp; Brand Media</Link>.
+              </p>
+            </SectionCard>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <SectionCard
+              title={`Preview: ${TRY_ON_LAYOUTS.find((o) => o.id === layoutIdFor(appearance.previewLayout, appearance.gridStyle))?.label}`}
+              subtitle="How shoppers will see your try-on page."
+            >
+              <div className="max-w-md mx-auto">
                 <DesignPreview
                   id={layoutIdFor(appearance.previewLayout, appearance.gridStyle)}
                   look={brandLook}
@@ -724,17 +734,10 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                   garments={(eligibleProducts.length > 0 ? eligibleProducts : products).slice(0, 6).map((p) => ({ id: p.id, name: p.name, image: p.image }))}
                 />
               </div>
-
-              <p className="mt-4 text-[11px] text-slate-500">
-                Colours and logo come from{' '}
-                <Link href="/dashboard/settings/onboarding/identity" className="font-bold text-slate-900 underline">Theme &amp; Identity</Link>
-                {' '}and{' '}
-                <Link href="/dashboard/settings/onboarding/media" className="font-bold text-slate-900 underline">Logos &amp; Brand Media</Link>.
-              </p>
             </SectionCard>
 
             <SectionCard title="Page title and subtitle" subtitle="The words at the top of your try-on page.">
-              <div className="space-y-3 text-xs max-w-2xl">
+              <div className="space-y-3 text-xs">
                 <div>
                   <label className="block font-bold mb-1">Page title</label>
                   <input value={appearance.pageTitle} onChange={(e) => setAppearance({ ...appearance, pageTitle: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
@@ -748,6 +751,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                 </Button>
               </div>
             </SectionCard>
+            </div>
           </div>
         )}
         {tab === 'history' && (
