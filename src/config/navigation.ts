@@ -47,8 +47,8 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'ShoppingBag',
     items: [
       { label: 'Products', href: '/dashboard/products', module: 'products' },
-      { label: 'Product Categories', href: '/dashboard/products/categories', module: 'products', hidden: true },
-      { label: 'Collections', href: '/dashboard/products/collections', module: 'products', hidden: true },
+      { label: 'Product Categories', href: '/dashboard/categories', module: 'products', hidden: true },
+      { label: 'Collections', href: '/dashboard/collections', module: 'products', hidden: true },
     ],
   },
   {
@@ -84,9 +84,9 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'PackageCheck',
     items: [
       { label: 'Orders', href: '/dashboard/orders', module: 'orders', badgeKey: 'orders' },
-      { label: 'Abandoned Carts', href: '/dashboard/orders/abandoned', module: 'orders', hidden: true },
-      { label: 'Returns', href: '/dashboard/orders/returns', module: 'orders', hidden: true },
-      { label: 'Refunds & Ledger', href: '/dashboard/orders/refunds', module: 'orders', hidden: true },
+      { label: 'Abandoned Carts', href: '/dashboard/abandoned-carts', module: 'orders', hidden: true },
+      { label: 'Returns', href: '/dashboard/returns', module: 'orders', hidden: true },
+      { label: 'Refunds & Ledger', href: '/dashboard/refunds', module: 'orders', hidden: true },
     ],
   },
   {
@@ -95,9 +95,9 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'Boxes',
     items: [
       { label: 'Inventory', href: '/dashboard/inventory', module: 'inventory', badgeKey: 'lowStock' },
-      { label: 'Warehouses / Locations', href: '/dashboard/inventory/locations', module: 'inventory', hidden: true },
-      { label: 'Stock Adjustments', href: '/dashboard/inventory/adjustments', module: 'inventory', hidden: true },
-      { label: 'Inventory History', href: '/dashboard/inventory/history', module: 'inventory', hidden: true },
+      { label: 'Warehouses / Locations', href: '/dashboard/warehouses', module: 'inventory', hidden: true },
+      { label: 'Stock Adjustments', href: '/dashboard/stock-adjustments', module: 'inventory', hidden: true },
+      { label: 'Inventory History', href: '/dashboard/inventory-history', module: 'inventory', hidden: true },
     ],
   },
   // Hidden from the sidebar until the backend for this module exists (pages stay reachable by URL).
@@ -125,11 +125,11 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'BarChart3',
     items: [
       { label: 'Analytics', href: '/dashboard/analytics', module: 'analytics' },
-      { label: 'Sales Reports', href: '/dashboard/analytics/sales', module: 'analytics', hidden: true },
-      { label: 'Product Performance', href: '/dashboard/analytics/products', module: 'analytics', hidden: true },
-      { label: 'Customer Analytics', href: '/dashboard/analytics/customers', module: 'analytics', hidden: true },
-      { label: 'Marketplace Analytics', href: '/dashboard/analytics/marketplace', module: 'analytics', hidden: true },
-      { label: 'Virtual Try-On Reports', href: '/dashboard/analytics/virtual-try-on', module: 'analytics', hidden: true },
+      { label: 'Sales Reports', href: '/dashboard/sales-reports', module: 'analytics', hidden: true },
+      { label: 'Product Performance', href: '/dashboard/product-performance', module: 'analytics', hidden: true },
+      { label: 'Customer Analytics', href: '/dashboard/customer-analytics', module: 'analytics', hidden: true },
+      { label: 'Marketplace Analytics', href: '/dashboard/marketplace-analytics', module: 'analytics', hidden: true },
+      { label: 'Virtual Try-On Reports', href: '/dashboard/try-on-reports', module: 'analytics', hidden: true },
     ],
   },
   {
@@ -144,10 +144,10 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'CreditCard',
     items: [
       { label: 'Billing & Credits', href: '/dashboard/billing', module: 'billing' },
-      { label: 'Subscription Plan', href: '/dashboard/billing/plan', module: 'billing', hidden: true },
-      { label: 'AI Usage & Credits', href: '/dashboard/billing/usage', module: 'billing', hidden: true },
-      { label: 'Invoices', href: '/dashboard/billing/invoices', module: 'billing', hidden: true },
-      { label: 'Payment Methods', href: '/dashboard/billing/payment-methods', module: 'billing', hidden: true },
+      { label: 'Subscription Plan', href: '/dashboard/subscription-plan', module: 'billing', hidden: true },
+      { label: 'AI Usage & Credits', href: '/dashboard/ai-usage', module: 'billing', hidden: true },
+      { label: 'Invoices', href: '/dashboard/invoices', module: 'billing', hidden: true },
+      { label: 'Payment Methods', href: '/dashboard/payment-methods', module: 'billing', hidden: true },
     ],
   },
   {

@@ -497,7 +497,7 @@ export function DashboardOverviewView() {
               title="Try-on funnel"
               subtitle="How many customers go from trying on to buying"
               right={
-                <Link href="/dashboard/analytics/virtual-try-on" className="text-xs font-bold underline whitespace-nowrap">
+                <Link href="/dashboard/try-on-reports" className="text-xs font-bold underline whitespace-nowrap">
                   Full report &rarr;
                 </Link>
               }

@@ -31,10 +31,10 @@ export type BillingTab = 'overview' | 'plan' | 'usage' | 'invoices' | 'payment-m
 
 const BILLING_TABS: Array<{ id: BillingTab; label: string; href: string }> = [
   { id: 'overview', label: 'Billing Overview', href: '/dashboard/billing' },
-  { id: 'plan', label: 'Subscription Plan', href: '/dashboard/billing/plan' },
-  { id: 'usage', label: 'AI Usage & Credits', href: '/dashboard/billing/usage' },
-  { id: 'invoices', label: 'Invoices', href: '/dashboard/billing/invoices' },
-  { id: 'payment-methods', label: 'Payment Methods', href: '/dashboard/billing/payment-methods' },
+  { id: 'plan', label: 'Subscription Plan', href: '/dashboard/subscription-plan' },
+  { id: 'usage', label: 'AI Usage & Credits', href: '/dashboard/ai-usage' },
+  { id: 'invoices', label: 'Invoices', href: '/dashboard/invoices' },
+  { id: 'payment-methods', label: 'Payment Methods', href: '/dashboard/payment-methods' },
 ];
 
 interface PlanCard {

@@ -1008,7 +1008,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     hint={
                       <>
                         {customCategories.length > 0 ? 'Your categories. ' : 'No categories added yet, showing standard ones. '}
-                        <Link href="/dashboard/products/categories/new" className="font-semibold text-slate-900 underline">
+                        <Link href="/dashboard/categories/new" className="font-semibold text-slate-900 underline">
                           + Add category
                         </Link>
                       </>
@@ -1033,7 +1033,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                     label="Collection"
                     error={showError('collection')}
                     hint={
-                      <Link href="/dashboard/products/collections/new" className="font-semibold text-slate-900 underline">
+                      <Link href="/dashboard/collections/new" className="font-semibold text-slate-900 underline">
                         + Add collection
                       </Link>
                     }

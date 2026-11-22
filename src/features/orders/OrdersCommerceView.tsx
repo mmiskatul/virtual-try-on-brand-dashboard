@@ -39,9 +39,9 @@ export type OrdersTab = 'orders' | 'abandoned' | 'returns' | 'refunds';
 
 const ORDER_TABS: Array<{ id: OrdersTab; label: string; href: string }> = [
   { id: 'orders', label: 'Orders', href: '/dashboard/orders' },
-  { id: 'abandoned', label: 'Abandoned Carts', href: '/dashboard/orders/abandoned' },
-  { id: 'returns', label: 'Returns', href: '/dashboard/orders/returns' },
-  { id: 'refunds', label: 'Refunds & Ledger', href: '/dashboard/orders/refunds' },
+  { id: 'abandoned', label: 'Abandoned Carts', href: '/dashboard/abandoned-carts' },
+  { id: 'returns', label: 'Returns', href: '/dashboard/returns' },
+  { id: 'refunds', label: 'Refunds & Ledger', href: '/dashboard/refunds' },
 ];
 
 const BACKEND_COMPATIBLE_STATUSES = new Set([

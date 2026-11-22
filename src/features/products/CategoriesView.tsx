@@ -96,7 +96,7 @@ export function CategoriesView({ mode = 'list', editId }: { mode?: 'list' | 'new
     }
   }, [mode, editing]);
 
-  const goList = () => router.push('/dashboard/products/categories');
+  const goList = () => router.push('/dashboard/categories');
   const drawerOpen = mode === 'new' || (mode === 'edit' && Boolean(editing));
   const editNotFound = mode === 'edit' && !loading && !editing;
 
@@ -194,7 +194,7 @@ export function CategoriesView({ mode = 'list', editId }: { mode?: 'list' | 'new
           subtitle="Organise your garments into categories shoppers can browse."
           actions={
             canCreate && (
-              <Button size="sm" className="gap-1.5" onClick={() => router.push('/dashboard/products/categories/new')}>
+              <Button size="sm" className="gap-1.5" onClick={() => router.push('/dashboard/categories/new')}>
                 <Plus className="h-3.5 w-3.5" /> Add Category
               </Button>
             )
@@ -237,7 +237,7 @@ export function CategoriesView({ mode = 'list', editId }: { mode?: 'list' | 'new
                               <button
                                 type="button"
                                 aria-label={`Edit ${c.name}`}
-                                onClick={() => router.push(`/dashboard/products/categories/${c.id}`)}
+                                onClick={() => router.push(`/dashboard/categories/${c.id}`)}
                                 className="p-1 text-slate-400 hover:text-slate-900"
                               >
                                 <Pencil className="h-3.5 w-3.5" />

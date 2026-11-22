@@ -91,7 +91,7 @@ export function CollectionsView({ mode = 'list', editId }: { mode?: 'list' | 'ne
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, editing?.id]);
 
-  const goList = () => router.push('/dashboard/products/collections');
+  const goList = () => router.push('/dashboard/collections');
   const drawerOpen = mode === 'new' || (mode === 'edit' && Boolean(editing));
   const editNotFound = mode === 'edit' && !loading && !editing;
 
@@ -214,7 +214,7 @@ export function CollectionsView({ mode = 'list', editId }: { mode?: 'list' | 'ne
           subtitle="Group garments into seasonal or themed collections."
           actions={
             canEdit && (
-              <Button size="sm" className="gap-1.5" onClick={() => router.push('/dashboard/products/collections/new')}>
+              <Button size="sm" className="gap-1.5" onClick={() => router.push('/dashboard/collections/new')}>
                 <Plus className="h-3.5 w-3.5" /> Add Collection
               </Button>
             )
@@ -264,7 +264,7 @@ export function CollectionsView({ mode = 'list', editId }: { mode?: 'list' | 'ne
                                 <button
                                   type="button"
                                   aria-label={`Edit ${c.title}`}
-                                  onClick={() => router.push(`/dashboard/products/collections/${c.id}`)}
+                                  onClick={() => router.push(`/dashboard/collections/${c.id}`)}
                                   className="p-1 text-slate-400 hover:text-slate-900"
                                 >
                                   <Pencil className="h-3.5 w-3.5" />

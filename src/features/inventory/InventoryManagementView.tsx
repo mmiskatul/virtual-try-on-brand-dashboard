@@ -31,9 +31,9 @@ export type InventoryTab = 'overview' | 'locations' | 'adjustments' | 'history';
 
 const INV_TABS: Array<{ id: InventoryTab; label: string; href: string }> = [
   { id: 'overview', label: 'Stock Overview', href: '/dashboard/inventory' },
-  { id: 'locations', label: 'Warehouses / Locations', href: '/dashboard/inventory/locations' },
-  { id: 'adjustments', label: 'Stock Adjustments', href: '/dashboard/inventory/adjustments' },
-  { id: 'history', label: 'Inventory History', href: '/dashboard/inventory/history' },
+  { id: 'locations', label: 'Warehouses / Locations', href: '/dashboard/warehouses' },
+  { id: 'adjustments', label: 'Stock Adjustments', href: '/dashboard/stock-adjustments' },
+  { id: 'history', label: 'Inventory History', href: '/dashboard/inventory-history' },
 ];
 
 export function InventoryManagementView({

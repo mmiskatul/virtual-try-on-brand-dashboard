@@ -75,6 +75,22 @@ export interface VerifiedBrandShellUser {
 /** Extra URL prefixes that belong to a module whose root link lives elsewhere. */
 const NAV_EXTRA_PREFIXES: Record<string, string[]> = {
   '/dashboard/integrations': ['/dashboard/developer'],
+  '/dashboard/products': ['/dashboard/categories', '/dashboard/collections'],
+  '/dashboard/orders': ['/dashboard/abandoned-carts', '/dashboard/returns', '/dashboard/refunds'],
+  '/dashboard/inventory': ['/dashboard/warehouses', '/dashboard/stock-adjustments', '/dashboard/inventory-history'],
+  '/dashboard/analytics': [
+    '/dashboard/sales-reports',
+    '/dashboard/product-performance',
+    '/dashboard/customer-analytics',
+    '/dashboard/marketplace-analytics',
+    '/dashboard/try-on-reports',
+  ],
+  '/dashboard/billing': [
+    '/dashboard/subscription-plan',
+    '/dashboard/ai-usage',
+    '/dashboard/invoices',
+    '/dashboard/payment-methods',
+  ],
 };
 
 const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {

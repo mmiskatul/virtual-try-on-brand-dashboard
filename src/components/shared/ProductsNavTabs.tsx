@@ -10,13 +10,13 @@ export function ProductsNavTabs() {
   const pathname = usePathname() || '';
   const productCount = useWorkspaceStore((s) => s.products.length);
 
-  const onCategories = pathname.startsWith('/dashboard/products/categories');
-  const onCollections = pathname.startsWith('/dashboard/products/collections');
+  const onCategories = pathname.startsWith('/dashboard/categories');
+  const onCollections = pathname.startsWith('/dashboard/collections');
 
   const tabs = [
     { label: 'Products', href: '/dashboard/products', active: !onCategories && !onCollections, badge: productCount },
-    { label: 'Categories', href: '/dashboard/products/categories', active: onCategories },
-    { label: 'Collections', href: '/dashboard/products/collections', active: onCollections },
+    { label: 'Categories', href: '/dashboard/categories', active: onCategories },
+    { label: 'Collections', href: '/dashboard/collections', active: onCollections },
   ];
 
   return (

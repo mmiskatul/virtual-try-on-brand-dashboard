@@ -35,11 +35,11 @@ export type AnalyticsTab =
 
 const ANALYTICS_TABS: Array<{ id: AnalyticsTab; label: string; href: string }> = [
   { id: 'overview', label: 'Business Analytics', href: '/dashboard/analytics' },
-  { id: 'sales', label: 'Sales Reports', href: '/dashboard/analytics/sales' },
-  { id: 'products', label: 'Product Performance', href: '/dashboard/analytics/products' },
-  { id: 'customers', label: 'Customer Analytics', href: '/dashboard/analytics/customers' },
-  { id: 'marketplace', label: 'Marketplace Analytics', href: '/dashboard/analytics/marketplace' },
-  { id: 'virtual-try-on', label: 'Virtual Try-On Reports', href: '/dashboard/analytics/virtual-try-on' },
+  { id: 'sales', label: 'Sales Reports', href: '/dashboard/sales-reports' },
+  { id: 'products', label: 'Product Performance', href: '/dashboard/product-performance' },
+  { id: 'customers', label: 'Customer Analytics', href: '/dashboard/customer-analytics' },
+  { id: 'marketplace', label: 'Marketplace Analytics', href: '/dashboard/marketplace-analytics' },
+  { id: 'virtual-try-on', label: 'Virtual Try-On Reports', href: '/dashboard/try-on-reports' },
 ];
 
 export function AnalyticsReportsView({
