@@ -564,7 +564,7 @@ export function ProductsListView() {
                           <td className="px-3 py-3 text-right">
                             <div className="inline-flex items-center gap-1.5">
                               <Link
-                                href={`/dashboard/products/${p.id}`}
+                                href={`/dashboard/products/${p.id}/edit`}
                                 className="rounded-lg border border-slate-200 px-2.5 py-1 font-semibold hover:bg-slate-100"
                               >
                                 Edit

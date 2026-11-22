@@ -1,11 +1,10 @@
-import { ProductEditorView } from '@/features/products/ProductEditorView';
+import { ProductPreviewView } from '@/features/products/ProductPreviewView';
 
-export default async function EditProductPage({
+export default async function ProductPreviewPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <ProductEditorView existingProductId={decodeURIComponent(id)} />;
+  return <ProductPreviewView productId={decodeURIComponent(id)} />;
 }
-

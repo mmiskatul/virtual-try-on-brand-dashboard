@@ -855,7 +855,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
       await ensureCatalogEntries(finalForm.category, finalForm.collection, payload.tryOnCategory);
       // Saved for real: the draft and any photos left in the browser are no longer needed.
       await deleteDraft(scopeId);
-      router.push('/dashboard/products');
+      router.push(existing ? `/dashboard/products/${existing.id}` : '/dashboard/products');
     } catch (err) {
       // Show the server's field-level messages next to the fields they belong to.
       if (err instanceof ServiceError && err.issues && err.issues.length > 0) {
@@ -910,9 +910,9 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
           title={existing ? `Edit: ${existing.name}` : 'Add a product'}
           subtitle="Work through the steps. You can come back to any finished step."
           actions={
-            <Link href="/dashboard/products">
+            <Link href={existing ? `/dashboard/products/${existing.id}` : '/dashboard/products'}>
               <Button variant="outline" size="sm" className="gap-1.5">
-                <ArrowLeft className="w-3.5 h-3.5" /> Back to Products
+                <ArrowLeft className="w-3.5 h-3.5" /> {existing ? 'Back to Preview' : 'Back to Products'}
               </Button>
             </Link>
           }
