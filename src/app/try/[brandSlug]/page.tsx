@@ -10,6 +10,7 @@ import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
 import { Button } from '../../../components/ui/button';
 import { BrandLook, resolveBrandLook } from '../../../lib/brand-look';
+import { layoutIdFor } from '../../../lib/try-on-layouts';
 
 const SAMPLE_MODELS = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80',
@@ -109,6 +110,19 @@ export default function DedicatedBrandPublicTryOnPage() {
 
   const activeGarment = eligibleGarments.find((p) => p.id === selectedId) || eligibleGarments[0];
 
+  // The page design the brand picked (Look & Feel). Classic is the original three-column page.
+  const design = layoutIdFor(appearance.previewLayout, appearance.gridStyle);
+  const wide = design === 'showcase' || design === 'editorial';
+  const photoCols = wide ? 'lg:col-span-6' : 'lg:col-span-4';
+  const garmentGrid =
+    design === 'grid'
+      ? 'grid grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1'
+      : design === 'showcase'
+        ? 'grid grid-cols-2 sm:grid-cols-4 gap-3'
+        : design === 'editorial'
+          ? 'grid grid-cols-2 sm:grid-cols-3 gap-4'
+          : 'space-y-2 max-h-80 overflow-y-auto pr-1';
+
   const handleGenerate = async () => {
     if (tryOnCfg.requireConsent && !consent) {
       setStatusNotice('Please accept privacy terms before generating your look.');
@@ -167,7 +181,7 @@ export default function DedicatedBrandPublicTryOnPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
           {/* Left: Photo & Consent */}
-          <div className="lg:col-span-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 space-y-4">
+          <div className={`${photoCols} rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 space-y-4`}>
             <h2 className="font-bold text-sm text-slate-900">1. Upload your photo</h2>
             <p className="text-xs text-slate-500">{appearance.uploadInstructions}</p>
             {tryOnCfg.requireConsent ? (
@@ -204,7 +218,7 @@ export default function DedicatedBrandPublicTryOnPage() {
           </div>
 
           {/* Center: Result Stage */}
-          <div className="lg:col-span-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 space-y-4">
+          <div className={`${photoCols} rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 space-y-4`}>
             <h2 className="font-bold text-sm text-slate-900">2. Try-On Result</h2>
             {phase === 'processing' ? (
               <div className="aspect-[3/4] rounded-2xl bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-2">
@@ -243,13 +257,14 @@ export default function DedicatedBrandPublicTryOnPage() {
           </div>
 
           {/* Right: Strictly Isolated Garment Selector */}
-          <div className="lg:col-span-4 rounded-3xl bg-white border border-slate-200 p-5 space-y-4">
+          <div className={`${wide ? 'lg:col-span-12' : 'lg:col-span-4'} rounded-3xl bg-white border border-slate-200 p-5 space-y-4`}>
             <h2 className="font-bold text-sm text-slate-900 flex items-center justify-between">
               <span>3. Select {brandName} Garment</span>
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
             </h2>
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1 text-xs">
+            <div className={`${garmentGrid} text-xs`}>
               {eligibleGarments.map((item) => (
+                design === 'classic' ? (
                 <button
                   key={item.id}
                   type="button"
@@ -268,6 +283,26 @@ export default function DedicatedBrandPublicTryOnPage() {
                     </p>
                   </div>
                 </button>
+                ) : (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedId(item.id)}
+                  className={`text-left rounded-xl border overflow-hidden bg-white ${
+                    activeGarment?.id === item.id ? 'border-slate-950 ring-2 ring-slate-950/20' : 'border-slate-200'
+                  }`}
+                >
+                  <div className={`relative w-full ${design === 'editorial' ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-slate-100`}>
+                    <SafeImage src={item.image} alt={item.name} fill className="object-cover" />
+                  </div>
+                  <div className="p-2.5">
+                    <p className={`truncate text-slate-900 ${design === 'editorial' ? 'font-bold text-sm' : 'font-semibold'}`}>{item.name}</p>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      {appearance.showPrices ? `৳${item.price} • ` : ''}{item.category}
+                    </p>
+                  </div>
+                </button>
+                )
               ))}
             </div>
             <button

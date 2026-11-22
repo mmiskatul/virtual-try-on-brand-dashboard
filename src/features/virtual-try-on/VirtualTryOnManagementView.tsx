@@ -19,6 +19,7 @@ import {
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
 import { resolveBrandLook } from '../../lib/brand-look';
+import { TRY_ON_LAYOUTS, TryOnLayoutId, layoutIdFor } from '../../lib/try-on-layouts';
 
 export type TryOnTab = 'overview' | 'products' | 'appearance' | 'history';
 
@@ -30,6 +31,65 @@ const TABS: Array<{ id: TryOnTab; label: string; href: string }> = [
 ];
 
 type GarmentFilter = 'all' | 'on' | 'off' | 'attention';
+
+/** A small wireframe of each try-on page design, so brands can pick by how it looks. */
+function LayoutWireframe({ id, accent }: { id: TryOnLayoutId; accent: string }) {
+  const panel = 'rounded bg-slate-200';
+  const garment = 'rounded-sm bg-slate-300';
+  return (
+    <div className="h-24 w-full rounded-lg border border-slate-200 bg-white p-1.5 flex flex-col gap-1">
+      <div className="h-2 w-1/3 rounded bg-slate-300" />
+      {id === 'classic' && (
+        <div className="flex-1 grid grid-cols-3 gap-1">
+          <div className={panel} />
+          <div className={panel} />
+          <div className="flex flex-col gap-1">
+            <div className="flex-1 rounded bg-slate-300" />
+            <div className="flex-1 rounded bg-slate-300" />
+            <div className="h-2 rounded" style={{ backgroundColor: accent }} />
+          </div>
+        </div>
+      )}
+      {id === 'grid' && (
+        <div className="flex-1 grid grid-cols-3 gap-1">
+          <div className={panel} />
+          <div className={panel} />
+          <div className="grid grid-cols-2 gap-0.5 content-start">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={`${garment} h-4`} />
+            ))}
+          </div>
+        </div>
+      )}
+      {id === 'showcase' && (
+        <div className="flex-1 flex flex-col gap-1">
+          <div className="flex-1 grid grid-cols-2 gap-1">
+            <div className={panel} />
+            <div className={panel} />
+          </div>
+          <div className="grid grid-cols-4 gap-0.5">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={`${garment} h-4`} />
+            ))}
+          </div>
+        </div>
+      )}
+      {id === 'editorial' && (
+        <div className="flex-1 flex flex-col gap-1">
+          <div className="flex-1 grid grid-cols-2 gap-1">
+            <div className={panel} />
+            <div className={panel} />
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={`${garment} h-6`} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initialTab?: TryOnTab }) {
   const tab = initialTab;
@@ -479,6 +539,35 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
         )}
 
         {tab === 'appearance' && (
+          <div className="space-y-6">
+          <SectionCard title="Page design" subtitle="Choose how your try-on page is laid out. Colours and logo still follow your brand.">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {TRY_ON_LAYOUTS.map((opt) => {
+                const selected = layoutIdFor(appearance.previewLayout, appearance.gridStyle) === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setAppearance({ ...appearance, previewLayout: opt.previewLayout, gridStyle: opt.gridStyle })}
+                    className={`text-left rounded-2xl border p-2.5 space-y-2 transition-colors ${
+                      selected ? 'border-slate-950 ring-2 ring-slate-950/15 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <LayoutWireframe id={opt.id} accent={brandLook.accent} />
+                    <div className="px-0.5">
+                      <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        {opt.label}
+                        {selected && <Check className="h-3.5 w-3.5 text-emerald-600" />}
+                      </p>
+                      <p className="text-[11px] text-slate-500 leading-snug">{opt.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-[11px] text-slate-500">Press Save look below to publish your choice.</p>
+          </SectionCard>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <SectionCard title="How your try-on page looks" subtitle="Words shoppers see. Colours, logo and banner follow your brand." className="lg:col-span-7">
               <div className="space-y-3 text-xs">
@@ -559,6 +648,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                 </div>
               </div>
             </SectionCard>
+          </div>
           </div>
         )}
 
