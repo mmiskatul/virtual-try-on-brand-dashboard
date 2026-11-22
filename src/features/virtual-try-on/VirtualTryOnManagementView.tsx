@@ -1,20 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  Code2,
-  Copy,
-  ExternalLink,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
-  Upload,
-} from 'lucide-react';
-import { TryOnCategory } from '../../types';
+import { usePathname } from 'next/navigation';
+import { Check, CheckCircle2, Circle, Code2, Copy, ExternalLink, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 import type { TryOnConfigPatch } from '../../services/brandService';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -27,76 +16,50 @@ import {
   SafeImage,
   SectionCard,
   StatusBadge,
-  SvgBarChart,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
 
-export type TryOnTab =
-  | 'overview'
-  | 'studio'
-  | 'configuration'
-  | 'products'
-  | 'appearance'
-  | 'embedding'
-  | 'history'
-  | 'privacy';
+export type TryOnTab = 'overview' | 'products' | 'appearance' | 'history';
 
-const SAMPLE_STUDIO_MODELS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80',
+const TABS: Array<{ id: TryOnTab; label: string; href: string }> = [
+  { id: 'overview', label: 'Overview', href: '/dashboard/virtual-try-on' },
+  { id: 'products', label: 'Garments', href: '/dashboard/try-on-garments' },
+  { id: 'appearance', label: 'Look & Feel', href: '/dashboard/try-on-look' },
+  { id: 'history', label: 'Sessions', href: '/dashboard/try-on-sessions' },
 ];
 
+type GarmentFilter = 'all' | 'on' | 'off' | 'attention';
+
 export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initialTab?: TryOnTab }) {
-  const [tab, setTab] = useState<TryOnTab>(initialTab);
+  const tab = initialTab;
+  const pathname = usePathname();
   const profile = useWorkspaceStore((s) => s.profile);
   const products = useWorkspaceStore((s) => s.products);
   const updateProduct = useWorkspaceStore((s) => s.updateProduct);
   const tryOnConfig = useWorkspaceStore((s) => s.tryOnConfig);
   const updateTryOnConfig = useWorkspaceStore((s) => s.updateTryOnConfig);
   const sessions = useWorkspaceStore((s) => s.tryOnSessions);
-  const addTryOnSession = useWorkspaceStore((s) => s.addTryOnSession);
 
   const showToast = useUiStore((s) => s.showToast);
   const hideToast = useUiStore((s) => s.hideToast);
 
-  const [engineInfo, setEngineInfo] = useState<{ connected: boolean; mode: string; provider: string }>({
-    connected: false,
-    mode: 'checking',
-    provider: 'checking',
-  });
+  const [engineOk, setEngineOk] = useState<boolean | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
-
-  // Appearance local editor copy
+  const [copiedCode, setCopiedCode] = useState(false);
   const [appearance, setAppearance] = useState(tryOnConfig.appearance);
-  const [allowlistDomain, setAllowlistDomain] = useState('');
-
-  // Studio Testbench state
-  const eligibleProducts = useMemo(
-    () => products.filter((p) => p.isTryOnEligible && p.includeInBrandTryOn !== false),
-    [products]
-  );
-  const [studioProductId, setStudioProductId] = useState(eligibleProducts[0]?.id || products[0]?.id || '');
-  const [studioPersonImg, setStudioPersonImg] = useState(SAMPLE_STUDIO_MODELS[0]);
-  const [studioPhase, setStudioPhase] = useState<'idle' | 'processing' | 'done' | 'failed'>('idle');
-  const [studioResultUrl, setStudioResultUrl] = useState('');
-  const [studioMessage, setStudioMessage] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    brandWorkspaceApi
-      .getTryOnProviderStatus()
-      .then((res) =>
-        setEngineInfo({ connected: true, mode: res.mode, provider: res.provider })
-      )
-      .catch(() =>
-        setEngineInfo({ connected: false, mode: 'offline', provider: 'unavailable' })
-      );
-  }, []);
+  const [filter, setFilter] = useState<GarmentFilter>('all');
 
   const notify = (msg: string) => {
     showToast(msg);
     setTimeout(hideToast, 3000);
   };
+
+  useEffect(() => {
+    brandWorkspaceApi
+      .getTryOnProviderStatus()
+      .then(() => setEngineOk(true))
+      .catch(() => setEngineOk(false));
+  }, []);
 
   // Settings live on the server: load them once, save them with a real request.
   const [serverReady, setServerReady] = useState(false);
@@ -134,424 +97,424 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
     }
   };
 
-  const publicTryOnUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/try/${profile.slug}`
-      : `/try/${profile.slug}`;
-
-  const activeStudioProduct =
-    eligibleProducts.find((p) => p.id === studioProductId) || eligibleProducts[0];
-
-  const handleCopyUrl = async () => {
-    if (typeof navigator === 'undefined') return;
-    await navigator.clipboard.writeText(publicTryOnUrl).catch(() => {});
-    setCopiedUrl(true);
-    setTimeout(() => setCopiedUrl(false), 2000);
-  };
-
-  const handleRunStudioTest = async () => {
-    if (!activeStudioProduct) return;
-    setStudioPhase('processing');
-    setStudioMessage(null);
-    const start = Date.now();
-    const res = await brandWorkspaceApi.executeTryOn({
-      productId: activeStudioProduct.id,
-      personImage: studioPersonImg,
-      garmentImage: activeStudioProduct.image,
-      category: activeStudioProduct.tryOnCategory || 'tops',
-    });
-    const dur = Date.now() - start;
-
-    if (res.mode === 'live_ai' && res.resultUrl) {
-      setStudioResultUrl(res.resultUrl);
-      setStudioPhase('done');
-      addTryOnSession({
-        id: `gen_${Date.now()}`,
-        tenantId: profile.id || '',
-        productId: activeStudioProduct.id,
-        productName: activeStudioProduct.name,
-        category: activeStudioProduct.tryOnCategory,
-        status: 'COMPLETED',
-        durationMs: dur,
-        creditsUsed: 1,
-        createdAt: new Date().toLocaleString(),
-      });
-    } else {
-      setStudioPhase('failed');
-      setStudioMessage(
-        res.message ||
-          'Backend AI synthesis did not complete (product not published in live DB or AI engine offline). Live synthesis is never simulated in production.'
-      );
-      addTryOnSession({
-        id: `gen_${Date.now()}`,
-        tenantId: profile.id || '',
-        productId: activeStudioProduct.id,
-        productName: activeStudioProduct.name,
-        category: activeStudioProduct.tryOnCategory,
-        status: 'FAILED',
-        durationMs: dur,
-        creditsUsed: 0,
-        errorReason: res.message || 'Backend engine unavailable',
-        createdAt: new Date().toLocaleString(),
-      });
+  // A garment change is shown right away and then saved on the server; it is put back if saving fails.
+  const setGarmentEligible = async (productId: string, value: boolean) => {
+    const before = products.find((p) => p.id === productId)?.isTryOnEligible ?? !value;
+    updateProduct(productId, { isTryOnEligible: value });
+    try {
+      await brandWorkspaceApi.setPublication(productId, 'isTryOnEligible', value);
+    } catch {
+      updateProduct(productId, { isTryOnEligible: before });
+      notify('Could not save that change. Please try again.');
     }
   };
 
+  const setAllEligible = async (value: boolean) => {
+    const targets = products.filter((p) => p.isTryOnEligible !== value);
+    await Promise.all(targets.map((p) => setGarmentEligible(p.id, value)));
+    notify(value ? 'Try-on turned on for all garments.' : 'Try-on turned off for all garments.');
+  };
+
+  const publicTryOnUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/try/${profile.slug}` : `/try/${profile.slug}`;
+
+  const copy = async (text: string, done: (v: boolean) => void) => {
+    if (typeof navigator === 'undefined') return;
+    await navigator.clipboard.writeText(text).catch(() => {});
+    done(true);
+    setTimeout(() => done(false), 2000);
+  };
+
+  const eligibleProducts = useMemo(
+    () => products.filter((p) => p.isTryOnEligible && p.includeInBrandTryOn !== false),
+    [products]
+  );
+  const needsAttention = useMemo(
+    () => eligibleProducts.filter((p) => !p.image || p.imageQualityStatus === 'NEEDS_CHECK'),
+    [eligibleProducts]
+  );
+
   const completedCount = sessions.filter((s) => s.status === 'COMPLETED').length;
   const failedCount = sessions.filter((s) => s.status === 'FAILED').length;
-  const successRate =
-    sessions.length > 0 ? `${Math.round((completedCount / sessions.length) * 100)}%` : '0%';
-  const avgDurationSec =
-    sessions.length > 0
-      ? (sessions.reduce((sum, s) => sum + s.durationMs, 0) / sessions.length / 1000).toFixed(2)
-      : '0.00';
+  const successRate = sessions.length > 0 ? `${Math.round((completedCount / sessions.length) * 100)}%` : '-';
+  const creditsLeft = Math.max(0, profile.quotaMax - profile.quotaUsed);
+  const usagePct = profile.quotaMax > 0 ? Math.min(100, Math.round((profile.quotaUsed / profile.quotaMax) * 100)) : 0;
 
-  const embedSnippet = `<script src="https://cdn.v-try.fashion/widget.js" data-brand="${profile.slug}" data-accent="${tryOnConfig.appearance.accentColor}"></script>`;
+  const topGarments = useMemo(() => {
+    const counts = new Map<string, { name: string; count: number }>();
+    for (const s of sessions) {
+      const entry = counts.get(s.productId) || { name: s.productName, count: 0 };
+      entry.count += 1;
+      counts.set(s.productId, entry);
+    }
+    return Array.from(counts.entries())
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [sessions]);
+
+  const isOn = tryOnConfig.enabled && tryOnConfig.publicPageActive;
+  const checklist = [
+    {
+      id: 'on',
+      label: 'Turn on virtual try-on',
+      done: isOn,
+      href: '/dashboard/virtual-try-on',
+      action: 'Use the switches below',
+    },
+    {
+      id: 'garments',
+      label: 'Enable at least 3 garments',
+      done: eligibleProducts.length >= 3,
+      href: '/dashboard/try-on-garments',
+      action: `${eligibleProducts.length} of 3 enabled`,
+    },
+    {
+      id: 'photos',
+      label: 'Use clear garment photos',
+      done: eligibleProducts.length > 0 && needsAttention.length === 0,
+      href: '/dashboard/try-on-garments',
+      action: needsAttention.length > 0 ? `${needsAttention.length} need a better photo` : 'Enable garments first',
+    },
+    {
+      id: 'first',
+      label: 'Get your first shopper try-on',
+      done: sessions.length > 0,
+      href: `/try/${profile.slug}`,
+      action: 'Share your link below',
+    },
+  ];
+  const doneCount = checklist.filter((c) => c.done).length;
+
+  const embedSnippet = `<a href="${publicTryOnUrl}" target="_blank" rel="noopener">${appearance.primaryBtnText}</a>`;
 
   return (
     <PermissionGate module="tryon" action="view">
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Core Platform Differentiator"
-          title="Brand Virtual Try-On Studio & Settings"
-          subtitle={`Manage your isolated public fitting experience at /try/${profile.slug}, garment eligibility, theme, embed widget, and privacy rules.`}
+          eyebrow="Virtual Try-On"
+          title="Virtual Try-On"
+          subtitle="Let shoppers see your garments on themselves. Turn it on, choose your garments and share your link."
           actions={
             <>
-              <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={() => void copy(publicTryOnUrl, setCopiedUrl)} className="gap-1.5">
                 {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedUrl ? 'Copied Try-On URL' : 'Copy Public URL'}
+                {copiedUrl ? 'Link copied' : 'Copy link'}
               </Button>
               <Link href={`/try/${profile.slug}`} target="_blank">
                 <Button size="sm" className="gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Open Public Try-On <ExternalLink className="w-3 h-3" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Preview as shopper <ExternalLink className="w-3 h-3" />
                 </Button>
               </Link>
             </>
           }
         />
 
-        {/* Engine Connection Strip */}
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5">
-            <span className={`w-2.5 h-2.5 rounded-full ${engineInfo.connected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-            <span className="font-bold text-slate-900">
-              {engineInfo.connected
-                ? `Connected to Platform AI Service (${engineInfo.mode})`
-                : 'AI Service Offline (Check Docker vton-backend :4000 -> vton-ai-service :8000)'}
+        {engineOk !== null && (
+          <div
+            className={`rounded-2xl border px-4 py-3 flex items-center gap-2.5 text-xs ${
+              engineOk ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${engineOk ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            <span className="font-bold">
+              {engineOk ? 'Try-on is working' : 'Try-on is temporarily unavailable. Please try again in a few minutes.'}
             </span>
           </div>
-          <span className="font-mono text-slate-500">
-            Public Route: <code>/try/{profile.slug}</code>
-          </span>
-        </div>
+        )}
 
-        {/* Navigation Tabs */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-bold">
-          {(
-            [
-              ['overview', 'Overview'],
-              ['studio', 'Test Studio'],
-              ['products', `Garment Eligibility (${eligibleProducts.length})`],
-              ['appearance', 'Appearance Editor'],
-              ['configuration', 'AI Configuration'],
-              ['embedding', 'Widget & Embed'],
-              ['history', 'Generation History'],
-              ['privacy', 'Privacy Controls'],
-            ] as Array<[TryOnTab, string]>
-          ).map(([k, lbl]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setTab(k)}
-              className={`px-3.5 py-2 rounded-xl border whitespace-nowrap ${
-                tab === k ? 'bg-slate-950 text-white border-slate-950' : 'bg-white text-slate-600 border-slate-200'
-              }`}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
+        <nav aria-label="Virtual try-on sections" className="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-bold">
+          {TABS.map((t) => {
+            const active = tab === t.id || pathname === t.href;
+            return (
+              <Link
+                key={t.id}
+                href={t.href}
+                aria-current={active ? 'page' : undefined}
+                className={`px-3.5 py-2 rounded-xl border whitespace-nowrap ${
+                  active ? 'bg-slate-950 text-white border-slate-950' : 'bg-white text-slate-600 border-slate-200'
+                }`}
+              >
+                {t.label}
+                {t.id === 'products' && ` (${eligibleProducts.length})`}
+              </Link>
+            );
+          })}
+        </nav>
 
         {tab === 'overview' && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <KpiCard label="Eligible Garments" value={eligibleProducts.length} change={`of ${products.length} total`} icon={<Sparkles className="w-4 h-4 text-amber-600" />} />
-              <KpiCard label="Total Sessions" value={sessions.length} change={`${completedCount} completed`} icon={<CheckCircle2 className="w-4 h-4 text-emerald-600" />} />
-              <KpiCard label="Success Rate" value={successRate} change={`${failedCount} failed`} icon={<RefreshCw className="w-4 h-4" />} />
-              <KpiCard label="Credits Consumed" value={profile.quotaUsed} change={`${profile.quotaMax - profile.quotaUsed} left`} icon={<ShieldCheck className="w-4 h-4" />} />
+              <KpiCard label="Garments on" value={eligibleProducts.length} change={`of ${products.length} products`} icon={<Sparkles className="w-4 h-4 text-amber-600" />} />
+              <KpiCard label="Shopper try-ons" value={sessions.length} change={`${completedCount} completed`} icon={<CheckCircle2 className="w-4 h-4 text-emerald-600" />} />
+              <KpiCard label="Success rate" value={successRate} change={`${failedCount} failed`} icon={<RefreshCw className="w-4 h-4" />} />
+              <KpiCard label="Credits left" value={creditsLeft} change={`${profile.quotaUsed} used`} icon={<ShieldCheck className="w-4 h-4" />} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <SectionCard title="Dedicated Brand Try-On Link" subtitle="Zero cross-brand leakage: shoppers here only try on items belonging strictly to your brand">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800">Try-On Feature Status</span>
-                    <StatusBadge status={tryOnConfig.enabled ? 'ACTIVE' : 'PAUSED'} />
+              <SectionCard title="Get started" subtitle={`${doneCount} of ${checklist.length} steps done`}>
+                <ul className="space-y-2 text-xs">
+                  {checklist.map((c) => (
+                    <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5">
+                      <span className="flex items-center gap-2 min-w-0">
+                        {c.done ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-slate-300 shrink-0" />
+                        )}
+                        <span className={`font-semibold ${c.done ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{c.label}</span>
+                      </span>
+                      {!c.done && (
+                        <Link href={c.href} className="shrink-0 text-[11px] font-bold text-slate-900 underline">
+                          {c.action}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </SectionCard>
+
+              <SectionCard title="Try-on switches" subtitle="Turn the experience on or off for your shoppers.">
+                <div className="space-y-3 text-sm">
+                  {(
+                    [
+                      ['enabled', 'Virtual try-on is on', 'When off, shoppers cannot try on any of your products.'],
+                      ['publicPageActive', 'Your try-on page is visible', `The page at /try/${profile.slug}. When off, shoppers see an "unavailable" message.`],
+                    ] as const
+                  ).map(([key, title, help]) => (
+                    <label key={key} className="flex items-start justify-between gap-4 p-3.5 rounded-xl border border-slate-200 cursor-pointer">
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-slate-950">{title}</span>
+                        <span className="block text-xs text-slate-500 mt-0.5">{help}</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={tryOnConfig[key]}
+                        disabled={savingConfig || !serverReady}
+                        onChange={(e) => void persistConfig({ [key]: e.target.checked }, e.target.checked ? 'Turned on.' : 'Turned off.')}
+                        className="mt-1 h-4 w-4 accent-slate-950 shrink-0"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Share your try-on" subtitle="Link to it from your website, Instagram bio or product pages.">
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <input readOnly value={publicTryOnUrl} className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs" />
+                    <Button size="sm" variant="outline" className="h-10" onClick={() => void copy(publicTryOnUrl, setCopiedUrl)}>
+                      {copiedUrl ? 'Copied' : 'Copy'}
+                    </Button>
                   </div>
-                  <p className="font-mono text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200 truncate">
-                    {publicTryOnUrl}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => setTab('studio')}>Test Generation</Button>
-                    <Button size="sm" variant="outline" onClick={() => setTab('appearance')}>Customize Look</Button>
-                    <Button size="sm" variant="outline" onClick={() => setTab('products')}>Manage Products</Button>
+                  <div>
+                    <p className="font-semibold text-slate-900 mb-1.5 flex items-center gap-1.5 text-xs">
+                      <Code2 className="w-4 h-4" /> Add a button to your website
+                    </p>
+                    <pre className="p-3.5 rounded-xl bg-slate-950 text-slate-100 overflow-x-auto font-mono text-[11px] leading-relaxed">{embedSnippet}</pre>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => void copy(embedSnippet, setCopiedCode)}>
+                      {copiedCode ? 'Copied' : 'Copy code'}
+                    </Button>
                   </div>
                 </div>
               </SectionCard>
 
-              <SectionCard title="Most Tried-On Garments" subtitle="Based on recorded generation sessions">
-                <div className="space-y-2.5 text-xs">
-                  {eligibleProducts.slice(0, 4).map((p) => (
-                    <div key={p.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                      <span className="font-bold text-slate-900 truncate">{p.name}</span>
-                      <span className="font-mono text-slate-500">{p.tryOnCategory}</span>
-                    </div>
-                  ))}
+              <SectionCard title="Credits" subtitle={`${profile.plan} plan`}>
+                <div className="space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-800">
+                      {profile.quotaUsed} of {profile.quotaMax} used
+                    </span>
+                    <span className="text-slate-500">{creditsLeft} left</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div className={`h-full rounded-full ${usagePct >= 90 ? 'bg-rose-500' : 'bg-slate-900'}`} style={{ width: `${usagePct}%` }} />
+                  </div>
+                  <Link href="/dashboard/billing" className="inline-block font-bold text-slate-900 underline">
+                    {usagePct >= 80 ? 'Running low: view plans' : 'View plan and credits'}
+                  </Link>
                 </div>
+              </SectionCard>
+
+              <SectionCard title="Most tried-on garments" subtitle="What shoppers try on the most">
+                {topGarments.length === 0 ? (
+                  <p className="text-xs text-slate-500">No try-ons yet. Share your link to get started.</p>
+                ) : (
+                  <ol className="space-y-2 text-xs">
+                    {topGarments.map((g, i) => (
+                      <li key={g.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <span className="font-bold text-slate-900 truncate">
+                          {i + 1}. {g.name}
+                        </span>
+                        <span className="font-semibold text-slate-600 shrink-0">{g.count} try-on{g.count === 1 ? '' : 's'}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </SectionCard>
+
+              <SectionCard title="Garments needing attention" subtitle="Clear, front-facing photos give the best results">
+                {needsAttention.length === 0 ? (
+                  <p className="text-xs text-slate-500">All enabled garments look good.</p>
+                ) : (
+                  <ul className="space-y-2 text-xs">
+                    {needsAttention.slice(0, 5).map((p) => (
+                      <li key={p.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-amber-50 border border-amber-100">
+                        <span className="font-bold text-slate-900 truncate">{p.name}</span>
+                        <Link href={`/dashboard/products/${p.id}/edit`} className="shrink-0 font-bold underline">
+                          Fix photo
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </SectionCard>
             </div>
-          </div>
-        )}
-
-        {tab === 'studio' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <SectionCard title="1. Customer Subject Photo" className="lg:col-span-4">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const up = await brandWorkspaceApi.uploadMediaFile(file);
-                  if (up.ok && up.url) setStudioPersonImg(up.url);
-                }}
-              />
-              <div className="space-y-3 text-xs">
-                <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
-                  <SafeImage src={studioPersonImg} alt="Test subject" fill className="object-cover" />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="flex-1 gap-1.5">
-                    <Upload className="w-3.5 h-3.5" /> Upload Photo
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setStudioPersonImg(
-                        studioPersonImg === SAMPLE_STUDIO_MODELS[0]
-                          ? SAMPLE_STUDIO_MODELS[1]
-                          : SAMPLE_STUDIO_MODELS[0]
-                      )
-                    }
-                  >
-                    Switch Preset
-                  </Button>
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="2. AI Output Stage" className="lg:col-span-4">
-              {studioPhase === 'processing' ? (
-                <div className="aspect-[3/4] rounded-2xl bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-2">
-                  <Sparkles className="w-8 h-8 text-amber-300 animate-pulse" />
-                  <p className="font-bold text-sm">{tryOnConfig.appearance.loadingText}</p>
-                </div>
-              ) : studioPhase === 'done' && studioResultUrl ? (
-                <div className="space-y-3">
-                  <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 border border-emerald-300">
-                    <SafeImage src={studioResultUrl} alt="Live AI result" fill className="object-cover" />
-                  </div>
-                  <p className="text-xs font-bold text-emerald-700">Live Backend AI Result Received</p>
-                </div>
-              ) : studioPhase === 'failed' ? (
-                <div className="aspect-[3/4] rounded-2xl border border-rose-200 bg-rose-50/50 p-6 flex flex-col items-center justify-center text-center space-y-3 text-xs">
-                  <AlertTriangle className="w-8 h-8 text-rose-600" />
-                  <p className="font-bold text-slate-900">Generation Did Not Complete</p>
-                  <p className="text-slate-600">{studioMessage}</p>
-                  <Button size="sm" onClick={handleRunStudioTest}>Retry Request</Button>
-                </div>
-              ) : (
-                <div className="aspect-[3/4] rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center p-6 text-center text-xs text-slate-500">
-                  Select a garment on the right and press Generate to dispatch an authentic job via <code>/api/v1/try-on/direct</code>.
-                </div>
-              )}
-            </SectionCard>
-
-            <SectionCard title={`3. ${profile.name} Garments`} className="lg:col-span-4">
-              <div className="space-y-3 text-xs">
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                  {eligibleProducts.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setStudioProductId(p.id)}
-                      className={`w-full text-left p-2.5 rounded-xl border flex items-center gap-3 ${
-                        activeStudioProduct?.id === p.id
-                          ? 'border-slate-950 bg-slate-100 font-bold'
-                          : 'border-slate-200 bg-white'
-                      }`}
-                    >
-                      <div className="relative w-10 h-12 rounded-lg overflow-hidden shrink-0">
-                        <SafeImage src={p.image} alt={p.name} fill className="object-cover" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-slate-900">{p.name}</p>
-                        <p className="text-[11px] text-slate-500">৳{p.price} • {p.tryOnCategory}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <Button onClick={handleRunStudioTest} disabled={!activeStudioProduct || studioPhase === 'processing'} className="w-full gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  {tryOnConfig.appearance.generateBtnText}
-                </Button>
-              </div>
-            </SectionCard>
           </div>
         )}
 
         {tab === 'products' && (
           <SectionCard
-            title="Garment Virtual Try-On Eligibility"
-            subtitle="Enable/disable AI try-on per garment or in bulk and verify image category compatibility"
+            title="Garments"
+            subtitle="Choose which products shoppers can try on."
             right={
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => { products.forEach((p) => updateProduct(p.id, { isTryOnEligible: true })); notify('Enabled Try-On across all garments.'); }}>
-                  Enable All
+                <Button size="sm" variant="outline" onClick={() => void setAllEligible(true)}>
+                  Turn on all
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => void setAllEligible(false)}>
+                  Turn off all
                 </Button>
               </div>
             }
           >
-            <div className="sm:hidden space-y-2.5 text-xs">
-              {products.map((p) => (
-                <div key={p.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 truncate">{p.name}</p>
-                      <div className="mt-1">
-                        <StatusBadge status={p.imageQualityStatus || 'VERIFIED'} />
-                      </div>
-                    </div>
-                    <StatusBadge status={p.isTryOnEligible ? 'ACTIVE' : 'HIDDEN'} />
-                  </div>
-                  <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                    <label className="space-y-1">
-                      <span className="text-[11px] font-semibold text-slate-500">AI Category</span>
-                      <select
-                        value={p.tryOnCategory}
-                        onChange={(e) => updateProduct(p.id, { tryOnCategory: e.target.value })}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs"
-                      >
-                        <option value="tops">tops</option>
-                        <option value="bottoms">bottoms</option>
-                        <option value="dresses">dresses</option>
-                        <option value="outerwear">outerwear</option>
-                      </select>
-                    </label>
-                    <div className="flex flex-col justify-end gap-1.5">
-                      <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
-                        <span>Brand Try-On</span>
-                        <input
-                          type="checkbox"
-                          checked={p.isTryOnEligible}
-                          onChange={(e) => updateProduct(p.id, { isTryOnEligible: e.target.checked })}
-                          className="rounded accent-slate-950"
-                        />
-                      </label>
-                      <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
-                        <span>Marketplace</span>
-                        <input
-                          type="checkbox"
-                          checked={Boolean(p.includeInMarketplaceTryOn)}
-                          onChange={(e) => updateProduct(p.id, { includeInMarketplaceTryOn: e.target.checked })}
-                          className="rounded accent-slate-950"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
+            <div className="flex flex-wrap gap-2 mb-4 text-xs font-bold">
+              {(
+                [
+                  ['all', `All (${products.length})`],
+                  ['on', `On (${products.filter((p) => p.isTryOnEligible).length})`],
+                  ['off', `Off (${products.filter((p) => !p.isTryOnEligible).length})`],
+                  ['attention', `Needs attention (${needsAttention.length})`],
+                ] as Array<[GarmentFilter, string]>
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFilter(k)}
+                  className={`px-3 py-1.5 rounded-full border ${
+                    filter === k ? 'bg-slate-950 text-white border-slate-950' : 'bg-white text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
               ))}
             </div>
-            <div className="hidden sm:block overflow-x-auto text-xs">
-              <table className="w-full text-left">
-                <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="p-3">Garment</th>
-                    <th className="p-3">AI Category</th>
-                    <th className="p-3">Image Compatibility</th>
-                    <th className="p-3 text-center">Brand Try-On</th>
-                    <th className="p-3 text-center">Marketplace Try-On</th>
-                    <th className="p-3 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {products.map((p) => (
-                    <tr key={p.id}>
-                      <td className="p-3 font-bold text-slate-900">{p.name}</td>
-                      <td className="p-3">
-                        <select
-                          value={p.tryOnCategory}
-                          onChange={(e) => updateProduct(p.id, { tryOnCategory: e.target.value })}
-                          className="px-2 py-1 rounded border border-slate-200 bg-white"
-                        >
-                          <option value="tops">tops</option>
-                          <option value="bottoms">bottoms</option>
-                          <option value="dresses">dresses</option>
-                          <option value="outerwear">outerwear</option>
-                        </select>
-                      </td>
-                      <td className="p-3"><StatusBadge status={p.imageQualityStatus || 'VERIFIED'} /></td>
-                      <td className="p-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={p.isTryOnEligible}
-                          onChange={(e) => updateProduct(p.id, { isTryOnEligible: e.target.checked })}
-                          className="rounded accent-slate-950"
-                        />
-                      </td>
-                      <td className="p-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(p.includeInMarketplaceTryOn)}
-                          onChange={(e) => updateProduct(p.id, { includeInMarketplaceTryOn: e.target.checked })}
-                          className="rounded accent-slate-950"
-                        />
-                      </td>
-                      <td className="p-3 text-right"><StatusBadge status={p.isTryOnEligible ? 'ACTIVE' : 'HIDDEN'} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {(() => {
+              const rows = products.filter((p) =>
+                filter === 'on'
+                  ? p.isTryOnEligible
+                  : filter === 'off'
+                    ? !p.isTryOnEligible
+                    : filter === 'attention'
+                      ? needsAttention.some((n) => n.id === p.id)
+                      : true
+              );
+              if (rows.length === 0) {
+                return <EmptyState title="No garments here" description="Try a different filter, or add products first." />;
+              }
+              return (
+                <div className="space-y-2.5 text-xs">
+                  {rows.map((p) => {
+                    const flagged = needsAttention.some((n) => n.id === p.id);
+                    return (
+                      <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                        <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                          <SafeImage src={p.image} alt={p.name} fill className="object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/dashboard/products/${p.id}`} className="block truncate font-bold text-slate-900 hover:underline">
+                            {p.name}
+                          </Link>
+                          <div className="mt-1 flex items-center gap-2">
+                            <StatusBadge status={p.isTryOnEligible ? 'ACTIVE' : 'HIDDEN'} />
+                            {flagged && (
+                              <Link href={`/dashboard/products/${p.id}/edit`} className="text-[11px] font-bold text-amber-700 underline">
+                                Photo needs checking
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2">
+                          <span className="text-[11px] font-semibold text-slate-500">Garment type</span>
+                          <select
+                            value={p.tryOnCategory}
+                            onChange={(e) => updateProduct(p.id, { tryOnCategory: e.target.value })}
+                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs"
+                          >
+                            <option value="tops">Top</option>
+                            <option value="bottoms">Bottom</option>
+                            <option value="dresses">Dress</option>
+                            <option value="outerwear">Outerwear</option>
+                          </select>
+                        </label>
+                        <label className="flex items-center gap-2 font-semibold text-slate-700">
+                          <span>Try-on</span>
+                          <input
+                            type="checkbox"
+                            checked={p.isTryOnEligible}
+                            onChange={(e) => void setGarmentEligible(p.id, e.target.checked)}
+                            className="h-4 w-4 rounded accent-slate-950"
+                          />
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </SectionCard>
         )}
 
         {tab === 'appearance' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <SectionCard title="Customer UI Labels & Layout" className="lg:col-span-7">
+            <SectionCard title="How your try-on page looks" subtitle="Words and colours shoppers see." className="lg:col-span-7">
               <div className="space-y-3 text-xs">
-                <div><label className="block font-bold mb-1">Public Page Title</label><input value={appearance.pageTitle} onChange={(e) => setAppearance({ ...appearance, pageTitle: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Page Subtitle</label><textarea rows={2} value={appearance.pageDescription} onChange={(e) => setAppearance({ ...appearance, pageDescription: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                <div><label className="block font-bold mb-1">Upload Instructions</label><input value={appearance.uploadInstructions} onChange={(e) => setAppearance({ ...appearance, uploadInstructions: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
+                <div>
+                  <label className="block font-bold mb-1">Page title</label>
+                  <input value={appearance.pageTitle} onChange={(e) => setAppearance({ ...appearance, pageTitle: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
+                </div>
+                <div>
+                  <label className="block font-bold mb-1">Page subtitle</label>
+                  <textarea rows={2} value={appearance.pageDescription} onChange={(e) => setAppearance({ ...appearance, pageDescription: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
+                </div>
+                <div>
+                  <label className="block font-bold mb-1">Photo upload instructions</label>
+                  <input value={appearance.uploadInstructions} onChange={(e) => setAppearance({ ...appearance, uploadInstructions: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div><label className="block font-bold mb-1">Try-On Button Text</label><input value={appearance.primaryBtnText} onChange={(e) => setAppearance({ ...appearance, primaryBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                  <div><label className="block font-bold mb-1">Generate Button Text</label><input value={appearance.generateBtnText} onChange={(e) => setAppearance({ ...appearance, generateBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
-                  <div><label className="block font-bold mb-1">Accent Color</label><input type="color" value={appearance.accentColor} onChange={(e) => setAppearance({ ...appearance, accentColor: e.target.value })} className="w-16 h-8 rounded border border-slate-200" /></div>
+                  <div>
+                    <label className="block font-bold mb-1">Try-on button text</label>
+                    <input value={appearance.primaryBtnText} onChange={(e) => setAppearance({ ...appearance, primaryBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
+                  </div>
+                  <div>
+                    <label className="block font-bold mb-1">Generate button text</label>
+                    <input value={appearance.generateBtnText} onChange={(e) => setAppearance({ ...appearance, generateBtnText: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
+                  </div>
+                  <div>
+                    <label className="block font-bold mb-1">Brand colour</label>
+                    <input type="color" value={appearance.accentColor} onChange={(e) => setAppearance({ ...appearance, accentColor: e.target.value })} className="w-16 h-8 rounded border border-slate-200" />
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-3 sm:gap-4 pt-1">
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={appearance.showPrices} onChange={(e) => setAppearance({ ...appearance, showPrices: e.target.checked })} /> Display Prices</label>
-                </div>
-                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance }, 'Saved. Your public try-on page now uses this look.')}>
-                  Save Appearance
+                <label className="flex items-center gap-2 pt-1">
+                  <input type="checkbox" checked={appearance.showPrices} onChange={(e) => setAppearance({ ...appearance, showPrices: e.target.checked })} /> Show prices
+                </label>
+                <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ appearance }, 'Saved. Your try-on page now uses this look.')}>
+                  Save look
                 </Button>
               </div>
             </SectionCard>
 
-            <SectionCard title="Live Customer Preview" className="lg:col-span-5">
+            <SectionCard title="Live preview" className="lg:col-span-5">
               <div className="rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4" style={{ backgroundColor: appearance.backgroundColor }}>
                 <div className="flex items-center gap-2.5">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-300 shrink-0">
@@ -563,189 +526,61 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                   <h4 className="font-bold text-base text-slate-950">{appearance.pageTitle}</h4>
                   <p className="text-xs text-slate-600 mt-1">{appearance.pageDescription}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 text-[11px] text-slate-500">
-                  {appearance.uploadInstructions}
-                </div>
+                <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 text-[11px] text-slate-500">{appearance.uploadInstructions}</div>
                 <div className="flex flex-wrap gap-2">
                   <span className="px-4 py-2 rounded-full text-white text-xs font-bold" style={{ backgroundColor: appearance.accentColor }}>
                     {appearance.generateBtnText}
                   </span>
-                  <span className="px-4 py-2 rounded-full border border-slate-300 bg-white text-xs font-bold">
-                    {appearance.primaryBtnText}
-                  </span>
+                  <span className="px-4 py-2 rounded-full border border-slate-300 bg-white text-xs font-bold">{appearance.primaryBtnText}</span>
                 </div>
               </div>
             </SectionCard>
           </div>
-        )}
-
-        {tab === 'configuration' && (
-          <div className="space-y-6">
-            <SectionCard title="Availability" subtitle="Turn the try-on experience on or off for your shoppers.">
-              <div className="space-y-3 text-sm max-w-xl">
-                {([
-                  ['enabled', 'Virtual try-on is on', 'When off, shoppers cannot generate try-ons for any of your products.'],
-                  ['publicPageActive', 'Public try-on page is visible', `Your page at /try/${profile.slug}. When off, it shows an "unavailable" message.`],
-                ] as const).map(([key, title, help]) => (
-                  <label key={key} className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-200 cursor-pointer">
-                    <span className="min-w-0">
-                      <span className="block font-semibold text-slate-950">{title}</span>
-                      <span className="block text-xs text-slate-500 mt-0.5">{help}</span>
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={tryOnConfig[key]}
-                      disabled={savingConfig || !serverReady}
-                      onChange={(e) => void persistConfig({ [key]: e.target.checked }, e.target.checked ? 'Turned on.' : 'Turned off.')}
-                      className="mt-1 h-4 w-4 accent-slate-950 shrink-0"
-                    />
-                  </label>
-                ))}
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Quality and limits" subtitle="Set by your plan and the platform. You cannot change these here.">
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm max-w-2xl">
-                {[
-                  ['Plan', profile.plan],
-                  ['Quality', 'Chosen automatically for your plan'],
-                  ['Photo size limit', 'Up to 10 MB per photo'],
-                  ['Garment types', 'Tops, bottoms, dresses and outerwear'],
-                ].map(([k, v]) => (
-                  <div key={String(k)} className="rounded-xl bg-slate-50 border border-slate-200/70 p-3.5">
-                    <dt className="text-xs text-slate-500">{k}</dt>
-                    <dd className="font-semibold text-slate-950 mt-0.5">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </SectionCard>
-          </div>
-        )}
-
-        {tab === 'embedding' && (
-          <SectionCard title="Share your try-on page" subtitle="Link to it from your website, Instagram bio or product pages.">
-            <div className="space-y-5 text-sm max-w-2xl">
-              <div>
-                <p className="font-semibold text-slate-900 mb-1.5">Your public link</p>
-                <div className="flex items-center gap-2">
-                  <input readOnly value={publicTryOnUrl} className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs" />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-10"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(publicTryOnUrl);
-                      setCopiedUrl(true);
-                      setTimeout(() => setCopiedUrl(false), 2000);
-                    }}
-                  >
-                    {copiedUrl ? 'Copied' : 'Copy'}
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900 mb-1.5 flex items-center gap-1.5"><Code2 className="w-4 h-4" /> Add a button to your own website</p>
-                <pre className="p-3.5 rounded-xl bg-slate-950 text-slate-100 overflow-x-auto font-mono text-[11px] leading-relaxed">{`<a href="${publicTryOnUrl}" target="_blank" rel="noopener">${appearance.primaryBtnText}</a>`}</pre>
-              </div>
-            </div>
-          </SectionCard>
         )}
 
         {tab === 'history' && (
-          <SectionCard title="AI Generation Session History" subtitle="Customer photos and generated results remain strictly hidden unless explicit customer consent & business purpose apply.">
+          <SectionCard
+            title="Sessions"
+            subtitle="Every try-on shoppers have run. Shopper photos and results are not shown here, to protect their privacy."
+            right={
+              <Link href="/dashboard/settings/privacy" className="text-[11px] font-bold underline">
+                Photo privacy settings
+              </Link>
+            }
+          >
             {sessions.length === 0 ? (
-              <EmptyState title="No try-on sessions yet" description="Sessions generated from the studio or public widget will appear here." />
+              <EmptyState title="No try-ons yet" description="When shoppers try on your garments, each session will appear here." />
             ) : (
-              <>
-                <div className="sm:hidden space-y-2.5 text-xs">
-                  {sessions.map((s) => (
-                    <div key={s.id} className="rounded-xl border border-slate-200 p-3 bg-white space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-mono text-[11px] font-bold text-slate-500 break-all">{s.id}</p>
-                          <p className="font-bold text-slate-900 line-clamp-2">{s.productName}</p>
-                        </div>
-                        <StatusBadge status={s.status} />
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
-                        <div>
-                          <span className="text-slate-400 block">Duration</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">{s.durationMs} ms</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Credits</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">{s.creditsUsed}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-slate-400 block">Logged</span>
-                          <span className="font-semibold text-slate-600">{s.createdAt}</span>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-100 break-words">
-                        {s.attributedOrderId
-                          ? `Attributed: Order ${s.attributedOrderId} (৳${s.attributedRevenue})`
-                          : s.errorReason || 'No purchase yet'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <div className="hidden sm:block overflow-x-auto text-xs">
-                  <table className="w-full text-left">
-                    <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
-                      <tr>
-                        <th className="p-3">Session ID</th>
-                        <th className="p-3">Garment</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3">Duration</th>
-                        <th className="p-3">Credits</th>
-                        <th className="p-3">Attribution</th>
-                        <th className="p-3 text-right">Timestamp</th>
+              <div className="overflow-x-auto text-xs">
+                <table className="w-full text-left">
+                  <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
+                    <tr>
+                      <th className="p-3">Garment</th>
+                      <th className="p-3">Result</th>
+                      <th className="p-3">Purchase</th>
+                      <th className="p-3 text-right">When</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sessions.map((s) => (
+                      <tr key={s.id}>
+                        <td className="p-3 font-semibold text-slate-900">{s.productName}</td>
+                        <td className="p-3">
+                          <StatusBadge status={s.status} />
+                        </td>
+                        <td className="p-3 text-slate-600">
+                          {s.attributedOrderId ? `Order ${s.attributedOrderId} (৳${s.attributedRevenue})` : s.errorReason || 'No purchase yet'}
+                        </td>
+                        <td className="p-3 text-right text-slate-500">{s.createdAt}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {sessions.map((s) => (
-                        <tr key={s.id}>
-                          <td className="p-3 font-mono font-bold">{s.id}</td>
-                          <td className="p-3 font-semibold">{s.productName}</td>
-                          <td className="p-3"><StatusBadge status={s.status} /></td>
-                          <td className="p-3">{s.durationMs} ms</td>
-                          <td className="p-3">{s.creditsUsed}</td>
-                          <td className="p-3 text-slate-600">{s.attributedOrderId ? `Order ${s.attributedOrderId} (৳${s.attributedRevenue})` : s.errorReason || 'No purchase yet'}</td>
-                          <td className="p-3 text-right text-slate-500">{s.createdAt}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </SectionCard>
-        )}
-
-        {tab === 'privacy' && (
-          <SectionCard title="Try-On Consent & Privacy Controls" subtitle="Transparent customer image retention policy configuration">
-            <div className="space-y-4 text-xs max-w-2xl">
-              <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
-                <span className="font-bold">Require explicit customer consent before upload</span>
-                <input type="checkbox" checked={tryOnConfig.requireConsent} onChange={(e) => updateTryOnConfig({ requireConsent: e.target.checked })} className="rounded accent-slate-950" />
-              </label>
-              <div>
-                <label className="block font-bold mb-1">Retention Window Preference (Days)</label>
-                <input type="number" min={1} max={365} value={tryOnConfig.retentionDays} onChange={(e) => updateTryOnConfig({ retentionDays: Number(e.target.value) })} className="w-32 px-3 py-2 rounded-xl border border-slate-200" />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Note: Automatic scheduled erasure depends on backend storage retention workers when external cloud persistence is enabled.
-                </p>
-              </div>
-              <div>
-                <label className="block font-bold mb-1">Customer Data Processing Notice</label>
-                <textarea rows={2} value={tryOnConfig.dataProcessingNotice} onChange={(e) => updateTryOnConfig({ dataProcessingNotice: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200" />
-              </div>
-              <Button size="sm" disabled={savingConfig || !serverReady} onClick={() => void persistConfig({ requireConsent: tryOnConfig.requireConsent, retentionDays: tryOnConfig.retentionDays, dataProcessingNotice: tryOnConfig.dataProcessingNotice }, 'Privacy settings saved.')}>Save privacy settings</Button>
-            </div>
           </SectionCard>
         )}
       </div>
     </PermissionGate>
   );
 }
-
