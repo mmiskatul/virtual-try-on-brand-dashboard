@@ -80,9 +80,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: 'PackageCheck',
     items: [
       { label: 'Orders', href: '/dashboard/orders', module: 'orders', badgeKey: 'orders' },
-      { label: 'Abandoned Carts', href: '/dashboard/abandoned-carts', module: 'orders', hidden: true },
-      { label: 'Returns', href: '/dashboard/returns', module: 'orders', hidden: true },
-      { label: 'Refunds & Ledger', href: '/dashboard/refunds', module: 'orders', hidden: true },
     ],
   },
   {

@@ -1,4 +1,4 @@
-import { OrdersCommerceView } from '@/features/orders/OrdersCommerceView';
+import { OrderDetailView } from '@/features/orders/OrderDetailView';
 
 export default async function OrderDetailPage({
   params,
@@ -6,6 +6,5 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <OrdersCommerceView orderId={decodeURIComponent(id)} />;
+  return <OrderDetailView orderId={decodeURIComponent(id)} />;
 }
-

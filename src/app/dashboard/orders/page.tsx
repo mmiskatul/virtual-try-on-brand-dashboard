@@ -1,5 +1,5 @@
-import { OrdersCommerceView } from '@/features/orders/OrdersCommerceView';
+import { OrdersView } from '@/features/orders/OrdersView';
 
 export default function Page() {
-  return <OrdersCommerceView initialTab="orders" />;
+  return <OrdersView />;
 }

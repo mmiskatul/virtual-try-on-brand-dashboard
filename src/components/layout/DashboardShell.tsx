@@ -76,7 +76,6 @@ export interface VerifiedBrandShellUser {
 const NAV_EXTRA_PREFIXES: Record<string, string[]> = {
   '/dashboard/integrations': ['/dashboard/developer'],
   '/dashboard/products': ['/dashboard/categories', '/dashboard/collections'],
-  '/dashboard/orders': ['/dashboard/abandoned-carts', '/dashboard/returns', '/dashboard/refunds'],
   '/dashboard/inventory': ['/dashboard/warehouses', '/dashboard/stock-adjustments', '/dashboard/inventory-history'],
   '/dashboard/analytics': [
     '/dashboard/sales-reports',
