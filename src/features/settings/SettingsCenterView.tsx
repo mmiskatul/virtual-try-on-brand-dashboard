@@ -1,17 +1,13 @@
 'use client';
 
 import { SecurityPanel } from './SecurityPanel';
+import { StoreSettingsPanel } from './StoreSettingsPanel';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
-  Building2,
-  Coins,
-  Globe,
-  Languages,
   Lock,
-  MailCheck,
   Palette,
   Save,
   Search,
@@ -19,7 +15,6 @@ import {
   Shield,
   Store,
   Truck,
-  UserCheck,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -29,39 +24,19 @@ import {
   PageHeader,
   PermissionGate,
   SectionCard,
-  StatusBadge,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
 
-export type SettingsTab =
-  | 'overview'
-  | 'onboarding'
-  | 'general'
-  | 'business'
-  | 'store'
-  | 'domains'
-  | 'seo'
-  | 'localization'
-  | 'tax'
-  | 'shipping'
-  | 'notifications'
-  | 'privacy'
-  | 'security'
-  | 'account';
+export type SettingsTab = 'overview' | 'onboarding' | 'general' | 'store' | 'delivery' | 'seo' | 'privacy' | 'security' | 'account';
 
 const SETTINGS_NAV: Array<{ id: SettingsTab; label: string; href: string }> = [
-  { id: 'overview', label: 'All Settings', href: '/dashboard/settings' },
-  { id: 'onboarding', label: 'Onboarding', href: '/dashboard/settings/onboarding' },
+  { id: 'overview', label: 'All settings', href: '/dashboard/settings' },
+  { id: 'onboarding', label: 'Brand profile & business', href: '/dashboard/settings/onboarding' },
   { id: 'general', label: 'General', href: '/dashboard/settings/general' },
-  { id: 'business', label: 'Business Info', href: '/dashboard/settings/business' },
-  { id: 'store', label: 'Store Availability', href: '/dashboard/settings/store' },
-  { id: 'domains', label: 'Domains & SSL', href: '/dashboard/settings/domains' },
-  { id: 'seo', label: 'SEO Metadata', href: '/dashboard/settings/seo' },
-  { id: 'localization', label: 'Localization', href: '/dashboard/settings/localization' },
-  { id: 'tax', label: 'Currency & Taxes', href: '/dashboard/settings/tax' },
-  { id: 'shipping', label: 'Shipping Rules', href: '/dashboard/settings/shipping' },
-  { id: 'notifications', label: 'Notifications', href: '/dashboard/settings/notifications' },
-  { id: 'privacy', label: 'Privacy & Data', href: '/dashboard/settings/privacy' },
+  { id: 'store', label: 'Store open or closed', href: '/dashboard/settings/store' },
+  { id: 'delivery', label: 'Delivery charges', href: '/dashboard/settings/delivery' },
+  { id: 'seo', label: 'Search & sharing', href: '/dashboard/settings/seo' },
+  { id: 'privacy', label: 'Customer photo privacy', href: '/dashboard/settings/privacy' },
   { id: 'security', label: 'Security', href: '/dashboard/settings/security' },
   { id: 'account', label: 'Account', href: '/dashboard/settings/account' },
 ];
@@ -94,11 +69,17 @@ export function SettingsCenterView({
 
   const handleSave = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (!isLiveBackend) {
+      showToast('You are offline or signed out. Sign in to save your settings.');
+      return;
+    }
     setSaving(true);
     try {
-      updateProfile(form);
-      updateTryOnConfig({ retentionDays, requireConsent });
-      if (isLiveBackend) {
+      if (tab === 'privacy') {
+        const saved = await brandWorkspaceApi.saveTryOnConfig({ retentionDays, requireConsent });
+        updateTryOnConfig(saved);
+        showToast('Customer photo privacy saved.');
+      } else {
         await brandWorkspaceApi.updateProfile({
           name: form.name,
           description: form.description,
@@ -106,34 +87,16 @@ export function SettingsCenterView({
           logoUrl: form.logo,
           bannerUrl: form.banner,
         });
+        await brandWorkspaceApi.updateBrandDetails({ slogan: (form.slogan || '').trim(), phone: (form.phone || '').trim() });
+        updateProfile(form);
+        showToast('Settings saved.');
       }
-      showToast('Settings saved.');
-    } catch (err: any) {
-      showToast(err?.message || 'Saved locally, but backend sync failed.');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Could not save your settings. Please try again.');
     } finally {
       setSaving(false);
     }
   };
-
-  const settingsData = form.settings || {
-    timezone: 'Asia/Dhaka (UTC+6)',
-    dateFormat: 'YYYY-MM-DD',
-    language: 'English (en-US)',
-    currency: 'BDT',
-    taxRatePercent: 5,
-    taxInclusive: false,
-    freeShippingThreshold: 120,
-    defaultShippingFee: 8,
-    emailNotifications: true,
-    orderNotifications: true,
-    inventoryNotifications: true,
-    tryOnNotifications: true,
-    billingNotifications: true,
-    twoFactorEnabled: false,
-  };
-
-  const patchSettings = (partial: Partial<typeof settingsData>) =>
-    setForm((prev) => ({ ...prev, settings: { ...settingsData, ...partial } }));
 
   return (
     <PermissionGate module="settings" action="view">
@@ -141,11 +104,11 @@ export function SettingsCenterView({
         <PageHeader
           eyebrow="Settings"
           title="Settings"
-          subtitle="Your web address, taxes, delivery charges, customer photo privacy and account security."
+          subtitle="Your brand details, whether your store is open, delivery charges, how you show up in Google, customer photo privacy and account security."
           actions={
-            tab === 'security' || tab === 'onboarding' ? undefined : (
+            tab === 'security' || tab === 'onboarding' || tab === 'account' || tab === 'overview' || tab === 'store' || tab === 'delivery' || tab === 'seo' ? undefined : (
             <Button size="sm" disabled={!canManage || saving} onClick={() => handleSave()} className="gap-1.5">
-              <Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save Changes'}
+              <Save className="w-3.5 h-3.5" /> {saving ? 'Saving…' : 'Save changes'}
             </Button>
             )
           }
@@ -178,13 +141,13 @@ export function SettingsCenterView({
             {tab === 'overview' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { id: 'onboarding', title: 'Onboarding', desc: 'Brand profile, verification, colours and logos', icon: Palette },
-                  { id: 'general', title: 'General', desc: 'Brand name, slogan, support contact', icon: Settings },
-                  { id: 'business', title: 'Business details', desc: 'Trade licence, company name, head office', icon: Building2 },
-                  { id: 'store', title: 'Store Availability', desc: 'Show or pause your store and marketplace', icon: Store },
-                  { id: 'domains', title: 'Web address', desc: 'Your store address and custom domain', icon: Globe },
-                  { id: 'tax', title: 'Currency & Taxes', desc: 'Checkout currency and VAT', icon: Coins },
-                  { id: 'privacy', title: 'Privacy & security', desc: 'How long customer photos are kept, and extra sign-in protection', icon: Lock },
+                  { id: 'onboarding', title: 'Brand profile & business', desc: 'Business details, verification, colours and logos', icon: Palette },
+                  { id: 'general', title: 'General', desc: 'Brand name, tagline, support email and phone', icon: Settings },
+                  { id: 'store', title: 'Store open or closed', desc: 'Close your store for a short time', icon: Store },
+                  { id: 'delivery', title: 'Delivery charges', desc: 'Standard fee and free delivery', icon: Truck },
+                  { id: 'seo', title: 'Search & sharing', desc: 'How your store looks in Google', icon: Search },
+                  { id: 'privacy', title: 'Customer photo privacy', desc: 'How long try-on photos are kept, and consent', icon: Lock },
+                  { id: 'security', title: 'Security', desc: 'Password, devices and sign-in protection', icon: Shield },
                 ].map((card) => {
                   const Icon = card.icon;
                   const targetHref = SETTINGS_NAV.find((n) => n.id === card.id)?.href || '/dashboard/settings';
@@ -206,7 +169,7 @@ export function SettingsCenterView({
               </div>
             )}
 
-            {(tab === 'general' || tab === 'overview') && (
+            {tab === 'general' && (
               <SectionCard title="General settings" subtitle="Your brand name and support email.">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <label className="block space-y-1">
@@ -246,304 +209,12 @@ export function SettingsCenterView({
               </SectionCard>
             )}
 
-            {tab === 'business' && (
-              <SectionCard title="Business details" subtitle="Your company registration and business address.">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Legal Entity Name</span>
-                    <input
-                      value={form.legalName || ''}
-                      onChange={(e) => setForm({ ...form, legalName: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Business Structure</span>
-                    <input
-                      value={form.businessType || ''}
-                      onChange={(e) => setForm({ ...form, businessType: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Trade License / Tax ID</span>
-                    <input
-                      value={form.registrationNumber || ''}
-                      onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 font-mono"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">City & Country</span>
-                    <input
-                      value={`${form.city || ''}, ${form.country || ''}`}
-                      onChange={(e) => {
-                        const [city, country] = e.target.value.split(',').map((s) => s.trim());
-                        setForm({ ...form, city, country });
-                      }}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="block space-y-1 sm:col-span-2">
-                    <span className="font-semibold text-slate-700">Street Address</span>
-                    <input
-                      value={form.address || ''}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'store' && (
-              <SectionCard title="Store and marketplace" subtitle="Close your store for maintenance, or hide your products from the marketplace.">
-                <div className="space-y-4 text-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200">
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 break-words">Dedicated Brand Storefront (/brands/{profile.slug})</p>
-                      <p className="text-slate-500">Live allows shoppers to browse your brand storefront and check out.</p>
-                    </div>
-                    <select
-                      value={form.storeStatus || 'LIVE'}
-                      onChange={(e) => setForm({ ...form, storeStatus: e.target.value as 'LIVE' | 'MAINTENANCE' })}
-                      className="self-start sm:self-auto rounded-xl border border-slate-200 px-3 py-1.5 font-bold bg-white shrink-0"
-                    >
-                      <option value="LIVE">LIVE</option>
-                      <option value="MAINTENANCE">MAINTENANCE</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200">
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900">Global Marketplace Participation</p>
-                      <p className="text-slate-500">Temporarily pause all published posts without deleting product listings.</p>
-                    </div>
-                    <select
-                      value={form.marketplaceStatus || 'CONNECTED'}
-                      onChange={(e) =>
-                        setForm({ ...form, marketplaceStatus: e.target.value as 'CONNECTED' | 'PAUSED' })
-                      }
-                      className="self-start sm:self-auto rounded-xl border border-slate-200 px-3 py-1.5 font-bold bg-white shrink-0"
-                    >
-                      <option value="CONNECTED">CONNECTED</option>
-                      <option value="PAUSED">PAUSED</option>
-                    </select>
-                  </div>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'domains' && (
-              <SectionCard title="Web address" subtitle="Your store address, and how to use your own domain.">
-                <div className="space-y-4 text-xs">
-                  <div className="p-4 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-900">Platform Storefront Path</p>
-                      <p className="font-mono text-slate-600">/brands/{profile.slug}</p>
-                    </div>
-                    <StatusBadge status="ACTIVE" />
-                  </div>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Custom Domain</span>
-                    <input
-                      value={form.domain?.customDomain || ''}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          domain: {
-                            subdomain: form.domain?.subdomain || `${profile.slug}.vton.app`,
-                            customDomain: e.target.value,
-                            verified: false,
-                            sslStatus: form.domain?.sslStatus || 'PENDING',
-                            primary: form.domain?.primary || 'subdomain',
-                          },
-                        })
-                      }
-                      placeholder="shop.yourdomain.com"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 font-mono"
-                    />
-                  </label>
-                  <p className="text-[11px] text-slate-500">
-                    Point a CNAME record to <code>edge.vton-saas.example</code>. Live DNS verification requires SaaS edge proxy verification by the platform infrastructure.
-                  </p>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'seo' && (
-              <SectionCard title="Search and sharing" subtitle="How your store looks in Google and when someone shares your link.">
-                <div className="space-y-3 text-xs">
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Meta Title</span>
-                    <input
-                      value={form.seo?.title || `${form.name} — Official Brand Store`}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          seo: {
-                            ...(form.seo || { description: '', canonicalUrl: '', ogImage: '', allowIndexing: true }),
-                            title: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Meta Description</span>
-                    <textarea
-                      rows={3}
-                      value={form.seo?.description || ''}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          seo: {
-                            ...(form.seo || { title: '', canonicalUrl: '', ogImage: '', allowIndexing: true }),
-                            description: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'localization' && (
-              <SectionCard title="Region and language" subtitle="Time zone, date style and language.">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Timezone</span>
-                    <input
-                      value={settingsData.timezone}
-                      onChange={(e) => patchSettings({ timezone: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Date Format</span>
-                    <select
-                      value={settingsData.dateFormat}
-                      onChange={(e) => patchSettings({ dateFormat: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white"
-                    >
-                      <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                      <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                      <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    </select>
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Language</span>
-                    <select
-                      value={settingsData.language}
-                      onChange={(e) => patchSettings({ language: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white"
-                    >
-                      <option value="English (en-US)">English (en-US)</option>
-                      <option value="English (en-GB)">English (en-GB)</option>
-                      <option value="Bengali (bn-BD)">Bengali (bn-BD)</option>
-                    </select>
-                  </label>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'tax' && (
-              <SectionCard title="Currency and tax" subtitle="Your currency, VAT or GST rate, and whether prices already include tax.">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Store Currency</span>
-                    <select
-                      value="BDT"
-                      onChange={() => patchSettings({ currency: 'BDT' })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white"
-                    >
-                      <option value="BDT">BDT (৳ Taka)</option>
-                    </select>
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">VAT / Tax Rate (%)</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="30"
-                      value={settingsData.taxRatePercent}
-                      onChange={(e) => patchSettings({ taxRatePercent: Number(e.target.value) })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="flex items-center gap-2 pt-5">
-                    <input
-                      type="checkbox"
-                      checked={settingsData.taxInclusive}
-                      onChange={(e) => patchSettings({ taxInclusive: e.target.checked })}
-                    />
-                    <span className="font-semibold text-slate-700">Prices include tax</span>
-                  </label>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'shipping' && (
-              <SectionCard title="Delivery charges" subtitle="Your standard delivery fee and the order amount that gets free delivery.">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Default Flat Shipping Fee (৳)</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={settingsData.defaultShippingFee}
-                      onChange={(e) => patchSettings({ defaultShippingFee: Number(e.target.value) })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="font-semibold text-slate-700">Free Shipping Minimum Order (৳)</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={settingsData.freeShippingThreshold}
-                      onChange={(e) => patchSettings({ freeShippingThreshold: Number(e.target.value) })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    />
-                  </label>
-                </div>
-              </SectionCard>
-            )}
-
-            {tab === 'notifications' && (
-              <SectionCard title="Alerts" subtitle="Choose which alerts you want to see. Email alerts only work once an email service is connected.">
-                <div className="space-y-3 text-xs">
-                  {(
-                    [
-                      ['orderNotifications', 'New Customer Orders & Cancellation Alerts'],
-                      ['inventoryNotifications', 'Low Stock Threshold Warnings (< 5 units)'],
-                      ['tryOnNotifications', 'Virtual Try-On Failure & AI Quota 80% Warnings'],
-                      ['billingNotifications', 'Monthly Plan Invoices & Renewal Notices'],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label key={key} className="flex items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer">
-                      <span className="font-semibold text-slate-800 leading-relaxed">{label}</span>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(settingsData[key])}
-                        onChange={(e) => patchSettings({ [key]: e.target.checked })}
-                        className="mt-0.5 sm:mt-0 shrink-0"
-                      />
-                    </label>
-                  ))}
-                </div>
-              </SectionCard>
-            )}
-
             {tab === 'privacy' && (
               <SectionCard title="Customer photo privacy" subtitle="How long shoppers' try-on photos are kept, and whether they must agree first.">
                 <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2 mb-3">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
                   <p>
-                    Setting retention days below documents your brand policy and storefront consent banner. Automatic background image deletion requires an enabled media lifecycle worker on your storage bucket.
+                    This is the promise shoppers see on your try-on page. Photos are only removed automatically after this many days once automatic clean-up is switched on for your image storage.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -552,7 +223,7 @@ export function SettingsCenterView({
                     <input
                       type="number"
                       min="1"
-                      max="90"
+                      max="365"
                       value={retentionDays}
                       onChange={(e) => setRetentionDays(Number(e.target.value))}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2"
@@ -570,6 +241,8 @@ export function SettingsCenterView({
               </SectionCard>
             )}
 
+            {(tab === 'store' || tab === 'delivery' || tab === 'seo') && <StoreSettingsPanel section={tab} />}
+
             {tab === 'security' && <SecurityPanel />}
 
             {tab === 'account' && (
@@ -578,9 +251,9 @@ export function SettingsCenterView({
                   <label className="block space-y-1">
                     <span className="font-semibold text-slate-700">Account Owner Name</span>
                     <input
+                      disabled
                       value={form.owner}
-                      onChange={(e) => setForm({ ...form, owner: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-500"
                     />
                   </label>
                   <label className="block space-y-1">

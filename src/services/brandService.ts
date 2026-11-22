@@ -987,6 +987,20 @@ export const brandWorkspaceApi = {
     await apiFetch<any>(`/api/v1/brand/discounts/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
 
+  // --- Store settings: open or closed, delivery charges, search and sharing text ---
+  getStoreSettings: async (): Promise<StoreSettings> => {
+    const res = await apiFetch<{ settings: StoreSettings }>('/api/v1/brand/store-settings');
+    return res.settings;
+  },
+
+  saveStoreSettings: async (patch: StoreSettingsPatch): Promise<StoreSettings> => {
+    const res = await apiFetch<{ settings: StoreSettings }>('/api/v1/brand/store-settings', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    });
+    return res.settings;
+  },
+
   // How each discount code is doing (orders, sales, money given away)
   getDiscountStats: async (): Promise<DiscountStatsResponse> => apiFetch<DiscountStatsResponse>('/api/v1/brand/discounts/stats'),
 
@@ -1475,4 +1489,16 @@ export interface TryOnReport {
 export interface DiscountStatsResponse {
   stats: Array<{ id: string; code: string; orders: number; revenue: number; discountGiven: number }>;
   totals: { orders: number; revenue: number; discountGiven: number };
+}
+
+export interface StoreSettings {
+  open: boolean;
+  shipping: { defaultFee: number; freeOver: number | null };
+  seo: { title: string; description: string };
+}
+
+export interface StoreSettingsPatch {
+  open?: boolean;
+  shipping?: Partial<StoreSettings['shipping']>;
+  seo?: Partial<StoreSettings['seo']>;
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -27,16 +26,6 @@ import {
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
 import { canPerform } from '../../config/permissions';
-
-export type BillingTab = 'overview' | 'plan' | 'usage' | 'invoices' | 'payment-methods';
-
-const BILLING_TABS: Array<{ id: BillingTab; label: string; href: string }> = [
-  { id: 'overview', label: 'Billing Overview', href: '/dashboard/billing' },
-  { id: 'plan', label: 'Subscription Plan', href: '/dashboard/subscription-plan' },
-  { id: 'usage', label: 'AI Usage & Credits', href: '/dashboard/ai-usage' },
-  { id: 'invoices', label: 'Invoices', href: '/dashboard/invoices' },
-  { id: 'payment-methods', label: 'Payment Methods', href: '/dashboard/payment-methods' },
-];
 
 interface PlanCard {
   id: string;
@@ -76,9 +65,7 @@ function toPlanCard(plan: any): PlanCard {
 }
 
 export function BillingCreditsView({
-  initialTab = 'overview',
 }: {
-  initialTab?: BillingTab;
 }) {
   const mounted = useMounted();
   const activeRole = useWorkspaceStore((s) => s.activeRole);
@@ -88,7 +75,6 @@ export function BillingCreditsView({
   const { sessions: tryOnSessions } = useTryOnSessions();
   const showToast = useUiStore((s) => s.showToast);
 
-  const [tab, setTab] = useState<BillingTab>(initialTab);
   const [confirmPlan, setConfirmPlan] = useState<PlanCard | null>(null);
   const [billing, setBilling] = useState<any | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
@@ -164,23 +150,6 @@ export function BillingCreditsView({
           </p>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          {BILLING_TABS.map((t) => (
-            <Link
-              key={t.id}
-              href={t.href}
-              onClick={() => setTab(t.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                tab === t.id
-                  ? 'bg-slate-950 text-white border-slate-950'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
-
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KpiCard label="Current plan" value={currentPlan} icon={<Zap className="w-4 h-4 text-amber-600" />} />
           <KpiCard label="Credits used this month" value={quotaUsed.toLocaleString()} icon={<Sparkles className="w-4 h-4" />} />
@@ -188,7 +157,7 @@ export function BillingCreditsView({
           <KpiCard label="Product limit" value={productLimit === null ? '-' : productLimit.toLocaleString()} icon={<FileText className="w-4 h-4" />} />
         </div>
 
-        {(tab === 'overview' || tab === 'usage') && (
+<section id="usage" className="scroll-mt-24">
           <SectionCard
             title="Try-ons this month"
             subtitle={`${quotaUsed.toLocaleString()} of ${quotaMax.toLocaleString()} credits used (${pct}%)`}
@@ -252,9 +221,9 @@ export function BillingCreditsView({
               </div>
             </div>
           </SectionCard>
-        )}
+        </section>
 
-        {(tab === 'overview' || tab === 'plan') && (
+<section id="plan" className="scroll-mt-24">
           <SectionCard
             title="Plans"
             subtitle="Compare what each plan includes."
@@ -316,9 +285,9 @@ export function BillingCreditsView({
               })}
             </div>
           </SectionCard>
-        )}
+        </section>
 
-        {(tab === 'overview' || tab === 'invoices') && (
+<section id="invoices" className="scroll-mt-24">
           <SectionCard title="Invoices" subtitle="Your monthly plan and credit pack receipts.">
             <div className="sm:hidden space-y-2.5 text-xs">
               {safeInvoices.map((inv) => (
@@ -384,21 +353,8 @@ export function BillingCreditsView({
               </table>
             </div>
           </SectionCard>
-        )}
+        </section>
 
-        {tab === 'payment-methods' && (
-          <SectionCard
-            title="Payment methods"
-            subtitle="How your plan is paid for each month."
-          >
-            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-600">
-              <p className="font-bold text-slate-900">No payment method on file</p>
-              <p className="mt-1">
-                Online payment processing is not enabled for this workspace yet. Billing contact: {profile.email || '—'}
-              </p>
-            </div>
-          </SectionCard>
-        )}
 
         <ConfirmDialog
           open={Boolean(confirmPlan)}
