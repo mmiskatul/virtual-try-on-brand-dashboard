@@ -499,7 +499,7 @@ export function DashboardShell({
     setRefreshing(true);
     const live = await syncNow();
     setRefreshing(false);
-    showToast(live ? 'Synchronized tenant workspace with backend.' : 'Showing workspace data (backend offline or unauthenticated).');
+    showToast(live ? 'Your data is up to date.' : 'Showing the data saved on this device (you are offline or signed out).');
     setTimeout(hideToast, 3000);
   };
 
@@ -579,7 +579,7 @@ export function DashboardShell({
                   type="button"
                   title={item.label}
                   onClick={() => {
-                    showToast('Complete Brand Onboarding first to access other workspace modules.');
+                    showToast('Finish setting up your brand first to use the other pages.');
                     setTimeout(hideToast, 3000);
                     if (isMobile) setMobileMenuOpen(false);
                     setPendingHref('/dashboard/settings/onboarding');
@@ -716,7 +716,7 @@ export function DashboardShell({
               className="sm:hidden w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>Workspace Docs</span>
+              <span>Help guide</span>
             </button>
           )}
         </div>
@@ -851,7 +851,7 @@ export function DashboardShell({
             {searchFocused && searchQuery.trim() && (
               <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-50 max-h-80 overflow-y-auto">
                 {searchResults.length === 0 ? (
-                  <p className="text-xs text-slate-500 p-3 text-center">No matching workspace items found.</p>
+                  <p className="text-xs text-slate-500 p-3 text-center">Nothing found.</p>
                 ) : (
                   searchResults.map((res, idx) => (
                     <Link
@@ -887,7 +887,7 @@ export function DashboardShell({
 
             {/* Live Connection Badge */}
             <span
-              title={isLiveBackend ? 'Connected to live backend at port 4000' : 'Running with local workspace data (Sign in or start backend to sync live)'}
+              title={isLiveBackend ? 'Connected to your live store' : 'Showing data saved on this device. Sign in to see your live store.'}
               className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                 isLiveBackend
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -954,7 +954,7 @@ export function DashboardShell({
             <button
               type="button"
               onClick={handleRefresh}
-              title="Sync Workspace"
+              title="Refresh data"
               className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -1103,7 +1103,7 @@ export function DashboardShell({
                     </Link>
                     <Link href="/dashboard/orders" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
                       <ShoppingBag className="w-3.5 h-3.5 text-slate-600" />
-                      <span>Orders &amp; Fulfillment</span>
+                      <span>Orders</span>
                     </Link>
                     <Link href="/dashboard/team" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
                       <Users className="w-3.5 h-3.5 text-slate-600" />
@@ -1166,7 +1166,7 @@ export function DashboardShell({
               {searchQuery.trim() && (
                 <div className="mt-2 bg-white border border-slate-200 rounded-2xl shadow-lg p-1.5 max-h-64 overflow-y-auto">
                   {searchResults.length === 0 ? (
-                    <p className="text-xs text-slate-500 p-3 text-center">No matching workspace items found.</p>
+                    <p className="text-xs text-slate-500 p-3 text-center">Nothing found.</p>
                   ) : (
                     searchResults.map((res, idx) => (
                       <Link
@@ -1206,7 +1206,7 @@ export function DashboardShell({
         >
           {shellBlocked ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center space-y-2">
-              <p className="text-sm font-bold text-slate-900">Brand Workspace Locked</p>
+              <p className="text-sm font-bold text-slate-900">Finish setting up first</p>
               <p className="text-xs text-slate-500">
                 Complete the Setup Required popup to unlock dashboard access.
               </p>
@@ -1262,7 +1262,7 @@ export function DashboardShell({
         <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-base">Brand Workspace Documentation</h3>
+              <h3 className="font-bold text-base">Help guide</h3>
               <button type="button" onClick={() => setHelpOpen(false)}>
                 <X className="w-5 h-5" />
               </button>
@@ -1300,7 +1300,7 @@ export function DashboardShell({
             <div className="w-11 h-11 rounded-2xl bg-slate-950 text-white mx-auto flex items-center justify-center">
               <RefreshCw className="w-5 h-5 animate-spin" />
             </div>
-            <p className="text-sm font-bold text-slate-950">Verifying Brand Workspace Setup</p>
+            <p className="text-sm font-bold text-slate-950">Checking your setup</p>
             <p className="text-xs text-slate-500">Checking your brand onboarding status...</p>
           </div>
         </div>

@@ -99,7 +99,7 @@ export function DashboardOverviewView() {
       setChecklist(chkRes);
     } catch (err: any) {
       if (isLiveBackend) {
-        setOverviewError(err?.message || 'Unable to load live overview telemetry.');
+        setOverviewError(err?.message || 'Could not load your latest numbers. Please try again.');
       }
     } finally {
       setOverviewLoading(false);
@@ -495,7 +495,7 @@ export function DashboardOverviewView() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <SectionCard
               className="lg:col-span-3"
-              title="Try-on funnel"
+              title="From try-on to sale"
               subtitle="How many customers go from trying on to buying"
               right={
                 <Link href="/dashboard/try-on-reports" className="text-xs font-bold underline whitespace-nowrap">

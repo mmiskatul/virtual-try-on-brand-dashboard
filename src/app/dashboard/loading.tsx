@@ -1,6 +1,6 @@
 export default function DashboardLoading() {
   return (
-    <div className="space-y-5 animate-pulse" aria-busy="true" aria-label="Loading workspace page">
+    <div className="space-y-5 animate-pulse" aria-busy="true" aria-label="Loading page">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-2">
           <div className="h-3 w-28 rounded-full bg-slate-200" />

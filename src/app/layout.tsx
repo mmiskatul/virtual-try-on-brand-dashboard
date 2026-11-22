@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     template: '%s | V-TRY Brand Portal',
   },
   description:
-    'Multi-tenant Brand Administration Platform for apparel catalogs, dual storefront & marketplace publishing, inventory, orders, and dedicated AI Virtual Try-On.',
+    'Run your clothing brand online: products, store, marketplace, stock, orders and AI virtual try-on.',
   robots: {
     index: false,
     follow: false,

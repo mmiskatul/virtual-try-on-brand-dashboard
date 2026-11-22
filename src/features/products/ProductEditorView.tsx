@@ -906,7 +906,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
     <PermissionGate module="products" action={existing ? 'edit' : 'create'}>
       <div className="space-y-6 pb-24">
         <PageHeader
-          eyebrow={`Tenant Owned by ${profile.name}`}
+          eyebrow={profile.name}
           title={existing ? `Edit: ${existing.name}` : 'Add a product'}
           subtitle="Work through the steps. You can come back to any finished step."
           actions={

@@ -108,7 +108,7 @@ function BrandRegisterContent() {
     <AuthShell
       authTab="register"
       title="Create brand account"
-      subtitle="Set up your brand workspace."
+      subtitle="Set up your brand."
     >
       <GoogleAuthButton mode="signup" callbackUrl={callbackUrl} disabled={isBusy} />
 
@@ -185,7 +185,7 @@ function BrandRegisterContent() {
           {isBusy ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Creating Brand Workspace...</span>
+              <span>Creating your brand...</span>
             </>
           ) : (
             <>
