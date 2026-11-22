@@ -987,6 +987,15 @@ export const brandWorkspaceApi = {
     await apiFetch<any>(`/api/v1/brand/discounts/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
 
+  // How each discount code is doing (orders, sales, money given away)
+  getDiscountStats: async (): Promise<DiscountStatsResponse> => apiFetch<DiscountStatsResponse>('/api/v1/brand/discounts/stats'),
+
+  // --- Reports (all numbers come from the server) ---
+  getSalesReport: (period: ReportPeriod) => apiFetch<SalesReport>(`/api/v1/brand/reports/sales?period=${period}`),
+  getProductsReport: (period: ReportPeriod) => apiFetch<ProductsReport>(`/api/v1/brand/reports/products?period=${period}`),
+  getCustomersReport: (period: ReportPeriod) => apiFetch<CustomersReport>(`/api/v1/brand/reports/customers?period=${period}`),
+  getTryOnReport: (period: ReportPeriod) => apiFetch<TryOnReport>(`/api/v1/brand/reports/try-on?period=${period}`),
+
   // --- Team ---
   getTeam: async () => {
     return apiFetch<{ members: TeamMember[]; invites: TeamInvite[]; roles: TeamRoleInfo[] }>('/api/v1/brand/team');
@@ -1422,3 +1431,48 @@ export interface BrandVerificationSummary {
   updatedAt: number;
 }
 
+export type ReportPeriod = '7d' | '30d' | '90d';
+
+export interface SalesReport {
+  period: ReportPeriod;
+  revenue: number;
+  orders: number;
+  averageOrderValue: number;
+  previous: { revenue: number; orders: number; averageOrderValue: number };
+  change: { revenue: number | null; orders: number | null; averageOrderValue: number | null };
+  discountsGiven: number;
+  byStatus: Record<string, number>;
+  series: Array<{ date: string; label: string; revenue: number; orders: number }>;
+}
+
+export interface ProductsReport {
+  period: ReportPeriod;
+  top: Array<{ productId: string; name: string; imageUrl?: string; units: number; revenue: number }>;
+  notSold: Array<{ productId: string; name: string; imageUrl?: string }>;
+  totalUnits: number;
+}
+
+export interface CustomersReport {
+  period: ReportPeriod;
+  totalCustomers: number;
+  newBuyers: number;
+  returningBuyers: number;
+  top: Array<{ email: string; name: string; orders: number; spent: number; lastOrderAt: number }>;
+}
+
+export interface TryOnReport {
+  period: ReportPeriod;
+  total: number;
+  completed: number;
+  failed: number;
+  inProgress: number;
+  successRate: number | null;
+  change: { total: number | null };
+  series: Array<{ date: string; label: string; tryOns: number }>;
+  topProducts: Array<{ productId: string; name: string; count: number }>;
+}
+
+export interface DiscountStatsResponse {
+  stats: Array<{ id: string; code: string; orders: number; revenue: number; discountGiven: number }>;
+  totals: { orders: number; revenue: number; discountGiven: number };
+}
