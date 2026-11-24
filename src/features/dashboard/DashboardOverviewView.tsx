@@ -46,9 +46,9 @@ import {
 import { Button } from '../../components/ui/button';
 
 const CHECKLIST_ITEMS: Array<{ id: OverviewChecklistId; label: string; href: string }> = [
-  { id: 'chk_profile', label: 'Add your brand story, tagline & about text', href: '/dashboard/settings' },
-  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/settings?tab=media' },
-  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/settings?tab=media' },
+  { id: 'chk_profile', label: 'Add your brand story, tagline & about text', href: '/dashboard/settings/profile' },
+  { id: 'chk_logo', label: 'Upload main logo & brand assets', href: '/dashboard/settings/media' },
+  { id: 'chk_cover', label: 'Configure storefront cover & theme', href: '/dashboard/settings/media' },
   { id: 'chk_biz', label: 'Add legal & business details (needed for payouts)', href: '/dashboard/settings/business' },
   { id: 'chk_product', label: 'Create first apparel product', href: '/dashboard/products/new' },
   { id: 'chk_variants', label: 'Configure sizes, colors & variants', href: '/dashboard/products' },

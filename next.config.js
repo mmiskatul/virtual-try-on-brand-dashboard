@@ -1,4 +1,4 @@
-// Local default so next-auth does not warn when .env only holds the backend URL.
+﻿// Local default so next-auth does not warn when .env only holds the backend URL.
 // In production the host (e.g. Vercel) provides the URL.
 if (process.env.NODE_ENV !== 'production' && !process.env.NEXTAUTH_URL) {
   process.env.NEXTAUTH_URL = 'http://localhost:3001';
@@ -16,19 +16,18 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/dashboard/overview', destination: '/dashboard', permanent: true },
-      { source: '/dashboard/brand', destination: '/dashboard/settings', permanent: true },
-      { source: '/dashboard/brand/profile', destination: '/dashboard/settings', permanent: true },
-      { source: '/dashboard/brand/identity', destination: '/dashboard/settings?tab=identity', permanent: true },
-      { source: '/dashboard/brand/media', destination: '/dashboard/settings?tab=media', permanent: true },
-      { source: '/dashboard/settings/brand', destination: '/dashboard/settings?tab=identity', permanent: true },
-      // Settings was 11 pages; it is now 4 (Brand, Store, Try-on privacy, Account & security).
-      { source: '/dashboard/settings/onboarding', destination: '/dashboard/settings', permanent: true },
-      { source: '/dashboard/settings/onboarding/identity', destination: '/dashboard/settings?tab=identity', permanent: true },
-      { source: '/dashboard/settings/onboarding/media', destination: '/dashboard/settings?tab=media', permanent: true },
-      { source: '/dashboard/settings/general', destination: '/dashboard/settings', permanent: true },
-      { source: '/dashboard/settings/delivery', destination: '/dashboard/settings/store', permanent: true },
-      { source: '/dashboard/settings/seo', destination: '/dashboard/settings/store', permanent: true },
-      { source: '/dashboard/settings/security', destination: '/dashboard/settings/account', permanent: true },
+      { source: '/dashboard/brand', destination: '/dashboard/settings/profile', permanent: true },
+      { source: '/dashboard/brand/profile', destination: '/dashboard/settings/profile', permanent: true },
+      { source: '/dashboard/brand/identity', destination: '/dashboard/settings/theme', permanent: true },
+      { source: '/dashboard/brand/media', destination: '/dashboard/settings/media', permanent: true },
+      { source: '/dashboard/settings/brand', destination: '/dashboard/settings/theme', permanent: true },
+      // Settings was 11 pages; it is now a hub plus one page per module (/dashboard/settings/<module>).
+      { source: '/dashboard/settings', has: [{ type: 'query', key: 'tab', value: 'identity' }], destination: '/dashboard/settings/theme', permanent: true },
+      { source: '/dashboard/settings', has: [{ type: 'query', key: 'tab', value: 'media' }], destination: '/dashboard/settings/media', permanent: true },
+      { source: '/dashboard/settings/onboarding', destination: '/dashboard/settings/profile', permanent: true },
+      { source: '/dashboard/settings/onboarding/identity', destination: '/dashboard/settings/theme', permanent: true },
+      { source: '/dashboard/settings/onboarding/media', destination: '/dashboard/settings/media', permanent: true },
+      { source: '/dashboard/settings/general', destination: '/dashboard/settings/profile', permanent: true },
       { source: '/dashboard/products/create', destination: '/dashboard/products/addproduct', permanent: true },
       { source: '/dashboard/products/categories/add', destination: '/dashboard/categories/new', permanent: true },
       { source: '/dashboard/products/categories/create', destination: '/dashboard/categories/new', permanent: true },
@@ -86,11 +85,10 @@ const nextConfig = {
       { source: '/dashboard/try-on-reports', destination: '/dashboard/analytics#try-on', permanent: false },
       { source: '/dashboard/warehouses', destination: '/dashboard/inventory', permanent: false },
       { source: '/dashboard/stock-adjustments', destination: '/dashboard/inventory', permanent: false },
-      { source: '/dashboard/settings/business', destination: '/dashboard/settings', permanent: false },
       { source: '/dashboard/settings/domains', destination: '/dashboard/settings', permanent: false },
       { source: '/dashboard/settings/localization', destination: '/dashboard/settings', permanent: false },
       { source: '/dashboard/settings/tax', destination: '/dashboard/settings', permanent: false },
-      { source: '/dashboard/settings/shipping', destination: '/dashboard/settings/store', permanent: false },
+      { source: '/dashboard/settings/shipping', destination: '/dashboard/settings/delivery', permanent: false },
       { source: '/dashboard/settings/notifications', destination: '/dashboard/settings', permanent: false },
       { source: '/dashboard/subscription-plan', destination: '/dashboard/billing#plan', permanent: false },
       { source: '/dashboard/ai-usage', destination: '/dashboard/billing#usage', permanent: false },
