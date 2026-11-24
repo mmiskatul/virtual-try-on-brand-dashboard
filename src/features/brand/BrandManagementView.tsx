@@ -68,9 +68,9 @@ const FONT_OPTIONS = [
 ] as const;
 
 const TAB_ROUTES: Array<{ key: BrandManagementTab; label: string; href: string }> = [
-  { key: 'profile', label: 'Profile & Verification', href: '/dashboard/settings/onboarding' },
-  { key: 'identity', label: 'Theme & Identity', href: '/dashboard/settings/onboarding/identity' },
-  { key: 'media', label: 'Logos & Brand Media', href: '/dashboard/settings/onboarding/media' },
+  { key: 'profile', label: 'Profile & Verification', href: '/dashboard/settings' },
+  { key: 'identity', label: 'Theme & Identity', href: '/dashboard/settings?tab=identity' },
+  { key: 'media', label: 'Logos & Brand Media', href: '/dashboard/settings?tab=media' },
 ];
 
 const ASSET_CARDS: Array<{
@@ -458,9 +458,9 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
     <PermissionGate module="brand" action="view">
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Settings • Onboarding"
-          title="Onboarding: Brand Profile & Assets"
-          subtitle="The brand details and assets you provided during setup. Update your profile, verification, theme and logos any time."
+          eyebrow="Settings • Brand"
+          title="Brand"
+          subtitle="Your brand details, verification, storefront theme and logos. Name, email, phone and tagline are edited here only."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -986,7 +986,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
               }}
             />
 
-            {/* Choose or Switch Active Storefront UI Design right inside /dashboard/settings/onboarding/media */}
+            {/* Choose or Switch Active Storefront UI Design right inside /dashboard/settings?tab=media */}
             <SectionCard
               title="Store design, logos and images"
               subtitle={`Active Design: ${

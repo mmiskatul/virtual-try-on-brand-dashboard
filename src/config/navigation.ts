@@ -138,16 +138,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Settings', href: '/dashboard/settings', module: 'settings' },
       { label: 'Support', href: '/dashboard/support', module: 'settings', hidden: true },
-      { label: 'Onboarding: Brand Profile & Assets', href: '/dashboard/settings/onboarding', module: 'brand', hidden: true },
-      { label: 'Onboarding: Theme & Identity', href: '/dashboard/settings/onboarding/identity', module: 'brand', hidden: true },
-      { label: 'Onboarding: Logos & Brand Media', href: '/dashboard/settings/onboarding/media', module: 'brand', hidden: true },
-      { label: 'General', href: '/dashboard/settings/general', module: 'settings', hidden: true },
-      { label: 'Store open or closed', href: '/dashboard/settings/store', module: 'settings', hidden: true },
-      { label: 'Delivery charges', href: '/dashboard/settings/delivery', module: 'settings', hidden: true },
-      { label: 'Search & sharing', href: '/dashboard/settings/seo', module: 'settings', hidden: true },
-      { label: 'Privacy & Data', href: '/dashboard/settings/privacy', module: 'settings', hidden: true },
-      { label: 'Security', href: '/dashboard/settings/security', module: 'settings', hidden: true },
-      { label: 'Account Settings', href: '/dashboard/settings/account', module: 'settings', hidden: true },
     ],
   },
 ];

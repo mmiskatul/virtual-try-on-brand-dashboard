@@ -1,5 +1,5 @@
-import { SettingsCenterView } from '@/features/settings/SettingsCenterView';
+import { AccountSettingsView } from '@/features/settings/AccountSettingsView';
 
 export default function Page() {
-  return <SettingsCenterView initialTab="account" />;
+  return <AccountSettingsView />;
 }

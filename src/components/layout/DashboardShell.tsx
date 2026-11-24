@@ -496,7 +496,7 @@ export function DashboardShell({
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
         {/* Workspace Identity */}
         <div className="flex items-center justify-between px-2 pb-3 border-b border-slate-100">
-          <Link href={isOnboardingGateActive ? '/dashboard/settings/onboarding' : '/dashboard'} className="flex items-center gap-2.5 min-w-0">
+          <Link href={isOnboardingGateActive ? '/dashboard/settings' : '/dashboard'} className="flex items-center gap-2.5 min-w-0">
             <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
               <SafeImage src={profile.logo} alt={profile.name} fill className="object-cover" />
             </div>
@@ -551,7 +551,7 @@ export function DashboardShell({
                   );
             const active = pendingHref ? pendingHref === item.href : isCurrentModule;
             const isNavigatingToThis = Boolean(pendingHref && pendingHref === item.href && pathname !== item.href);
-            const lockedByOnboarding = isOnboardingGateActive && !item.href.startsWith('/dashboard/settings/onboarding');
+            const lockedByOnboarding = isOnboardingGateActive && item.href !== '/dashboard/settings';
             const badgeVal = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
 
             const baseClass = `flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13px] transition-colors ${
@@ -568,8 +568,8 @@ export function DashboardShell({
                     showToast('Finish setting up your brand first to use the other pages.');
                     setTimeout(hideToast, 3000);
                     if (isMobile) setMobileMenuOpen(false);
-                    setPendingHref('/dashboard/settings/onboarding');
-                    router.push('/dashboard/settings/onboarding');
+                    setPendingHref('/dashboard/settings');
+                    router.push('/dashboard/settings');
                   }}
                   className={`${baseClass} w-full text-slate-400 hover:bg-slate-100/60 font-medium cursor-not-allowed text-left`}
                 >
@@ -782,7 +782,7 @@ export function DashboardShell({
             </button>
 
             <Link
-              href={isOnboardingGateActive ? '/dashboard/settings/onboarding' : '/dashboard'}
+              href={isOnboardingGateActive ? '/dashboard/settings' : '/dashboard'}
               className="md:hidden font-extrabold text-xs sm:text-sm text-slate-950 truncate max-w-[120px] sm:max-w-[180px]"
             >
               {profile.name}
@@ -1076,7 +1076,7 @@ export function DashboardShell({
                   </div>
 
                   <div className="space-y-0.5">
-                    <Link href="/dashboard/settings/onboarding" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
+                    <Link href="/dashboard/settings" onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 font-medium text-slate-800">
                       <Store className="w-3.5 h-3.5 text-slate-600" />
                       <span>Brand Profile</span>
                     </Link>

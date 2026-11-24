@@ -1,5 +1,5 @@
-import { SettingsCenterView } from '@/features/settings/SettingsCenterView';
+import { PrivacySettingsView } from '@/features/settings/PrivacySettingsView';
 
 export default function Page() {
-  return <SettingsCenterView initialTab="privacy" />;
+  return <PrivacySettingsView />;
 }

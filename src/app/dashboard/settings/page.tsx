@@ -1,5 +1,9 @@
-import { SettingsCenterView } from '@/features/settings/SettingsCenterView';
+import { BrandManagementView, type BrandManagementTab } from '@/features/brand/BrandManagementView';
 
-export default function Page() {
-  return <SettingsCenterView initialTab="overview" />;
+const TABS: BrandManagementTab[] = ['profile', 'identity', 'media'];
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams;
+  const initialTab = TABS.find((t) => t === tab) ?? 'profile';
+  return <BrandManagementView initialTab={initialTab} />;
 }
