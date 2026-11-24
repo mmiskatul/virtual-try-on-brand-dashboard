@@ -12,15 +12,20 @@ export function AccountSettingsView() {
     <PermissionGate module="settings" action="view">
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Settings • Account & security"
-          title="Account & security"
-          subtitle="Who owns this shop, your shop address, your password and the devices you are signed in on."
+          backHref="/dashboard/settings"
+          backLabel="Settings"
+          eyebrow="Settings • Account"
+          title="Owner & shop address"
+          subtitle="Who owns this shop and the web address shoppers use."
         />
-        <SectionCard title="Owner and shop address" subtitle="To change the owner name, edit it on the Brand tab.">
+        <SectionCard title="Owner and shop address">
           <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
             <div className="space-y-1.5">
               <span className="text-xs font-semibold text-slate-700">Account owner</span>
               <p className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-slate-600">{profile.owner || '—'}</p>
+              <p className="text-[11px] text-slate-500">
+                To change this, edit it in <Link href="/dashboard/settings/profile" className="font-semibold text-slate-900 underline">Brand profile</Link>.
+              </p>
             </div>
             <div className="space-y-1.5">
               <span className="text-xs font-semibold text-slate-700">Your shop address</span>
@@ -33,6 +38,22 @@ export function AccountSettingsView() {
             </div>
           </div>
         </SectionCard>
+      </div>
+    </PermissionGate>
+  );
+}
+
+export function SecuritySettingsView() {
+  return (
+    <PermissionGate module="settings" action="view">
+      <div className="space-y-6">
+        <PageHeader
+          backHref="/dashboard/settings"
+          backLabel="Settings"
+          eyebrow="Settings • Account"
+          title="Security & devices"
+          subtitle="Change your password and see where you are signed in."
+        />
         <SecurityPanel />
       </div>
     </PermissionGate>
