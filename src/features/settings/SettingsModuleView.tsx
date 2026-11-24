@@ -18,6 +18,8 @@ export function SettingsModuleView({ module }: { module: SettingsModuleId }) {
       return <BrandManagementView section={module} />;
     case 'store':
     case 'delivery':
+    case 'audience':
+    case 'returns':
     case 'seo':
       return <StoreSettingsPanel section={module} />;
     case 'privacy':
