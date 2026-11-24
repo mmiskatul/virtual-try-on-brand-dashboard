@@ -209,6 +209,8 @@ export function CollectionsView({ mode = 'list', editId }: { mode?: 'list' | 'ne
     <PermissionGate module="products" action="view">
       <div className="space-y-6">
         <PageHeader
+          backHref={mode !== 'list' ? '/dashboard/collections' : undefined}
+          backLabel="All collections"
           eyebrow="Product Management"
           title="Collections"
           subtitle="Group garments into seasonal or themed collections."

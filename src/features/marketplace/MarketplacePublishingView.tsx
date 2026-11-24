@@ -120,6 +120,8 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
       <div className="space-y-6">
         <PageHeader
           preview
+          backHref={tab === 'create' ? '/dashboard/marketplace' : undefined}
+          backLabel="Marketplace"
           eyebrow="Global Marketplace Channel"
           title="Marketplace Publishing & Posts"
           subtitle="Explicitly promote selected catalog items to the public marketplace without creating duplicate SKUs."

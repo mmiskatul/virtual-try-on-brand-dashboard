@@ -189,6 +189,8 @@ export function CategoriesView({ mode = 'list', editId }: { mode?: 'list' | 'new
     <PermissionGate module="products" action="view">
       <div className="space-y-6">
         <PageHeader
+          backHref={mode !== 'list' ? '/dashboard/categories' : undefined}
+          backLabel="All categories"
           eyebrow="Product Management"
           title="Categories"
           subtitle="Organise your garments into categories shoppers can browse."
