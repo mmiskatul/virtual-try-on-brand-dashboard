@@ -23,6 +23,7 @@ export default function BrandStorefrontClient() {
   const [brandDesc, setBrandDesc] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [storeOpen, setStoreOpen] = useState(true);
+  const [returns, setReturns] = useState<{ policy: string; windowDays: number | null }>({ policy: '', windowDays: null });
   const [accentColor, setAccentColor] = useState('#0F172A');
   const [primaryColor, setPrimaryColor] = useState('#0F172A');
   const [headerStyle, setHeaderStyle] = useState<StorefrontHeaderStyle>('split');
@@ -47,6 +48,7 @@ export default function BrandStorefrontClient() {
         setBrandDesc(res.tenant.description || '');
         setAnnouncement(res.tenant.storefrontSettings?.announcement || '');
         setStoreOpen(res.tenant.storefrontSettings?.store?.open !== false);
+        setReturns(res.tenant.storefrontSettings?.store?.returns || { policy: '', windowDays: null });
         setAccentColor(res.tenant.storefrontSettings?.accentColor || '#0F172A');
         setPrimaryColor(res.tenant.storefrontSettings?.primaryColor || '#0F172A');
         setHeaderStyle(normalizeHeaderStyle(res.tenant.storefrontSettings?.headerStyle));
@@ -421,6 +423,14 @@ export default function BrandStorefrontClient() {
             </div>
           ))}
         </div>
+        {(returns.windowDays || returns.policy.trim()) && (
+          <section aria-labelledby="return-policy" className="mt-10 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+            <h2 id="return-policy" className="text-sm font-extrabold text-slate-950">
+              Returns{returns.windowDays ? ` · ${returns.windowDays} days` : ''}
+            </h2>
+            {returns.policy.trim() && <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-600">{returns.policy.trim()}</p>}
+          </section>
+        )}
       </main>
     </div>
   );
