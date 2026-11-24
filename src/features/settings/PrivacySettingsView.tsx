@@ -7,9 +7,7 @@ import { useUiStore } from '../../stores/useUiStore';
 import { brandWorkspaceApi } from '../../services/brandService';
 import { canPerform } from '../../config/permissions';
 import { PageHeader, PermissionGate, SectionCard } from '../../components/shared/UiPrimitives';
-import { Button } from '../../components/ui/button';
-
-const INPUT = 'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm focus:border-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-50 disabled:text-slate-400';
+import { Field, SaveBar, useUnsavedWarning } from '../../components/shared/SettingsKit';
 
 export function PrivacySettingsView() {
   const isLiveBackend = useWorkspaceStore((s) => s.isLiveBackend);
@@ -19,28 +17,30 @@ export function PrivacySettingsView() {
   const updateTryOnConfig = useWorkspaceStore((s) => s.updateTryOnConfig);
   const showToast = useUiStore((s) => s.showToast);
 
-  const [retentionDays, setRetentionDays] = useState(tryOnConfig.retentionDays);
+  const [retentionDays, setRetentionDays] = useState(String(tryOnConfig.retentionDays));
   const [requireConsent, setRequireConsent] = useState(tryOnConfig.requireConsent);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setRetentionDays(tryOnConfig.retentionDays);
+    setRetentionDays(String(tryOnConfig.retentionDays));
     setRequireConsent(tryOnConfig.requireConsent);
   }, [tryOnConfig.retentionDays, tryOnConfig.requireConsent]);
 
   const canManage = canPerform(activeRole, 'settings', 'manage_settings', roleOverrides);
   const days = Number(retentionDays);
-  const invalid = !Number.isFinite(days) || days < 1 || days > 365;
+  const invalid = !Number.isFinite(days) || !Number.isInteger(days) || days < 1 || days > 365;
   const dirty = days !== tryOnConfig.retentionDays || requireConsent !== tryOnConfig.requireConsent;
+  useUnsavedWarning(dirty);
 
-  const save = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const save = async () => {
+    setError(null);
     if (!isLiveBackend) {
-      showToast('You are offline or signed out. Sign in to save your settings.');
+      setError('You are offline or signed out. Sign in to save your settings.');
       return;
     }
     if (invalid) {
-      showToast('Keep photos for between 1 and 365 days.');
+      setError('Keep photos for a whole number of days from 1 to 365.');
       return;
     }
     setSaving(true);
@@ -49,7 +49,7 @@ export function PrivacySettingsView() {
       updateTryOnConfig(saved);
       showToast('Customer photo privacy saved.');
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Could not save your settings. Please try again.');
+      setError(err instanceof Error ? err.message : 'Could not save your settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -57,16 +57,13 @@ export function PrivacySettingsView() {
 
   return (
     <PermissionGate module="settings" action="view">
-      <form onSubmit={save} className="space-y-6">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow="Settings • Try-on privacy"
+          backHref="/dashboard/settings"
+          backLabel="Settings"
+          eyebrow="Settings • Try-on"
           title="Try-on privacy"
           subtitle="How long shoppers' try-on photos are kept, and whether they must agree first."
-          actions={
-            <Button type="submit" size="sm" disabled={!canManage || saving || !dirty || invalid}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </Button>
-          }
         />
         <SectionCard title="Customer photos" subtitle="This is the promise shoppers see on your try-on page.">
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900">
@@ -74,11 +71,14 @@ export function PrivacySettingsView() {
             <p>Photos are only removed automatically after this many days once automatic clean-up is switched on for your image storage.</p>
           </div>
           <div className="max-w-md space-y-4 text-sm">
-            <label className="block space-y-1.5">
-              <span className="font-semibold text-slate-700">Keep customer photos for (days)</span>
-              <input type="number" min={1} max={365} value={retentionDays} disabled={!canManage} onChange={(e) => setRetentionDays(Number(e.target.value))} className={INPUT} />
-              {invalid && <span className="text-xs text-rose-700">Enter a number from 1 to 365.</span>}
-            </label>
+            <Field
+              label="Keep customer photos for (days)"
+              type="number"
+              disabled={!canManage}
+              value={retentionDays}
+              onChange={setRetentionDays}
+              error={invalid ? 'Enter a whole number from 1 to 365.' : null}
+            />
             <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 p-3.5">
               <input type="checkbox" checked={requireConsent} disabled={!canManage} onChange={(e) => setRequireConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-slate-950" />
               <span>
@@ -86,10 +86,21 @@ export function PrivacySettingsView() {
                 <span className="text-xs text-slate-500">Shoppers must agree to your photo policy before a try-on is generated.</span>
               </span>
             </label>
-            {!canManage && <p className="text-xs text-slate-500">Only an owner or admin can change this.</p>}
           </div>
         </SectionCard>
-      </form>
+        <SaveBar
+          dirty={dirty}
+          saving={saving}
+          canEdit={canManage && !invalid}
+          error={error}
+          onSave={() => void save()}
+          onDiscard={() => {
+            setRetentionDays(String(tryOnConfig.retentionDays));
+            setRequireConsent(tryOnConfig.requireConsent);
+            setError(null);
+          }}
+        />
+      </div>
     </PermissionGate>
   );
 }
