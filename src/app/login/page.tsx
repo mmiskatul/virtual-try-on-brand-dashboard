@@ -189,11 +189,9 @@ function BrandLoginContent() {
     >
       <AuthToast toast={toast} onClose={dismissToast} />
       {session?.user && (
-        <div className="p-3.5 rounded-2xl bg-gray-100 border border-gray-300 flex items-center justify-between gap-3 text-xs">
-          <div>
-            <p className="text-gray-900 font-semibold">Signed in as {session.user.name || session.user.email}</p>
-            <p className="text-gray-500 text-[11px]">{session.user.email}</p>
-          </div>
+        <div className="p-3.5 rounded-2xl bg-gray-100 border border-gray-300 flex items-center gap-2 text-xs text-gray-700">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Signed in as {session.user.name || session.user.email}. Redirecting to your dashboard...</span>
         </div>
       )}
 
