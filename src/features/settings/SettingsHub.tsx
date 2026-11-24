@@ -76,6 +76,13 @@ export function SettingsHub() {
           : `${money(store.shipping.defaultFee)} flat`,
         tone: 'plain',
       };
+      out.audience = {
+        text: store.audience === 'WOMEN' ? 'Women' : store.audience === 'MEN' ? 'Men' : 'Women and men',
+        tone: 'plain',
+      };
+      out.returns = store.returns.policy.trim() || store.returns.windowDays
+        ? { text: store.returns.windowDays ? `${store.returns.windowDays}-day returns` : 'Policy written', tone: 'good' }
+        : { text: 'Not set', tone: 'warn' };
       out.seo = store.seo.title.trim() ? { text: 'Custom title set', tone: 'good' } : { text: 'Using automatic title', tone: 'plain' };
     }
     return out;
