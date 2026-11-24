@@ -9,13 +9,15 @@ import { ErrorBanner, PageHeader, PermissionGate, SectionCard } from '../../comp
 import { Field, SaveBar, useUnsavedWarning } from '../../components/shared/SettingsKit';
 import { Switch } from '../products/shared';
 
-export type StoreSection = 'store' | 'delivery' | 'seo';
+export type StoreSection = 'store' | 'delivery' | 'seo' | 'audience' | 'returns';
 
 const money = (n: number) => `৳${n.toLocaleString()}`;
 
 const COPY: Record<StoreSection, { title: string; subtitle: string }> = {
   store: { title: 'Open or closed', subtitle: 'Close your store for a short time, for example while you restock.' },
   delivery: { title: 'Delivery charges', subtitle: 'What shoppers pay for delivery at checkout.' },
+  audience: { title: 'Who the store is for', subtitle: 'Choose women, men or both. This sets what shoppers see first on your try-on page.' },
+  returns: { title: 'Return policy', subtitle: 'The return window and the words shoppers read before they buy.' },
   seo: { title: 'Search & sharing', subtitle: 'How your store looks in Google and when someone shares your link.' },
 };
 
@@ -56,7 +58,7 @@ export function StoreSettingsPanel({ section }: { section: StoreSection }) {
   }, [load]);
 
   const part = (s: StoreSettings | null) =>
-    s ? JSON.stringify(section === 'store' ? s.open : section === 'delivery' ? s.shipping : s.seo) : '';
+    s ? JSON.stringify(section === 'store' ? s.open : section === 'delivery' ? s.shipping : section === 'audience' ? s.audience : section === 'returns' ? s.returns : s.seo) : '';
   const dirty = part(draft) !== part(saved);
   useUnsavedWarning(dirty);
 
@@ -92,6 +94,7 @@ export function StoreSettingsPanel({ section }: { section: StoreSection }) {
 
   const setShipping = (p: Partial<StoreSettings['shipping']>) => setDraft({ ...draft, shipping: { ...draft.shipping, ...p } });
   const setSeo = (p: Partial<StoreSettings['seo']>) => setDraft({ ...draft, seo: { ...draft.seo, ...p } });
+  const setReturns = (p: Partial<StoreSettings['returns']>) => setDraft({ ...draft, returns: { ...draft.returns, ...p } });
 
   const save = async () => {
     setFieldError(null);
@@ -99,9 +102,18 @@ export function StoreSettingsPanel({ section }: { section: StoreSection }) {
       if (!Number.isFinite(draft.shipping.defaultFee) || draft.shipping.defaultFee < 0) return setFieldError('The delivery fee cannot be negative.');
       if (draft.shipping.freeOver !== null && (!Number.isFinite(draft.shipping.freeOver) || draft.shipping.freeOver < 0)) return setFieldError('The free-delivery amount cannot be negative.');
     }
+    if (section === 'returns') {
+      const d = draft.returns.windowDays;
+      if (d !== null && (!Number.isInteger(d) || d < 1 || d > 365)) return setFieldError('The return window must be a whole number of days from 1 to 365, or left empty.');
+    }
     setSaving(true);
     try {
-      const patch = section === 'store' ? { open: draft.open } : section === 'delivery' ? { shipping: draft.shipping } : { seo: draft.seo };
+      const patch =
+        section === 'store' ? { open: draft.open }
+        : section === 'delivery' ? { shipping: draft.shipping }
+        : section === 'audience' ? { audience: draft.audience }
+        : section === 'returns' ? { returns: draft.returns }
+        : { seo: draft.seo };
       const next = await brandWorkspaceApi.saveStoreSettings(patch);
       setSaved(next);
       setDraft(next);
@@ -170,6 +182,72 @@ export function StoreSettingsPanel({ section }: { section: StoreSection }) {
               ? `Orders under ${money(draft.shipping.freeOver ?? 0)} pay ${money(draft.shipping.defaultFee)} for delivery. Orders of ${money(draft.shipping.freeOver ?? 0)} or more get free delivery.`
               : `Every order pays ${money(draft.shipping.defaultFee)} for delivery.`}
           </p>
+        </div>
+      </SectionCard>
+    );
+  } else if (section === 'audience') {
+    const OPTIONS: Array<{ value: StoreSettings['audience']; label: string; hint: string }> = [
+      { value: 'WOMEN', label: 'Women', hint: 'Shoppers go straight to clothes for women. The man or woman question is skipped.' },
+      { value: 'MEN', label: 'Men', hint: 'Shoppers go straight to clothes for men. The man or woman question is skipped.' },
+      { value: 'UNISEX', label: 'Women and men', hint: 'Shoppers choose man or woman first. Each product still has its own Women, Men or Both setting.' },
+    ];
+    body = (
+      <SectionCard title="Who is your store for?">
+        <div role="radiogroup" aria-label="Who the store is for" className="grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+          {OPTIONS.map((o) => {
+            const on = draft.audience === o.value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                disabled={!canManage}
+                onClick={() => setDraft({ ...draft, audience: o.value })}
+                className={`rounded-2xl border p-4 text-left transition-colors disabled:opacity-60 ${on ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white hover:border-slate-400'}`}
+              >
+                <span className="block text-sm font-bold">{o.label}</span>
+                <span className={`mt-1 block text-xs ${on ? 'text-slate-300' : 'text-slate-500'}`}>{o.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      </SectionCard>
+    );
+  } else if (section === 'returns') {
+    const days = draft.returns.windowDays;
+    body = (
+      <SectionCard title="Return policy">
+        <div className="max-w-xl space-y-4 text-sm">
+          <Field
+            label="Return window (days)"
+            type="number"
+            disabled={!canManage}
+            value={days === null ? '' : String(days)}
+            placeholder="Leave empty for no set window"
+            hint="How many days after delivery a shopper can send an item back."
+            onChange={(v) => setReturns({ windowDays: v.trim() === '' ? null : Number(v) })}
+          />
+          <Field
+            label="Policy for shoppers"
+            rows={6}
+            maxLength={2000}
+            disabled={!canManage}
+            value={draft.returns.policy}
+            placeholder="For example: Unworn items with tags can be returned within 7 days. Refunds go back to your original payment method."
+            onChange={(v) => setReturns({ policy: v })}
+          />
+          <div className="rounded-xl border border-slate-200 p-4">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">What shoppers see on your store</p>
+            {days || draft.returns.policy.trim() ? (
+              <>
+                {days ? <p className="text-sm font-bold text-slate-950">{days}-day returns</p> : null}
+                {draft.returns.policy.trim() ? <p className="whitespace-pre-line text-xs text-slate-600">{draft.returns.policy.trim()}</p> : null}
+              </>
+            ) : (
+              <p className="text-xs text-slate-500">Nothing is shown until you add a return window or a policy.</p>
+            )}
+          </div>
         </div>
       </SectionCard>
     );
