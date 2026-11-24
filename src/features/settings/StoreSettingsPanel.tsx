@@ -5,19 +5,25 @@ import { brandWorkspaceApi, type StoreSettings } from '../../services/brandServi
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { canPerform } from '../../config/permissions';
-import { ErrorBanner, SectionCard } from '../../components/shared/UiPrimitives';
-import { Button } from '../../components/ui/button';
+import { ErrorBanner, PageHeader, PermissionGate, SectionCard } from '../../components/shared/UiPrimitives';
+import { Field, SaveBar, useUnsavedWarning } from '../../components/shared/SettingsKit';
 import { Switch } from '../products/shared';
 
-const INPUT = 'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm focus:border-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-50 disabled:text-slate-400';
+export type StoreSection = 'store' | 'delivery' | 'seo';
+
 const money = (n: number) => `৳${n.toLocaleString()}`;
 
+const COPY: Record<StoreSection, { title: string; subtitle: string }> = {
+  store: { title: 'Open or closed', subtitle: 'Close your store for a short time, for example while you restock.' },
+  delivery: { title: 'Delivery charges', subtitle: 'What shoppers pay for delivery at checkout.' },
+  seo: { title: 'Search & sharing', subtitle: 'How your store looks in Google and when someone shares your link.' },
+};
+
 /**
- * The store settings that really save on the server and change what shoppers see:
- * whether the store is open, delivery charges, and the text for Google and shared links.
- * All three live on one page and share one Save button.
+ * The store settings that really save on the server and change what shoppers see.
+ * Each section is its own page and only sends its own part to the server.
  */
-export function StoreSettingsPanel() {
+export function StoreSettingsPanel({ section }: { section: StoreSection }) {
   const activeRole = useWorkspaceStore((s) => s.activeRole);
   const roleOverrides = useWorkspaceStore((s) => s.roleOverrides);
   const profile = useWorkspaceStore((s) => s.profile);
@@ -49,32 +55,57 @@ export function StoreSettingsPanel() {
     void load();
   }, [load]);
 
+  const part = (s: StoreSettings | null) =>
+    s ? JSON.stringify(section === 'store' ? s.open : section === 'delivery' ? s.shipping : s.seo) : '';
+  const dirty = part(draft) !== part(saved);
+  useUnsavedWarning(dirty);
+
+  const header = (
+    <PageHeader
+      backHref="/dashboard/settings"
+      backLabel="Settings"
+      eyebrow="Settings • Store"
+      title={COPY[section].title}
+      subtitle={COPY[section].subtitle}
+    />
+  );
+
   if (loading) {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label="Loading settings">
-        <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
-        <div className="h-40 animate-pulse rounded-2xl bg-slate-100" />
+      <div className="space-y-6">
+        {header}
+        <div className="space-y-3" aria-busy="true" aria-label="Loading settings">
+          <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+          <div className="h-40 animate-pulse rounded-2xl bg-slate-100" />
+        </div>
       </div>
     );
   }
   if (error || !draft || !saved) {
-    return <ErrorBanner message={error || 'Could not load your settings.'} onRetry={() => void load()} />;
+    return (
+      <div className="space-y-6">
+        {header}
+        <ErrorBanner message={error || 'Could not load your settings.'} onRetry={() => void load()} />
+      </div>
+    );
   }
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const setShipping = (p: Partial<StoreSettings['shipping']>) => setDraft({ ...draft, shipping: { ...draft.shipping, ...p } });
   const setSeo = (p: Partial<StoreSettings['seo']>) => setDraft({ ...draft, seo: { ...draft.seo, ...p } });
 
   const save = async () => {
     setFieldError(null);
-    if (!Number.isFinite(draft.shipping.defaultFee) || draft.shipping.defaultFee < 0) return setFieldError('The delivery fee cannot be negative.');
-    if (draft.shipping.freeOver !== null && (!Number.isFinite(draft.shipping.freeOver) || draft.shipping.freeOver < 0)) return setFieldError('The free-delivery amount cannot be negative.');
+    if (section === 'delivery') {
+      if (!Number.isFinite(draft.shipping.defaultFee) || draft.shipping.defaultFee < 0) return setFieldError('The delivery fee cannot be negative.');
+      if (draft.shipping.freeOver !== null && (!Number.isFinite(draft.shipping.freeOver) || draft.shipping.freeOver < 0)) return setFieldError('The free-delivery amount cannot be negative.');
+    }
     setSaving(true);
     try {
-      const next = await brandWorkspaceApi.saveStoreSettings({ open: draft.open, shipping: draft.shipping, seo: draft.seo });
+      const patch = section === 'store' ? { open: draft.open } : section === 'delivery' ? { shipping: draft.shipping } : { seo: draft.seo };
+      const next = await brandWorkspaceApi.saveStoreSettings(patch);
       setSaved(next);
       setDraft(next);
-      showToast('Store settings saved.');
+      showToast(section === 'store' ? (next.open ? 'Your store is open.' : 'Your store is closed.') : 'Saved.');
     } catch (e: unknown) {
       const issues = (e as { issues?: Array<{ message?: string }> })?.issues;
       setFieldError(issues?.[0]?.message || (e instanceof Error ? e.message : 'Could not save. Please try again.'));
@@ -83,13 +114,17 @@ export function StoreSettingsPanel() {
     }
   };
 
-  const free = draft.shipping.freeOver !== null;
-  const shownTitle = draft.seo.title.trim() || `${profile.name} | Official Boutique & AI Virtual Fitting`;
-  const shownDescription = draft.seo.description.trim() || (profile.slogan || profile.description || 'Shop our collection and try it on virtually.');
+  const discard = () => {
+    setFieldError(null);
+    setDraft(saved);
+  };
 
-  return (
-    <div className="space-y-6">
-      <SectionCard title="Open or closed" subtitle="Close your store for a short time, for example while you restock.">
+  const saveBar = <SaveBar dirty={dirty} saving={saving} canEdit={canManage} error={fieldError} onSave={() => void save()} onDiscard={discard} />;
+
+  let body: React.ReactNode;
+  if (section === 'store') {
+    body = (
+      <SectionCard title="Store status">
         <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 p-4">
           <div>
             <p className="text-sm font-bold text-slate-950">{draft.open ? 'Your store is open' : 'Your store is closed'}</p>
@@ -102,23 +137,32 @@ export function StoreSettingsPanel() {
           <Switch label="Store is open" checked={draft.open} disabled={!canManage} onChange={() => setDraft({ ...draft, open: !draft.open })} />
         </div>
       </SectionCard>
-
-      <SectionCard title="Delivery charges" subtitle="What shoppers pay for delivery at checkout.">
+    );
+  } else if (section === 'delivery') {
+    const free = draft.shipping.freeOver !== null;
+    body = (
+      <SectionCard title="Delivery fee">
         <div className="max-w-md space-y-4 text-sm">
-          <label className="block space-y-1.5">
-            <span className="font-semibold text-slate-700">Standard delivery fee (৳)</span>
-            <input type="number" min={0} step="any" value={draft.shipping.defaultFee} disabled={!canManage} onChange={(e) => setShipping({ defaultFee: Number(e.target.value) })} className={INPUT} />
-          </label>
+          <Field
+            label="Standard delivery fee (৳)"
+            type="number"
+            disabled={!canManage}
+            value={String(draft.shipping.defaultFee)}
+            onChange={(v) => setShipping({ defaultFee: Number(v) })}
+          />
           <div className="space-y-2">
             <label className="flex items-center gap-2 font-semibold text-slate-700">
               <input type="checkbox" checked={free} disabled={!canManage} onChange={(e) => setShipping({ freeOver: e.target.checked ? 150 : null })} className="h-4 w-4 accent-slate-950" />
               Free delivery on bigger orders
             </label>
             {free && (
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">Free when the items come to at least (৳)</span>
-                <input type="number" min={0} step="any" value={draft.shipping.freeOver ?? 0} disabled={!canManage} onChange={(e) => setShipping({ freeOver: Number(e.target.value) })} className={INPUT} />
-              </label>
+              <Field
+                label="Free when the items come to at least (৳)"
+                type="number"
+                disabled={!canManage}
+                value={String(draft.shipping.freeOver ?? 0)}
+                onChange={(v) => setShipping({ freeOver: Number(v) })}
+              />
             )}
           </div>
           <p className="rounded-xl bg-slate-50 px-3.5 py-3 text-xs text-slate-600">
@@ -128,17 +172,15 @@ export function StoreSettingsPanel() {
           </p>
         </div>
       </SectionCard>
-
-      <SectionCard title="Search and sharing" subtitle="How your store looks in Google and when someone shares your link.">
+    );
+  } else {
+    const shownTitle = draft.seo.title.trim() || `${profile.name} | Official Boutique & AI Virtual Fitting`;
+    const shownDescription = draft.seo.description.trim() || (profile.slogan || profile.description || 'Shop our collection and try it on virtually.');
+    body = (
+      <SectionCard title="Google listing">
         <div className="max-w-xl space-y-4 text-sm">
-          <label className="block space-y-1.5">
-            <span className="flex justify-between font-semibold text-slate-700">Title <span className="text-xs font-normal text-slate-400">{draft.seo.title.length}/70</span></span>
-            <input value={draft.seo.title} maxLength={70} disabled={!canManage} onChange={(e) => setSeo({ title: e.target.value })} placeholder={`${profile.name} | Official Boutique`} className={INPUT} />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="flex justify-between font-semibold text-slate-700">Short description <span className="text-xs font-normal text-slate-400">{draft.seo.description.length}/160</span></span>
-            <textarea rows={3} value={draft.seo.description} maxLength={160} disabled={!canManage} onChange={(e) => setSeo({ description: e.target.value })} placeholder="One or two sentences about your brand." className={INPUT} />
-          </label>
+          <Field label="Title" maxLength={70} disabled={!canManage} value={draft.seo.title} placeholder={`${profile.name} | Official Boutique`} onChange={(v) => setSeo({ title: v })} />
+          <Field label="Short description" rows={3} maxLength={160} disabled={!canManage} value={draft.seo.description} placeholder="One or two sentences about your brand." onChange={(v) => setSeo({ description: v })} />
           <div className="rounded-xl border border-slate-200 p-4">
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">How it can look in Google</p>
             <p className="truncate text-base font-medium text-blue-700">{shownTitle}</p>
@@ -147,16 +189,16 @@ export function StoreSettingsPanel() {
           </div>
         </div>
       </SectionCard>
+    );
+  }
 
-      <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
-        <Button size="sm" disabled={!canManage || saving || !dirty} onClick={() => void save()}>
-          {saving ? 'Saving…' : 'Save changes'}
-        </Button>
-        {!canManage && <span className="text-xs text-slate-500">Only an owner or admin can change this.</span>}
-        {canManage && !dirty && <span className="text-xs text-slate-400">Nothing to save</span>}
-        {canManage && dirty && !fieldError && <span className="text-xs text-amber-700">You have unsaved changes</span>}
-        {fieldError && <p role="alert" className="text-xs font-semibold text-rose-700">{fieldError}</p>}
+  return (
+    <PermissionGate module="settings" action="view">
+      <div className="space-y-6">
+        {header}
+        {body}
+        {saveBar}
       </div>
-    </div>
+    </PermissionGate>
   );
 }
