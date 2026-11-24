@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { canPerform } from '../../config/permissions';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import {
@@ -42,19 +42,12 @@ export function ProductPreviewView({ productId }: { productId: string }) {
   }, [product]);
   const [selected, setSelected] = useState(0);
 
-  const backLink = (
-    <Link href="/dashboard/products">
-      <Button variant="outline" size="sm" className="gap-1.5">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to Products
-      </Button>
-    </Link>
-  );
 
   if (!product) {
     return (
       <PermissionGate module="products" action="view">
         <div className="space-y-6">
-          <PageHeader eyebrow="Product Management" title="Product not found" actions={backLink} />
+          <PageHeader backHref="/dashboard/products" backLabel="Products" eyebrow="Product Management" title="Product not found" />
           <EmptyState
             title="This product could not be found"
             description="It may have been deleted, or the list is still loading."
@@ -72,12 +65,13 @@ export function ProductPreviewView({ productId }: { productId: string }) {
     <PermissionGate module="products" action="view">
       <div className="space-y-6">
         <PageHeader
+          backHref="/dashboard/products"
+          backLabel="Products"
           eyebrow="Product Preview"
           title={product.name}
           subtitle={`${product.sku} · ${product.category}${product.subCategory ? ` / ${product.subCategory}` : ''}`}
           actions={
             <>
-              {backLink}
               {canEdit && (
                 <Link href={`/dashboard/products/${product.id}/edit`}>
                   <Button size="sm" className="gap-1.5">

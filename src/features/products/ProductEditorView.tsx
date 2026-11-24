@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, ImagePlus, Loader2, Lock, Sparkles, Trash2, Upload } from 'lucide-react';
+import { Check, ImagePlus, Loader2, Lock, Sparkles, Trash2, Upload } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { brandWorkspaceApi, ServiceError } from '../../services';
 import {
@@ -914,13 +914,8 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
           eyebrow={profile.name}
           title={existing ? `Edit: ${existing.name}` : 'Add a product'}
           subtitle="Work through the steps. You can come back to any finished step."
-          actions={
-            <Link href={existing ? `/dashboard/products/${existing.id}` : '/dashboard/products'}>
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <ArrowLeft className="w-3.5 h-3.5" /> {existing ? 'Back to Preview' : 'Back to Products'}
-              </Button>
-            </Link>
-          }
+          backHref={existing ? `/dashboard/products/${existing.id}` : '/dashboard/products'}
+          backLabel={existing ? 'Product preview' : 'Products'}
         />
 
         {isNewProduct && restoredNotice && (
