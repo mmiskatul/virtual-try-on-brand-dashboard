@@ -1501,10 +1501,15 @@ export interface StoreSettings {
   open: boolean;
   shipping: { defaultFee: number; freeOver: number | null };
   seo: { title: string; description: string };
+  /** Who the whole store is for. UNISEX means both women and men. */
+  audience: 'WOMEN' | 'MEN' | 'UNISEX';
+  returns: { policy: string; windowDays: number | null };
 }
 
 export interface StoreSettingsPatch {
   open?: boolean;
   shipping?: Partial<StoreSettings['shipping']>;
   seo?: Partial<StoreSettings['seo']>;
+  audience?: StoreSettings['audience'];
+  returns?: Partial<StoreSettings['returns']>;
 }
