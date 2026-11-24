@@ -26,9 +26,16 @@ function sanitizeCallbackUrl(raw: string | null): string {
 function BrandLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const callbackUrl = sanitizeCallbackUrl(searchParams.get('callbackUrl'));
+
+  // Already signed in: skip the login page and go straight to the dashboard.
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace(callbackUrl);
+    }
+  }, [status, callbackUrl, router]);
   const verifiedParam = searchParams.get('verified');
   const resetParam = searchParams.get('reset');
   const prefillEmail = searchParams.get('email') || '';
