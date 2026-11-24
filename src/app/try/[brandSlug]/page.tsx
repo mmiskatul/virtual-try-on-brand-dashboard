@@ -73,6 +73,8 @@ export default function BrandTryOnPage() {
 
   // 1. Man or woman, 2. photo + size + garment, 3. generate
   const [gender, setGender] = useState<Gender | ''>('');
+  // A women-only or men-only store skips the "man or woman" question.
+  const [lockedGender, setLockedGender] = useState<Gender | null>(null);
   const [size, setSize] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [garmentSizePick, setGarmentSizePick] = useState<{ id: string; value: string } | null>(null);
@@ -112,6 +114,10 @@ export default function BrandTryOnPage() {
             banner: res.tenant.bannerUrl || res.tenant.storefrontSettings?.bannerImage,
           })
         );
+        const audience = res.tenant.storefrontSettings?.store?.audience;
+        const only: Gender | null = audience === 'WOMEN' ? 'female' : audience === 'MEN' ? 'male' : null;
+        setLockedGender(only);
+        if (only) setGender(only);
         setEligibleGarments(res.products.filter((p) => p.isTryOnEligible && p.brandStorefrontPublished));
         setLoading(false);
         return;
@@ -280,9 +286,15 @@ export default function BrandTryOnPage() {
           <>
             <div className="mb-5 flex items-center justify-between gap-3">
               <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">Try it on</h1>
-              <button type="button" onClick={() => chooseGender(gender === 'female' ? 'male' : 'female')} className="rounded-full border border-stone-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-900">
-                {gender === 'female' ? 'Women' : 'Men'} · Change
-              </button>
+              {lockedGender ? (
+                <span className="rounded-full border border-stone-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-900">
+                  {gender === 'female' ? 'Women' : 'Men'}
+                </span>
+              ) : (
+                <button type="button" onClick={() => chooseGender(gender === 'female' ? 'male' : 'female')} className="rounded-full border border-stone-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-900">
+                  {gender === 'female' ? 'Women' : 'Men'} · Change
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
