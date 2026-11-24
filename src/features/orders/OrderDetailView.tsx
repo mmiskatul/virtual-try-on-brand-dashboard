@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Printer } from 'lucide-react';
+import { Check, Printer } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useMounted } from '../../hooks/useMounted';
 import {
@@ -30,14 +30,6 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const order = mounted ? orders.find((o) => o.id === orderId) : undefined;
-  const backButton = (
-    <Link href="/dashboard/orders">
-      <Button variant="outline" size="sm" className="gap-1.5">
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to orders
-      </Button>
-    </Link>
-  );
-
   if (!mounted) {
     return (
       <PermissionGate module="orders" action="view">
@@ -53,7 +45,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     return (
       <PermissionGate module="orders" action="view">
         <div className="space-y-6">
-          <PageHeader eyebrow="Orders" title={`Order ${orderId}`} actions={backButton} />
+          <PageHeader backHref="/dashboard/orders" backLabel="Orders" eyebrow="Orders" title={`Order ${orderId}`} />
           <EmptyState
             title="We could not find this order"
             description="It may not be in your shop, or it has not loaded yet. Go back to Orders and try again."
@@ -75,12 +67,13 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
 
       <div className="space-y-6">
         <PageHeader
+          backHref="/dashboard/orders"
+          backLabel="Orders"
           eyebrow="Orders"
           title={`Order ${order.id}`}
           subtitle={`Placed on ${order.date}`}
           actions={
             <>
-              {backButton}
               <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5">
                 <Printer className="w-3.5 h-3.5" /> Print packing slip
               </Button>
