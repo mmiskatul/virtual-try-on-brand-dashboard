@@ -194,24 +194,6 @@ function BrandLoginContent() {
             <p className="text-gray-900 font-semibold">Signed in as {session.user.name || session.user.email}</p>
             <p className="text-gray-500 text-[11px]">{session.user.email}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href={callbackUrl}
-              className="px-3 py-1.5 rounded-lg bg-black hover:bg-gray-800 text-white font-bold"
-            >
-              Dashboard
-            </Link>
-            <button
-              type="button"
-              onClick={async () => {
-                const { logoutBrand } = await import('../../lib/logout');
-                await logoutBrand({ redirect: false });
-              }}
-              className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"
-            >
-              Switch
-            </button>
-          </div>
         </div>
       )}
 
