@@ -1,10 +1,11 @@
-import { SettingsTabs } from '@/features/settings/SettingsTabs';
+import { SettingsPalette } from '@/features/settings/SettingsPalette';
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-6">
-      <SettingsTabs />
+    <>
       {children}
-    </div>
+      {/* Ctrl+K: jump to any setting from anywhere in Settings */}
+      <SettingsPalette />
+    </>
   );
 }
