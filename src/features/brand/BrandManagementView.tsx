@@ -41,8 +41,29 @@ import {
   StatusBadge,
 } from '../../components/shared/UiPrimitives';
 import { Button } from '../../components/ui/button';
+import { Field, SaveBar, useUnsavedWarning } from '../../components/shared/SettingsKit';
+import { canPerform } from '../../config/permissions';
 
-export type BrandManagementTab = 'profile' | 'identity' | 'media';
+export type BrandSection = 'profile' | 'business' | 'social' | 'verification' | 'theme' | 'media';
+type BrandManagementTab = 'profile' | 'identity' | 'media';
+
+const SECTION_TAB: Record<BrandSection, BrandManagementTab> = {
+  profile: 'profile',
+  business: 'profile',
+  social: 'profile',
+  verification: 'profile',
+  theme: 'identity',
+  media: 'media',
+};
+
+const SECTION_COPY: Record<BrandSection, { title: string; subtitle: string }> = {
+  profile: { title: 'Brand profile', subtitle: 'Your name, contact details, tagline and story.' },
+  business: { title: 'Business details', subtitle: 'Legal name, registration and where you are based.' },
+  social: { title: 'Social links', subtitle: 'Instagram, Facebook and your website.' },
+  verification: { title: 'Verification', subtitle: 'Your trust badge and what is left to finish.' },
+  theme: { title: 'Theme & identity', subtitle: 'Colours, fonts and button style for your storefront.' },
+  media: { title: 'Logos & media', subtitle: 'Your logo, banner and share image.' },
+};
 export type BrandAssetKey = 'logo' | 'banner' | 'lightLogo' | 'socialImage';
 
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -66,12 +87,6 @@ const FONT_OPTIONS = [
   'Inter',
   'DM Sans',
 ] as const;
-
-const TAB_ROUTES: Array<{ key: BrandManagementTab; label: string; href: string }> = [
-  { key: 'profile', label: 'Profile & Verification', href: '/dashboard/settings' },
-  { key: 'identity', label: 'Theme & Identity', href: '/dashboard/settings?tab=identity' },
-  { key: 'media', label: 'Logos & Brand Media', href: '/dashboard/settings?tab=media' },
-];
 
 const ASSET_CARDS: Array<{
   key: BrandAssetKey;
@@ -151,8 +166,8 @@ function buildFormFromProfile(profile: ReturnType<typeof useWorkspaceStore.getSt
   };
 }
 
-export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: BrandManagementTab }) {
-  const [tab, setTab] = useState<BrandManagementTab>(initialTab);
+export function BrandManagementView({ section }: { section: BrandSection }) {
+  const tab = SECTION_TAB[section];
   const profile = useWorkspaceStore((s) => s.profile);
   const isLiveBackend = useWorkspaceStore((s) => s.isLiveBackend);
   const lastSyncedAt = useWorkspaceStore((s) => s.lastSyncedAt);
@@ -165,6 +180,10 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
   const [form, setForm] = useState<BrandFormState>(() => buildFormFromProfile(profile));
   const [verification, setVerification] = useState<BrandVerificationSummary | null>(null);
   const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
+  const activeRole = useWorkspaceStore((s) => s.activeRole);
+  const roleOverrides = useWorkspaceStore((s) => s.roleOverrides);
+  const canEdit = canPerform(activeRole, 'brand', 'edit', roleOverrides);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingSection, setSavingSection] = useState<'profile' | 'identity' | 'media' | null>(null);
@@ -179,10 +198,6 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
     }
     return (err as any)?.message || fallback;
   }, []);
-
-  useEffect(() => {
-    setTab(initialTab);
-  }, [initialTab]);
 
   const updateField = <K extends keyof BrandFormState>(key: K, value: BrandFormState[K]) => {
     setDirty(true);
@@ -332,7 +347,6 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
     setSavingSection('identity');
     try {
       const res = await brandWorkspaceApi.updateBrandIdentity({
-        storefrontTitle: form.storefrontTitle.trim() || form.name.trim() || profile.name,
         primaryColor: form.primaryColor,
         secondaryColor: form.secondaryColor,
         accentColor: form.accentColor,
@@ -362,7 +376,6 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
         announcement: form.announcement.trim(),
       });
       const idRes = await brandWorkspaceApi.updateBrandIdentity({
-        storefrontTitle: form.storefrontTitle.trim() || form.name.trim() || profile.name,
         primaryColor: form.primaryColor,
         secondaryColor: form.secondaryColor,
         accentColor: form.accentColor,
@@ -458,371 +471,118 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
     <PermissionGate module="brand" action="view">
       <div className="space-y-6">
         <PageHeader
+          backHref="/dashboard/settings"
+          backLabel="Settings"
           eyebrow="Settings • Brand"
-          title="Brand"
-          subtitle="Your brand details, verification, storefront theme and logos. Name, email, phone and tagline are edited here only."
+          title={SECTION_COPY[section].title}
+          subtitle={SECTION_COPY[section].subtitle}
           actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void syncFromBackend(true)}
-                disabled={loadingProfile}
-                className="gap-1.5"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingProfile ? 'animate-spin' : ''}`} />
-                {loadingProfile ? 'Syncing...' : 'Refresh'}
-              </Button>
-              <PermissionGate module="brand" action="edit">
-                <Button
-                  size="sm"
-                  onClick={() => void handleSave()}
-                  disabled={saving || uploadingField !== null}
-                  className="gap-1.5"
-                >
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  {saving ? 'Saving...' : dirty ? 'Save Changes *' : 'Save Changes'}
-                </Button>
-              </PermissionGate>
-            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => void syncFromBackend(true)} disabled={loadingProfile} className="gap-1.5">
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingProfile ? 'animate-spin' : ''}`} />
+              {loadingProfile ? 'Syncing...' : 'Refresh'}
+            </Button>
           }
         />
 
         {errorMessage && <ErrorBanner message={errorMessage} onRetry={() => void syncFromBackend(true)} />}
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative w-11 h-11 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
-              <SafeImage src={profile.logo} alt={profile.name} fill className="object-cover" />
+        {section === 'profile' && (
+          <SectionCard title="Brand profile" subtitle="Shown on your storefront and in emails to shoppers.">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Brand Name" value={form.name} onChange={(v) => updateField('name', v)} placeholder="Your brand name" required />
+              <Field label="Contact Email" value={form.contactEmail} onChange={(v) => updateField('contactEmail', v)} placeholder="hello@yourbrand.com" type="email" />
+              <Field label="Brand Owner / Lead Contact" value={form.owner} onChange={(v) => updateField('owner', v)} placeholder="Your full name" />
+              <Field label="Support Phone" value={form.phone} onChange={(v) => updateField('phone', v)} placeholder="+880 1711-000000" />
+              <Field label="Tagline / Slogan" value={form.slogan} onChange={(v) => updateField('slogan', v)} placeholder="Quiet Luxury Engineered for Effortless Fit" />
+              <Field label="Category Focus" value={form.categoryFocus} onChange={(v) => updateField('categoryFocus', v)} placeholder="Silk Dresses, Linen Tailoring & Festive Wear" />
+              <Field label="Storefront Announcement Banner" value={form.announcement} onChange={(v) => updateField('announcement', v)} placeholder="Free express delivery on orders over ৳1,500" className="sm:col-span-2" />
+              <Field label="Short Description" value={form.shortDescription} onChange={(v) => updateField('shortDescription', v)} placeholder="Minimalist ethical silks and tailored silhouettes." className="sm:col-span-2" />
+              <Field label="Brand Story & About" value={form.description} onChange={(v) => updateField('description', v)} placeholder="Tell shoppers about your craftsmanship, sizing philosophy, and heritage..." rows={3} className="sm:col-span-2" />
             </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-extrabold text-slate-950 truncate">{form.name || profile.name}</p>
-                <StatusBadge status={profile.storeStatus || 'LIVE'} />
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    isLiveBackend
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-amber-50 text-amber-700 border-amber-200'
-                  }`}
-                >
-                  {isLiveBackend ? `Synced${lastSyncedAt ? ` • ${lastSyncedAt}` : ''}` : 'Sync Pending'}
-                </span>
-              </div>
-              <p className="text-slate-500 truncate">
-                /brands/{profile.slug} • {form.slogan || profile.slogan || 'Official Storefront'}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <Link
-              href={`/brands/${profile.slug}`}
-              target="_blank"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold"
-            >
-              View Live Shop <ExternalLink className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-
-        <div className="flex gap-2 border-b border-slate-200 pb-3 text-xs font-bold overflow-x-auto">
-          {TAB_ROUTES.map((item) => (
-            <Link
-              key={item.key}
-              href={item.href}
-              onClick={() => setTab(item.key)}
-              className={`px-4 py-2 rounded-xl border whitespace-nowrap transition-colors ${
-                tab === item.key
-                  ? 'bg-slate-950 text-white border-slate-950'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-
-        {tab === 'profile' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <SectionCard
-              title="Core Brand, Business & Social Details"
-              subtitle="These details are saved to your brand profile."
-              right={
-                <PermissionGate module="brand" action="edit">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={saving}
-                    onClick={() => void handleSaveDetails()}
-                    className="gap-1.5"
-                  >
-                    {savingSection === 'profile' ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Check className="w-3.5 h-3.5" />
-                    )}
-                    {savingSection === 'profile' ? 'Saving Profile...' : 'Save Profile Details'}
-                  </Button>
-                </PermissionGate>
-              }
-              className="lg:col-span-8"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Brand Name *</label>
-                  <input
-                    value={form.name}
-                    onChange={(e) => updateField('name', e.target.value)}
-                    placeholder="Your brand name"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Contact Email</label>
-                  <input
-                    type="email"
-                    value={form.contactEmail}
-                    onChange={(e) => updateField('contactEmail', e.target.value)}
-                    placeholder="hello@yourbrand.com"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Brand Owner / Lead Contact</label>
-                  <input
-                    value={form.owner}
-                    onChange={(e) => updateField('owner', e.target.value)}
-                    placeholder="Your full name"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Legal Entity Name</label>
-                  <input
-                    value={form.legalName}
-                    onChange={(e) => updateField('legalName', e.target.value)}
-                    placeholder="Your registered company name"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Business Type</label>
-                  <input
-                    value={form.businessType}
-                    onChange={(e) => updateField('businessType', e.target.value)}
-                    placeholder="Independent Fashion House"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Business Registration #</label>
-                  <input
-                    value={form.registrationNumber}
-                    onChange={(e) => updateField('registrationNumber', e.target.value)}
-                    placeholder="REG-2024-88412"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Established Year</label>
-                  <input
-                    value={form.establishedYear}
-                    onChange={(e) => updateField('establishedYear', e.target.value)}
-                    placeholder="2022"
-                    maxLength={4}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Support Phone</label>
-                  <input
-                    value={form.phone}
-                    onChange={(e) => updateField('phone', e.target.value)}
-                    placeholder="+880 1711-000000"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">City</label>
-                  <input
-                    value={form.city}
-                    onChange={(e) => updateField('city', e.target.value)}
-                    placeholder="Dhaka"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Country / Region</label>
-                  <input
-                    value={form.country}
-                    onChange={(e) => updateField('country', e.target.value)}
-                    placeholder="Bangladesh"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Studio / Flagship Address</label>
-                  <input
-                    value={form.address}
-                    onChange={(e) => updateField('address', e.target.value)}
-                    placeholder="Studio 4B, Road 11, Banani, Dhaka"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Tagline / Slogan</label>
-                  <input
-                    value={form.slogan}
-                    onChange={(e) => updateField('slogan', e.target.value)}
-                    placeholder="Quiet Luxury Engineered for Effortless Fit"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Category Focus</label>
-                  <input
-                    value={form.categoryFocus}
-                    onChange={(e) => updateField('categoryFocus', e.target.value)}
-                    placeholder="Silk Dresses, Linen Tailoring & Festive Wear"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Storefront Announcement Banner</label>
-                  <input
-                    value={form.announcement}
-                    onChange={(e) => updateField('announcement', e.target.value)}
-                    placeholder="Free express delivery on orders over ৳1,500"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Short Description</label>
-                  <input
-                    value={form.shortDescription}
-                    onChange={(e) => updateField('shortDescription', e.target.value)}
-                    placeholder="Minimalist ethical silks and tailored silhouettes."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Brand Story & About</label>
-                  <textarea
-                    rows={3}
-                    value={form.description}
-                    onChange={(e) => updateField('description', e.target.value)}
-                    placeholder="Tell shoppers about your craftsmanship, sizing philosophy, and heritage..."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Instagram Handle</label>
-                  <input
-                    value={form.instagram}
-                    onChange={(e) => updateField('instagram', e.target.value)}
-                    placeholder="@yourbrand"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Facebook Page</label>
-                  <input
-                    value={form.facebook}
-                    onChange={(e) => updateField('facebook', e.target.value)}
-                    placeholder="facebook.com/yourbrand"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-700 mb-1">Official Website</label>
-                  <input
-                    value={form.website}
-                    onChange={(e) => updateField('website', e.target.value)}
-                    placeholder="https://yourbrand.com"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Verification and account status" className="lg:col-span-4">
-              <div className="space-y-3 text-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold text-slate-800">Current Badge</span>
-                  <StatusBadge status={profile.verificationStatus || 'VERIFIED'} />
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 text-slate-600">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" /> Verification Readiness
-                    </p>
-                    <span className="font-mono text-[11px] font-bold text-slate-900">
-                      {verification ? `${verification.verificationScore}%` : 'Syncing...'}
-                    </span>
-                  </div>
-                  {verification && (
-                    <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-600 transition-all"
-                        style={{ width: `${verification.verificationScore}%` }}
-                      />
-                    </div>
-                  )}
-                  <p>
-                    Registration ({verification?.registrationNumber || form.registrationNumber || 'On file'}).
-                  </p>
-                  {verification && verification.checks.length > 0 && (
-                    <ul className="space-y-1.5 pt-1">
-                      {verification.checks.map((chk) => (
-                        <li key={chk.key} className="flex items-center gap-1.5 text-[11px]">
-                          {chk.completed ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          ) : (
-                            <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                          )}
-                          <span className={chk.completed ? 'text-slate-700' : 'text-slate-500'}>
-                            {chk.label}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="pt-2 border-t border-slate-200 space-y-1 font-mono text-[11px] text-slate-500">
-                    <p>Account ID: {profile.id || 'local'}</p>
-                    <p>Slug: /brands/{profile.slug}</p>
-                    <p>Storefront: {profile.storeStatus || 'LIVE'}</p>
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
-          </div>
+          </SectionCard>
         )}
 
-        {tab === 'identity' && (
+        {section === 'business' && (
+          <SectionCard title="Business details" subtitle="Your legal and location details. Shoppers do not see the registration number.">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Legal Entity Name" value={form.legalName} onChange={(v) => updateField('legalName', v)} placeholder="Your registered company name" />
+              <Field label="Business Type" value={form.businessType} onChange={(v) => updateField('businessType', v)} placeholder="Independent Fashion House" />
+              <Field label="Business Registration #" value={form.registrationNumber} onChange={(v) => updateField('registrationNumber', v)} placeholder="REG-2024-88412" />
+              <Field label="Established Year" value={form.establishedYear} onChange={(v) => updateField('establishedYear', v)} placeholder="2022" maxLength={4} />
+              <Field label="City" value={form.city} onChange={(v) => updateField('city', v)} placeholder="Dhaka" />
+              <Field label="Country / Region" value={form.country} onChange={(v) => updateField('country', v)} placeholder="Bangladesh" />
+              <Field label="Studio / Flagship Address" value={form.address} onChange={(v) => updateField('address', v)} placeholder="Studio 4B, Road 11, Banani, Dhaka" className="sm:col-span-2" />
+            </div>
+          </SectionCard>
+        )}
+
+        {section === 'social' && (
+          <SectionCard title="Social links" subtitle="Where shoppers can find you online.">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Instagram Handle" value={form.instagram} onChange={(v) => updateField('instagram', v)} placeholder="@yourbrand" />
+              <Field label="Facebook Page" value={form.facebook} onChange={(v) => updateField('facebook', v)} placeholder="facebook.com/yourbrand" />
+              <Field label="Official Website" value={form.website} onChange={(v) => updateField('website', v)} placeholder="https://yourbrand.com" className="sm:col-span-2" />
+            </div>
+          </SectionCard>
+        )}
+
+        {section === 'verification' && (
+        <SectionCard title="Verification and account status">
+          <div className="space-y-3 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold text-slate-800">Current Badge</span>
+              <StatusBadge status={profile.verificationStatus || 'VERIFIED'} />
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 text-slate-600">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> Verification Readiness
+                </p>
+                <span className="font-mono text-[11px] font-bold text-slate-900">
+                  {verification ? `${verification.verificationScore}%` : 'Syncing...'}
+                </span>
+              </div>
+              {verification && (
+                <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-600 transition-all"
+                    style={{ width: `${verification.verificationScore}%` }}
+                  />
+                </div>
+              )}
+              <p>
+                Registration ({verification?.registrationNumber || form.registrationNumber || 'On file'}).
+              </p>
+              {verification && verification.checks.length > 0 && (
+                <ul className="space-y-1.5 pt-1">
+                  {verification.checks.map((chk) => (
+                    <li key={chk.key} className="flex items-center gap-1.5 text-[11px]">
+                      {chk.completed ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      ) : (
+                        <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                      )}
+                      <span className={chk.completed ? 'text-slate-700' : 'text-slate-500'}>
+                        {chk.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="pt-2 border-t border-slate-200 space-y-1 font-mono text-[11px] text-slate-500">
+                <p>Account ID: {profile.id || 'local'}</p>
+                <p>Slug: /brands/{profile.slug}</p>
+                <p>Storefront: {profile.storeStatus || 'LIVE'}</p>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+        )}
+
+        {section === 'theme' && (
           <SectionCard
             title="Storefront Theme Colors, Typography & Layout Tokens"
             subtitle="Changes are saved to your storefront theme."
-            right={
-              <PermissionGate module="brand" action="edit">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={saving}
-                  onClick={() => void handleSaveIdentity()}
-                  className="gap-1.5"
-                >
-                  {savingSection === 'identity' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                  {savingSection === 'identity' ? 'Saving Theme...' : 'Save Theme & Identity'}
-                </Button>
-              </PermissionGate>
-            }
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
@@ -907,15 +667,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                   </select>
                 </div>
 
-                <div className="col-span-2 sm:col-span-3 p-3 rounded-xl border border-slate-200 space-y-1.5">
-                  <label className="block font-bold text-slate-700">Storefront SEO / Hero Title</label>
-                  <input
-                    value={form.storefrontTitle}
-                    onChange={(e) => updateField('storefrontTitle', e.target.value)}
-                    placeholder="Your Brand Official Store"
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-slate-950"
-                  />
-                </div>
+                <p className="col-span-2 sm:col-span-3 rounded-xl bg-slate-50 px-3.5 py-3 text-xs text-slate-600">Your store title for Google and shared links is edited in <Link href="/dashboard/settings/seo" className="font-semibold text-slate-900 underline">Search &amp; sharing</Link>.</p>
               </div>
 
               <div
@@ -972,7 +724,7 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
           </SectionCard>
         )}
 
-        {tab === 'media' && (
+        {section === 'media' && (
           <div className="space-y-6">
             <input
               ref={fileRef}
@@ -986,30 +738,12 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
               }}
             />
 
-            {/* Choose or Switch Active Storefront UI Design right inside /dashboard/settings?tab=media */}
+            {/* Choose or Switch Active Storefront UI Design right inside the Logos & media page */}
             <SectionCard
               title="Store design, logos and images"
               subtitle={`Active Design: ${
                 STOREFRONT_HEADER_STYLES.find((s) => s.id === form.headerStyle)?.label || 'Editorial Split'
               } — Switch layouts below and edit media directly inside your selected UI`}
-              right={
-                <PermissionGate module="brand" action="edit">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={saving}
-                    onClick={() => void handleSaveMediaStudio()}
-                    className="gap-1.5"
-                  >
-                    {savingSection === 'media' ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Check className="w-3.5 h-3.5" />
-                    )}
-                    {savingSection === 'media' ? 'Saving UI...' : 'Save Selected UI & Copy'}
-                  </Button>
-                </PermissionGate>
-              }
             >
               <div className="space-y-5">
                 <StorefrontDesignCarousel
@@ -1082,15 +816,6 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
                       </p>
                     </div>
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Storefront Headline</label>
-                      <input
-                        value={form.storefrontTitle}
-                        onChange={(e) => updateField('storefrontTitle', e.target.value)}
-                        placeholder={form.name || 'Your Brand Storefront'}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-slate-950"
-                      />
-                    </div>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Hero Tagline / Slogan</label>
@@ -1178,6 +903,19 @@ export function BrandManagementView({ initialTab = 'profile' }: { initialTab?: B
               </div>
             </SectionCard>
           </div>
+        )}
+
+        {section !== 'verification' && (
+          <SaveBar
+            dirty={dirty}
+            saving={saving}
+            canEdit={canEdit && uploadingField === null}
+            onSave={() => void handleSave()}
+            onDiscard={() => {
+              setForm(buildFormFromProfile(profile));
+              setDirty(false);
+            }}
+          />
         )}
       </div>
     </PermissionGate>
