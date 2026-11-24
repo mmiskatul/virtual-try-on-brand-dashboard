@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Download, Search, Users } from 'lucide-react';
 import { brandWorkspaceApi, type BrandCustomer, type CustomerOrderRow } from '../../services/brandService';
-import { ErrorBanner, KpiCard, PageHeader, PermissionGate, SectionCard, StatusBadge } from '../../components/shared/UiPrimitives';
+import { BackLink, ErrorBanner, KpiCard, PageHeader, PermissionGate, SectionCard, StatusBadge } from '../../components/shared/UiPrimitives';
 
 const money = (n: number) => `৳${Math.round(n).toLocaleString()}`;
 const day = (ms: number) => (ms ? new Date(ms).toLocaleDateString() : '-');
@@ -206,9 +206,7 @@ export function CustomerDetailView({ email }: { email: string }) {
   return (
     <PermissionGate module="customers" action="view">
       <div className="space-y-6">
-        <Link href="/dashboard/customers" className="text-sm font-semibold text-slate-600 hover:text-slate-950">
-          &larr; All customers
-        </Link>
+        <BackLink href="/dashboard/customers" label="All customers" />
         {error && <ErrorBanner message={error} onRetry={() => void load()} />}
         {loading ? (
           <div className="space-y-3" aria-busy="true" aria-label="Loading customer">
