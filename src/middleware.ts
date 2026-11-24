@@ -218,6 +218,21 @@ function checkEdgeRateLimit(
 }
 
 /**
+ * Client IP for rate limiting. Prefer headers the CDN/proxy sets itself; for x-forwarded-for take the
+ * LAST hop (added by our own proxy) because the first entries are client-controlled and spoofable.
+ */
+function getClientIp(request: NextRequest): string {
+  const platform = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip');
+  if (platform) return platform.trim();
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    const hops = forwarded.split(',').map((h) => h.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1];
+  }
+  return '127.0.0.1';
+}
+
+/**
  * Edge Runtime Middleware with Token Verification, Strict CORS & Edge Rate Limiting: Brand Portal
  */
 export async function middleware(request: NextRequest) {
@@ -226,7 +241,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/forgot-password', request.url));
   }
   const origin = request.headers.get('origin');
-  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+  const clientIp = getClientIp(request);
 
   // 1. Edge-Level Strict CORS Preflight & Origin Verification
   if (pathname.startsWith('/api/')) {
@@ -255,10 +270,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Edge-Level Sliding-Window Rate Limiting
+  // Client-controlled hints (_rsc, prefetch headers) only relax limits for page navigations, never for /api/*.
+  const isApiPath = pathname.startsWith('/api/');
   const exemptFromRateLimit =
     process.env.NODE_ENV !== 'production' ||
-    request.nextUrl.searchParams.has('_rsc') ||
-    request.headers.has('next-router-prefetch') ||
+    (!isApiPath &&
+      (request.nextUrl.searchParams.has('_rsc') || request.headers.has('next-router-prefetch'))) ||
     /^[/]api[/]auth[/](session|csrf|providers|_log)([/]|$)/.test(pathname);
   const rateLimit = exemptFromRateLimit
     ? checkEdgeRateLimit(clientIp, pathname, true)
@@ -338,9 +355,15 @@ export async function middleware(request: NextRequest) {
   }
 
   // 4. Verify BOTH NextAuth session JWT AND backend HttpOnly merchant access/refresh token
+  // Pass secureCookie explicitly: without NEXTAUTH_URL, next-auth would look for the wrong cookie name
+  // behind an HTTPS proxy and every user would look signed out (login loop).
+  const isHttps =
+    request.nextUrl.protocol === 'https:' ||
+    request.headers.get('x-forwarded-proto')?.split(',')[0].trim() === 'https';
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: isHttps,
   });
 
   const nextAuthUserId =
@@ -352,9 +375,10 @@ export async function middleware(request: NextRequest) {
   const hasNextAuthBrand = Boolean(token && nextAuthUserId && isAllowedBrandRole(token.role));
 
   const isPrefetchRequest =
-    request.headers.has('next-router-prefetch') ||
+    !isApiPath &&
+    (request.headers.has('next-router-prefetch') ||
     request.headers.get('purpose') === 'prefetch' ||
-    request.headers.get('x-middleware-prefetch') === '1';
+    request.headers.get('x-middleware-prefetch') === '1');
 
   const accessCookie = request.cookies.get(BRAND_ACCESS_COOKIE)?.value;
   const refreshCookie = request.cookies.get(BRAND_REFRESH_COOKIE)?.value;
@@ -368,7 +392,8 @@ export async function middleware(request: NextRequest) {
       buildBrandCookieHeader({ accessToken: accessCookie, sessionToken: sessionCookie }),
       nextAuthUserId,
     );
-    if (!backendSession.ok) {
+    // A backend outage (5xx, 429, timeout) must not sign everyone out: keep the session and cookies.
+    if (!backendSession.ok && !backendSession.transient) {
       hasValidAccess = false;
       clearStaleAuthCookies = true;
     }
