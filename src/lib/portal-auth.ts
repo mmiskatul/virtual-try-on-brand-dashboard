@@ -260,6 +260,8 @@ export async function exchangeBrandOAuthCodeFromBackend(code: string): Promise<{
 
 type VerifySessionResult = {
   ok: boolean;
+  /** True when the backend could not answer (5xx, 429, timeout). The session is NOT known to be invalid. */
+  transient?: boolean;
   tenantId?: string;
   onboardingCompleted?: boolean;
   user?: { id?: string; role?: string };
@@ -307,7 +309,9 @@ export async function verifyBrandSessionWithBackend(
       });
 
       if (!res.ok) {
-        return { ok: false };
+        // Only 401/403 mean the session is really gone. Anything else is a backend hiccup.
+        const rejected = res.status === 401 || res.status === 403;
+        return rejected ? { ok: false } : { ok: false, transient: true };
       }
 
       const data = await res.json().catch(() => null);
@@ -359,7 +363,7 @@ export async function verifyBrandSessionWithBackend(
 
       return result;
     } catch {
-      return { ok: false };
+      return { ok: false, transient: true };
     } finally {
       sessionVerifyInFlight.delete(cacheKey);
     }
