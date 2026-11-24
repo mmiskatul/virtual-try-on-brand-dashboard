@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import Image, { ImageProps } from 'next/image';
+import Link from 'next/link';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowDownRight,
   ArrowUpRight,
   Info,
@@ -63,13 +65,30 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/** The one "← Back" link used on every detail page. */
+export function BackLink({ href, label = 'Back' }: { href: string; label?: string }) {
+  return (
+    <Link
+      href={href}
+      className="mb-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 -ml-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" /> {label}
+    </Link>
+  );
+}
+
 export function PageHeader({
   eyebrow,
   title,
   subtitle,
   actions,
   preview,
+  backHref,
+  backLabel = 'Back',
 }: {
+  /** Shows a "← Back" link above the title that goes to this page. */
+  backHref?: string;
+  backLabel?: string;
   eyebrow?: string;
   title: string;
   subtitle?: string;
@@ -81,6 +100,7 @@ export function PageHeader({
     <>
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-3.5 sm:gap-4 pb-3 border-b border-slate-200/80">
       <div className="space-y-1 min-w-0">
+        {backHref && <BackLink href={backHref} label={backLabel} />}
         {eyebrow && (
           <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
             {eyebrow}
