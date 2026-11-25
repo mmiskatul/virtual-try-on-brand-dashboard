@@ -39,7 +39,7 @@ export function CameraCapture({
       return;
     }
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 1600 } }, audio: false })
+      .getUserMedia({ video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1920 } }, audio: false })
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -104,14 +104,14 @@ export function CameraCapture({
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Take a photo" className="fixed inset-0 z-[90] flex flex-col bg-black">
+    <div role="dialog" aria-modal="true" aria-label="Take a photo" className="fixed inset-x-0 top-0 z-[90] flex h-[100dvh] flex-col bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-between px-4 py-3 text-white">
         <p className="text-sm font-bold">Take your photo</p>
         <button type="button" onClick={onClose} aria-label="Close camera" className="rounded-full p-2 hover:bg-white/10">
           <X className="h-5 w-5" />
         </button>
       </div>
-      <div className="relative flex min-h-0 flex-1 items-center justify-center">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         {error ? (
           <p className="max-w-sm px-6 text-center text-sm text-white/90">{error}</p>
         ) : (
