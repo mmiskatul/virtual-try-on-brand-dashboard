@@ -203,9 +203,12 @@ export interface TeamRoleInfo {
   fixed?: boolean;
 }
 
-async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** Making a try-on picture can take a minute or more, so those calls wait this long (other calls stay quick). */
+const TRY_ON_TIMEOUT_MS = 120_000;
+
+async function apiFetch<T>(path: string, init: RequestInit = {}, timeoutOverrideMs?: number): Promise<T> {
   const controller = new AbortController();
-  const timeoutMs = init.body instanceof FormData ? 25000 : 8000;
+  const timeoutMs = timeoutOverrideMs ?? (init.body instanceof FormData ? 25000 : 8000);
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await brandFetch(`${API_BASE}${path}`, {
@@ -1099,7 +1102,7 @@ export const brandWorkspaceApi = {
           ...(params.garmentSize ? { garmentSize: params.garmentSize } : {}),
           ...(params.consentGiven !== undefined ? { consentGiven: params.consentGiven } : {}),
         }),
-      });
+      }, TRY_ON_TIMEOUT_MS);
       const job = submitRes?.data || submitRes;
       jobId = job?.jobId;
       if (jobId) {
@@ -1131,7 +1134,7 @@ export const brandWorkspaceApi = {
         method: 'POST',
         headers: { 'Idempotency-Key': `studio_${params.productId}_${Date.now()}` },
         body: JSON.stringify(params),
-      });
+      }, TRY_ON_TIMEOUT_MS);
       const resultUrl =
         res.resultUrl || res.output_url || res.outputImageUrl || res.result?.output_url;
       if (resultUrl) {
