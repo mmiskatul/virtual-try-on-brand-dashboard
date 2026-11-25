@@ -213,7 +213,7 @@ function BrandLoginContent() {
 
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-stone-200" />
-        <span className="text-[10px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
+        <span className="text-[11px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
           or log in with email
         </span>
         <div className="h-px flex-1 bg-stone-200" />
@@ -221,7 +221,7 @@ function BrandLoginContent() {
 
       <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs space-y-2">
+          <div role="alert" className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs space-y-2">
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
@@ -256,15 +256,15 @@ function BrandLoginContent() {
         )}
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Email</label>
-          <Input
+          <label htmlFor="f-login-email" className="block text-xs font-medium text-gray-700">Email</label>
+          <Input id="f-login-email"
             type="email"
             placeholder="you@brand.com"
             autoComplete="email"
             {...register('email')}
             className={errors.email ? 'border-rose-500 focus-visible:border-rose-500' : ''}
           />
-          {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
+          {errors.email && <p role="alert" className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
         <PasswordField

@@ -109,7 +109,7 @@ function BrandResetPasswordContent() {
   if (tokenState === 'invalid') {
     return (
       <AuthShell title="Reset link expired or invalid" subtitle="For your security, reset links expire after 30 minutes and can only be used once." badge="Password Reset">
-        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
+        <div role="alert" className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{errorMsg}</span>
         </div>
@@ -165,7 +165,7 @@ function BrandResetPasswordContent() {
     >
       <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
+          <div role="alert" className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
@@ -174,12 +174,12 @@ function BrandResetPasswordContent() {
         {!urlToken && (
           <>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">Business Email</label>
-              <Input type="email" placeholder="you@yourbrand.com" {...register('email')} />
+              <label htmlFor="f-reset-password-email" className="block text-xs font-medium text-gray-700">Business Email</label>
+              <Input id="f-reset-password-email" type="email" placeholder="you@yourbrand.com" {...register('email')} />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">6-Digit Reset Code</label>
-              <Input
+              <label htmlFor="f-reset-password-code" className="block text-xs font-medium text-gray-700">6-Digit Reset Code</label>
+              <Input id="f-reset-password-code"
                 type="text"
                 inputMode="numeric"
                 maxLength={6}

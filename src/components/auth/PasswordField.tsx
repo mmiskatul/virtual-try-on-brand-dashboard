@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Input, InputProps } from '../ui/input';
 
@@ -29,17 +29,21 @@ function getPasswordStrength(value: string): { score: number; label: string; col
 export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
   ({ label, error, showStrength = false, watchedValue = '', rightSlot, className, ...props }, ref) => {
     const [visible, setVisible] = useState(false);
+    const autoId = useId();
+    const inputId = props.id || autoId;
     const strength = showStrength ? getPasswordStrength(watchedValue) : null;
 
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <label className="block text-xs font-medium text-gray-700">{label}</label>
+          <label htmlFor={inputId} className="block text-xs font-medium text-gray-700">{label}</label>
           {rightSlot}
         </div>
         <div className="relative">
           <Input
             ref={ref}
+            id={inputId}
+            aria-invalid={error ? true : undefined}
             type={visible ? 'text' : 'password'}
             className={`pr-10 ${error ? 'border-rose-500 focus-visible:border-rose-500' : ''} ${className || ''}`}
             {...props}
@@ -73,7 +77,7 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
           </div>
         )}
 
-        {error && <p className="text-rose-600 text-[11px] font-medium">{error}</p>}
+        {error && <p role="alert" className="text-rose-600 text-[11px] font-medium">{error}</p>}
       </div>
     );
   }

@@ -114,7 +114,7 @@ function BrandRegisterContent() {
 
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-stone-200" />
-        <span className="text-[10px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
+        <span className="text-[11px] text-stone-500 uppercase font-mono tracking-wider whitespace-nowrap shrink-0">
           or register with email
         </span>
         <div className="h-px flex-1 bg-stone-200" />
@@ -122,45 +122,45 @@ function BrandRegisterContent() {
 
       <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
+          <div role="alert" className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Brand Name</label>
-          <Input
+          <label htmlFor="f-register-brandName" className="block text-xs font-medium text-gray-700">Brand Name</label>
+          <Input id="f-register-brandName"
             type="text"
             placeholder="Lumiere Couture"
             {...register('brandName')}
             className={errors.brandName ? 'border-rose-500' : ''}
           />
-          {errors.brandName && <p className="text-rose-600 text-[11px] font-medium">{errors.brandName.message}</p>}
+          {errors.brandName && <p role="alert" className="text-rose-600 text-[11px] font-medium">{errors.brandName.message}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Owner Full Name</label>
-          <Input
+          <label htmlFor="f-register-ownerName" className="block text-xs font-medium text-gray-700">Owner Full Name</label>
+          <Input id="f-register-ownerName"
             type="text"
             placeholder="Claire Moreau"
             autoComplete="name"
             {...register('ownerName')}
             className={errors.ownerName ? 'border-rose-500' : ''}
           />
-          {errors.ownerName && <p className="text-rose-600 text-[11px] font-medium">{errors.ownerName.message}</p>}
+          {errors.ownerName && <p role="alert" className="text-rose-600 text-[11px] font-medium">{errors.ownerName.message}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Business Email</label>
-          <Input
+          <label htmlFor="f-register-email" className="block text-xs font-medium text-gray-700">Business Email</label>
+          <Input id="f-register-email"
             type="email"
             placeholder="claire@lumiere.com"
             autoComplete="email"
             {...register('email')}
             className={errors.email ? 'border-rose-500' : ''}
           />
-          {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
+          {errors.email && <p role="alert" className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
         <PasswordField

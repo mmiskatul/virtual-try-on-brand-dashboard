@@ -91,7 +91,7 @@ function BrandForgotPasswordContent() {
         </div>
 
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
+          <div role="alert" className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
@@ -137,22 +137,22 @@ function BrandForgotPasswordContent() {
     >
       <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
+          <div role="alert" className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Business Email</label>
-          <Input
+          <label htmlFor="f-forgot-password-email" className="block text-xs font-medium text-gray-700">Business Email</label>
+          <Input id="f-forgot-password-email"
             type="email"
             placeholder="you@yourbrand.com"
             autoComplete="email"
             {...register('email')}
             className={errors.email ? 'border-rose-500' : ''}
           />
-          {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
+          {errors.email && <p role="alert" className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full gap-2">

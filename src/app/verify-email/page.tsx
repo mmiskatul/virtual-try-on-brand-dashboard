@@ -230,8 +230,8 @@ function BrandVerifyEmailContent() {
 
       <form noValidate onSubmit={handleSubmit(onSubmitCode)} className="space-y-4">
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Business Email</label>
-          <Input
+          <label htmlFor="f-verify-email-email" className="block text-xs font-medium text-gray-700">Business Email</label>
+          <Input id="f-verify-email-email"
             type="email"
             placeholder="claire@lumiere.com"
             {...register('email')}
@@ -250,12 +250,12 @@ function BrandVerifyEmailContent() {
               </Link>
             </p>
           )}
-          {errors.email && <p className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
+          {errors.email && <p role="alert" className="text-rose-600 text-[11px] font-medium">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">6-Digit Verification Code</label>
-          <Input
+          <label htmlFor="f-verify-email-code" className="block text-xs font-medium text-gray-700">6-Digit Verification Code</label>
+          <Input id="f-verify-email-code"
             type="text"
             inputMode="numeric"
             maxLength={6}
@@ -263,7 +263,7 @@ function BrandVerifyEmailContent() {
             {...register('code')}
             className={`font-mono text-center text-base tracking-[0.4em] ${errors.code ? 'border-rose-500' : ''}`}
           />
-          {errors.code && <p className="text-rose-600 text-[11px] font-medium">{errors.code.message}</p>}
+          {errors.code && <p role="alert" className="text-rose-600 text-[11px] font-medium">{errors.code.message}</p>}
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full h-11 font-bold gap-2">
