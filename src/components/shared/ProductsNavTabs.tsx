@@ -35,7 +35,7 @@ export function ProductsNavTabs() {
           <span>{tab.label}</span>
           {typeof tab.badge === 'number' && tab.badge > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+              className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
                 tab.active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
               }`}
             >

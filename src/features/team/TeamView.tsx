@@ -326,7 +326,7 @@ export function TeamView() {
                       {m.extraPermissions.length > 0 && (
                         <p className="mt-1 flex flex-wrap gap-1">
                           {m.extraPermissions.map((p) => (
-                            <span key={p} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <span key={p} className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                               + {labelFor(p)}
                             </span>
                           ))}
@@ -378,7 +378,7 @@ export function TeamView() {
               <li key={r.code} className="rounded-xl border border-slate-200 p-4 space-y-2">
                 <p className="flex items-center gap-2 text-sm font-bold text-slate-950">
                   {r.name}
-                  {r.fixed && <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600"><Lock className="h-2.5 w-2.5" /> Fixed</span>}
+                  {r.fixed && <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600"><Lock className="h-2.5 w-2.5" /> Fixed</span>}
                 </p>
                 <p className="text-xs text-slate-500">{r.description}</p>
                 <div className="flex flex-wrap gap-1.5 pt-1">

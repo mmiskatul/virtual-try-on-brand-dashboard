@@ -75,7 +75,7 @@ function Bars({ rows, value, format }: { rows: Array<{ label: string; value: num
           </div>
         ))}
       </div>
-      <div className="mt-2 flex justify-between text-[10px] text-slate-400">
+      <div className="mt-2 flex justify-between text-[11px] text-slate-400">
         <span>{rows[0]?.label}</span>
         {!dense && rows.length > 2 && <span>{rows[Math.floor(rows.length / 2)]?.label}</span>}
         <span>{rows[rows.length - 1]?.label}</span>
@@ -258,7 +258,7 @@ export function ReportsView() {
                     </div>
                     <div className="overflow-x-auto lg:col-span-2">
                       <table className="w-full text-left text-xs">
-                        <thead className="border-b border-slate-200 text-[10px] uppercase text-slate-500">
+                        <thead className="border-b border-slate-200 text-[11px] uppercase text-slate-500">
                           <tr>
                             <th className="py-2 pr-3">Best customers</th>
                             <th className="py-2 pr-3 text-right">Orders</th>

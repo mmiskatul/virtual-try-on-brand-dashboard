@@ -296,7 +296,7 @@ export function OrdersView() {
 
                   <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
+                      <thead className="text-[11px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
                         <tr>
                           <th className="p-3 w-8">
                             {canEdit && <input type="checkbox" aria-label="Select all shown orders" checked={allVisibleSelected} onChange={toggleAllVisible} className="rounded accent-slate-950" />}

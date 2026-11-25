@@ -86,7 +86,7 @@ export function SettingsPalette() {
             placeholder="Jump to a setting… (delivery, logo, password)"
             className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
           />
-          <kbd className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">Esc</kbd>
+          <kbd className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[11px] font-semibold text-slate-400">Esc</kbd>
         </div>
         <ul role="listbox" className="max-h-80 overflow-y-auto p-1.5">
           {results.length === 0 && <li className="px-3 py-6 text-center text-sm text-slate-500">No setting matches “{query}”.</li>}
@@ -105,7 +105,7 @@ export function SettingsPalette() {
                     <span className="block truncate text-sm font-semibold text-slate-900">{m.title}</span>
                     <span className="block truncate text-xs text-slate-500">{m.description}</span>
                   </span>
-                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.group}</span>
+                  <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-400">{m.group}</span>
                   {i === active && <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
                 </button>
               </li>

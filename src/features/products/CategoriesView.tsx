@@ -258,12 +258,12 @@ export function CategoriesView({ mode = 'list', editId }: { mode?: 'list' | 'new
                         <p className="text-xs text-slate-500">{productCount(c)} product(s)</p>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {c.tryOnCategory && c.tryOnCategory !== 'none' && (
-                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">
                               Try-On: {tryOnLabel(c.tryOnCategory)}
                             </span>
                           )}
                           {c.active === false && (
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">
                               Hidden
                             </span>
                           )}

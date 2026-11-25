@@ -157,7 +157,7 @@ function Field({
           {required && <span className="text-rose-600"> *</span>}
         </label>
         {counter && (
-          <span className={`text-[10px] tabular-nums ${counter.value > counter.max ? 'text-rose-600 font-bold' : 'text-slate-400'}`}>
+          <span className={`text-[11px] tabular-nums ${counter.value > counter.max ? 'text-rose-600 font-bold' : 'text-slate-400'}`}>
             {counter.value}/{counter.max}
           </span>
         )}
@@ -980,7 +980,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                       >
                         {st.label}
                       </span>
-                      <span className="hidden text-[10px] text-slate-400 sm:block">{st.hint}</span>
+                      <span className="hidden text-[11px] text-slate-400 sm:block">{st.hint}</span>
                     </span>
                   </button>
                 </li>
@@ -1156,7 +1156,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                       {textInput('costPrice', 'costPrice', { type: 'number', inputMode: 'decimal', min: 0, step: '0.01', placeholder: '0.00' })}
                     </Field>
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
-                      <span className="text-[10px] font-bold uppercase text-emerald-700">Est. margin</span>
+                      <span className="text-[11px] font-bold uppercase text-emerald-700">Est. margin</span>
                       <p className="text-lg font-extrabold text-emerald-800">{marginPct === null ? '—' : `${marginPct}%`}</p>
                     </div>
                   </div>
@@ -1357,7 +1357,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
                         <Check className="h-3 w-3" />
                       </span>
                       <span className={`flex-1 font-semibold ${c.done ? 'text-slate-500' : 'text-slate-900'}`}>{c.label}</span>
-                      {!c.required && !c.done && <span className="text-[10px] font-bold text-slate-400">Recommended</span>}
+                      {!c.required && !c.done && <span className="text-[11px] font-bold text-slate-400">Recommended</span>}
                     </button>
                   </li>
                 ))}

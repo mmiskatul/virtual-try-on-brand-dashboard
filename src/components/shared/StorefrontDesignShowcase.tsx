@@ -162,7 +162,7 @@ export function ShopDesignThumbnail({
                 className="inline-block h-1.5 w-8 rounded-full"
                 style={{ backgroundColor: accentColor }}
               />
-              <p className="text-[9px] font-extrabold leading-tight text-slate-900 truncate">
+              <p className="text-[11px] font-extrabold leading-tight text-slate-900 truncate">
                 {displayName}
               </p>
               <span
@@ -203,7 +203,7 @@ export function ShopDesignThumbnail({
         <div className="bg-white border-t-2 p-2 space-y-2" style={{ borderTopColor: primaryColor }}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <div className="space-y-0.5 min-w-0">
-              <p className="text-[9px] font-black tracking-tight text-slate-950 truncate">
+              <p className="text-[11px] font-black tracking-tight text-slate-950 truncate">
                 {displayName} Studio
               </p>
               <div className="flex gap-1">
@@ -251,7 +251,7 @@ export function ShopDesignThumbnail({
                 initial
               )}
             </div>
-            <p className="text-[9px] font-extrabold text-slate-950 truncate">{displayName}</p>
+            <p className="text-[11px] font-extrabold text-slate-950 truncate">{displayName}</p>
             <span
               className="inline-block px-2 py-0.5 rounded-full text-[6px] font-bold text-white"
               style={{ backgroundColor: accentColor }}
@@ -328,7 +328,7 @@ export function ShopDesignThumbnail({
               >
                 Mirrored
               </div>
-              <p className="text-[9px] font-extrabold leading-tight text-slate-900 truncate">
+              <p className="text-[11px] font-extrabold leading-tight text-slate-900 truncate">
                 {displayName}
               </p>
               <span
@@ -354,7 +354,7 @@ export function ShopDesignThumbnail({
       {styleId === 'magazine' && (
         <div className="bg-[#FAF9F6] p-2 space-y-1.5">
           <div className="flex items-end justify-between border-b border-slate-200 pb-1">
-            <p className="text-[9px] font-black uppercase tracking-tight text-slate-950 truncate">
+            <p className="text-[11px] font-black uppercase tracking-tight text-slate-950 truncate">
               {displayName}
             </p>
             <span className="text-[6px] font-bold uppercase" style={{ color: accentColor }}>
@@ -422,7 +422,7 @@ export function ShopDesignThumbnail({
               >
                 Noir
               </span>
-              <p className="text-[9px] font-extrabold truncate">{displayName}</p>
+              <p className="text-[11px] font-extrabold truncate">{displayName}</p>
             </div>
             <div className="w-10 h-9 rounded overflow-hidden border border-white/15 shrink-0 bg-slate-900">
               {bannerUrl ? (
@@ -593,7 +593,7 @@ export function StorefrontDesignCarousel({
                   </p>
                 </div>
                 {selected && (
-                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-slate-950 text-white text-[10px] font-bold shrink-0">
+                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-slate-950 text-white text-[11px] font-bold shrink-0">
                     <Check className="w-2.5 h-2.5" />
                     Active
                   </span>
@@ -653,7 +653,7 @@ function InteractiveMediaBadge({
           e.stopPropagation();
           onUploadSlot(slot);
         }}
-        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm transition-colors ${
+        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm transition-colors ${
           dark
             ? 'bg-slate-950/90 text-white hover:bg-slate-900 border border-white/25'
             : 'bg-white/95 text-slate-900 hover:bg-slate-100 border border-slate-300'
@@ -721,7 +721,7 @@ export function FullShopLivePreview({
         >
           <Sparkles className="w-5 h-5 mb-1 opacity-90" />
           <span className="text-xs font-bold">{labelText}</span>
-          <span className="text-[10px] opacity-80">
+          <span className="text-[11px] opacity-80">
             {interactive ? 'Click Upload Banner below to set this slot' : 'Upload a photo or keep color card'}
           </span>
         </div>
@@ -803,7 +803,7 @@ export function FullShopLivePreview({
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 sm:p-6 items-center bg-white border-b border-slate-200">
           <div className="sm:col-span-7 space-y-2.5 min-w-0">
             <span
-              className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+              className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-white"
               style={{ backgroundColor: accentColor }}
             >
               {displayBrand}
@@ -840,7 +840,7 @@ export function FullShopLivePreview({
           </div>
           <div className="sm:col-span-7 space-y-2.5 min-w-0">
             <span
-              className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+              className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-white"
               style={{ backgroundColor: accentColor }}
             >
               {displayBrand}
@@ -927,7 +927,7 @@ export function FullShopLivePreview({
             />
           )}
           <span
-            className="inline-block px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+            className="inline-block px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-white"
             style={{ backgroundColor: accentColor }}
           >
             {displayBrand}
@@ -980,7 +980,7 @@ export function FullShopLivePreview({
             </div>
             <div className="min-w-0">
               <span
-                className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white mb-1"
+                className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-white mb-1"
                 style={{ backgroundColor: accentColor }}
               >
                 {displayBrand}
@@ -1001,7 +1001,7 @@ export function FullShopLivePreview({
         <div className="p-5 sm:p-6 bg-[#FAF9F6] border-b border-slate-200 space-y-3.5">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-3">
             <div className="min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
                 Lookbook Issue • {displayBrand}
               </span>
               <h3
@@ -1023,7 +1023,7 @@ export function FullShopLivePreview({
             className="sm:col-span-6 rounded-2xl p-4 sm:p-5 text-white flex flex-col justify-between"
             style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
           >
-            <span className="inline-block w-fit px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider">
+            <span className="inline-block w-fit px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold uppercase tracking-wider">
               {displayBrand}
             </span>
             <div className="space-y-1 mt-4">
@@ -1041,11 +1041,11 @@ export function FullShopLivePreview({
               {renderBannerBox('h-28', `linear-gradient(135deg, ${primaryColor}35, ${accentColor}35)`, 'Bento Spotlight Banner')}
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Studio Mode</p>
+              <p className="text-[11px] font-bold uppercase text-slate-400">Studio Mode</p>
               <p className="text-[11px] font-extrabold text-slate-900">Try-On Enabled</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Pricing</p>
+              <p className="text-[11px] font-bold uppercase text-slate-400">Pricing</p>
               <p className="text-[11px] font-extrabold text-slate-900">BDT (৳)</p>
             </div>
           </div>
@@ -1065,7 +1065,7 @@ export function FullShopLivePreview({
                 )}
               </div>
               <span
-                className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest text-white"
+                className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-widest text-white"
                 style={{ backgroundColor: accentColor }}
               >
                 {displayBrand} Noir
@@ -1120,7 +1120,7 @@ export function FullShopLivePreview({
                   background: `linear-gradient(145deg, ${primaryColor}10, ${accentColor}16)`,
                 }}
               >
-                <span className="px-2 py-0.5 rounded-full bg-white/90 text-slate-800 text-[10px] font-bold border border-slate-200">
+                <span className="px-2 py-0.5 rounded-full bg-white/90 text-slate-800 text-[11px] font-bold border border-slate-200">
                   {item.tag}
                 </span>
               </div>
@@ -1164,7 +1164,7 @@ export function FullShopLivePreview({
               )}
             </div>
             <div className="flex-1 p-3 space-y-1.5 min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">vtrystudio.com</p>
+              <p className="text-[11px] uppercase tracking-wide text-slate-400">vtrystudio.com</p>
               <p className="text-sm font-bold text-slate-900 truncate">{displayTitle}</p>
               <p className="text-xs text-slate-500 line-clamp-2">{displaySlogan}</p>
               <div className="flex flex-wrap items-center gap-2 pt-1">

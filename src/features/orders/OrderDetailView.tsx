@@ -222,7 +222,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           {order.shippingAddress && (
             <p className="text-sm">{order.shippingAddress.street}, {order.shippingAddress.city} {order.shippingAddress.postalCode}, {order.shippingAddress.country}</p>
           )}
-          <table className="mt-4 w-full border-collapse text-sm">
+          <div className="overflow-x-auto"><table className="mt-4 w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-400 text-left"><th className="py-1">Item</th><th>Size</th><th>Colour</th><th className="text-right">Qty</th></tr>
             </thead>
@@ -231,7 +231,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 <tr key={i} className="border-b border-slate-200"><td className="py-1">{it.productName}</td><td>{it.size}</td><td>{it.color}</td><td className="text-right">{it.quantity}</td></tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
           {order.trackingNumber && <p className="mt-3 text-sm">Tracking: {order.trackingNumber}</p>}
         </div>
 

@@ -146,7 +146,7 @@ function ImageUploadCard({
             alt={label}
             className="w-full h-full object-cover"
           />
-          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-white text-[10px] font-bold backdrop-blur-sm">
+          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-white text-[11px] font-bold backdrop-blur-sm">
             Uploaded Ready
           </span>
         </div>

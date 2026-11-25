@@ -42,7 +42,7 @@ export default function BrandDashboardError({
 
         {error.digest && (
           <div className="bg-white rounded-lg p-3 border border-gray-200 text-left">
-            <p className="text-[10px] font-mono text-gray-500">Incident Digest:</p>
+            <p className="text-[11px] font-mono text-gray-500">Incident Digest:</p>
             <p className="text-xs font-mono text-gray-700 truncate">{error.digest}</p>
           </div>
         )}

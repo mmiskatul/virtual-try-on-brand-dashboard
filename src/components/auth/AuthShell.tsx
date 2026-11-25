@@ -74,7 +74,7 @@ export function AuthShell({
                 V
               </div>
               <span className="font-serif font-bold tracking-[0.12em] sm:tracking-[0.14em] text-xs sm:text-sm text-stone-950 leading-none truncate">
-                V-TRY <span className="text-[10px] font-sans text-stone-500 font-bold">BRANDS</span>
+                V-TRY <span className="text-[11px] font-sans text-stone-500 font-bold">BRANDS</span>
               </span>
             </Link>
 
@@ -125,7 +125,7 @@ export function AuthShell({
             {(badge || title || subtitle) && (
               <div className="space-y-1">
                 {badge && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-200">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-200">
                     {badge}
                   </span>
                 )}

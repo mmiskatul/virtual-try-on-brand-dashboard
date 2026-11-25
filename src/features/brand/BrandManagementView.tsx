@@ -682,7 +682,7 @@ export function BrandManagementView({ section }: { section: BrandSection }) {
                   <span className="inline-flex items-center gap-1.5">
                     <Palette className="w-3.5 h-3.5" /> Live Token Preview
                   </span>
-                  <span className="text-[10px] font-mono">
+                  <span className="text-[11px] font-mono">
                     {form.headingFont} • {form.headerStyle}
                   </span>
                 </div>
@@ -870,7 +870,7 @@ export function BrandManagementView({ section }: { section: BrandSection }) {
 
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="p-2.5 rounded-xl border border-slate-200 bg-white">
-                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                        <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
                           Primary
                         </label>
                         <div className="flex items-center gap-2">
@@ -884,7 +884,7 @@ export function BrandManagementView({ section }: { section: BrandSection }) {
                         </div>
                       </div>
                       <div className="p-2.5 rounded-xl border border-slate-200 bg-white">
-                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                        <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
                           Accent
                         </label>
                         <div className="flex items-center gap-2">

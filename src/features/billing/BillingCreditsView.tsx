@@ -194,7 +194,7 @@ export function BillingCreditsView({
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[11px]">
                       <th className="py-2 pr-4">Session ID</th>
                       <th className="py-2 pr-4">Product</th>
                       <th className="py-2 pr-4">Status</th>
@@ -318,7 +318,7 @@ export function BillingCreditsView({
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                  <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[11px]">
                     <th className="py-2.5 pr-4">Invoice ID</th>
                     <th className="py-2.5 pr-4">Period</th>
                     <th className="py-2.5 pr-4">Plan</th>

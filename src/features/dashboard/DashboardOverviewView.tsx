@@ -325,7 +325,7 @@ export function DashboardOverviewView() {
           >
             <RefreshCw className={`w-4 h-4 ${overviewLoading || timeseriesLoading ? 'animate-spin' : ''}`} />
           </Button>
-          <Link href={`/brands/${workspaceSlug}`} target="_blank">
+          <Link href={`/brands/${workspaceSlug}`} target="_blank" rel="noopener noreferrer">
             <Button type="button" variant="outline" size="sm" className="h-10 gap-1.5 text-sm">
               View store <ExternalLink className="w-3.5 h-3.5" />
             </Button>

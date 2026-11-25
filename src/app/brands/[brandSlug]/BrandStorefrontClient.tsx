@@ -209,7 +209,7 @@ export default function BrandStorefrontClient() {
             <SafeImage src={brandBanner} alt={brandName} fill priority className="object-cover opacity-65" />
           )}
           <div className="relative z-10 max-w-2xl space-y-2">
-            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-amber-200 font-bold">
+            <p className="text-[11px] sm:text-[11px] uppercase tracking-[0.2em] text-amber-200 font-bold">
               {brandName}
             </p>
             <h1 className="text-2xl sm:text-5xl font-extrabold leading-tight">{storefrontTitle || brandName}</h1>
@@ -307,11 +307,11 @@ export default function BrandStorefrontClient() {
                 )}
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                <p className="text-[10px] font-bold uppercase text-slate-400">Try-On Fit</p>
+                <p className="text-[11px] font-bold uppercase text-slate-400">Try-On Fit</p>
                 <p className="text-xs font-extrabold text-slate-900 mt-0.5">Live Preview Ready</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                <p className="text-[10px] font-bold uppercase text-slate-400">Currency</p>
+                <p className="text-[11px] font-bold uppercase text-slate-400">Currency</p>
                 <p className="text-xs font-extrabold text-slate-900 mt-0.5">BDT (৳)</p>
               </div>
             </div>
@@ -400,7 +400,7 @@ export default function BrandStorefrontClient() {
               <div className="relative aspect-[3/4] bg-slate-100">
                 <SafeImage src={p.image} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                 {!p.marketplacePublished && (
-                  <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-slate-950 text-white text-[10px] font-bold">
+                  <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-slate-950 text-white text-[11px] font-bold">
                     Storefront Exclusive
                   </span>
                 )}

@@ -214,7 +214,7 @@ export function InventoryView({ initialTab = 'stock' }: { initialTab?: Inventory
                           <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${label.cls}`}>{label.text}</span>
                           <div className="w-16 text-right">
                             <p className="text-lg font-extrabold tabular-nums text-slate-950">{p.stock}</p>
-                            <p className="text-[10px] text-slate-400">in stock</p>
+                            <p className="text-[11px] text-slate-400">in stock</p>
                           </div>
                           {canEdit && (
                             <div className="flex gap-1.5">
@@ -237,7 +237,7 @@ export function InventoryView({ initialTab = 'stock' }: { initialTab?: Inventory
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="border-b border-slate-200 text-[10px] uppercase text-slate-400">
+                      <thead className="border-b border-slate-200 text-[11px] uppercase text-slate-400">
                         <tr>
                           <th className="py-2.5 pr-4">Product</th>
                           <th className="py-2.5 pr-4 text-right">Change</th>

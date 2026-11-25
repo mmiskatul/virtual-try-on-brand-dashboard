@@ -397,7 +397,7 @@ export function CollectionsView({ mode = 'list', editId }: { mode?: 'list' | 'ne
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-semibold text-slate-900">{p.name}</span>
                           {inOther && (
-                            <span className="block truncate text-[10px] text-amber-600">
+                            <span className="block truncate text-[11px] text-amber-600">
                               Currently in &quot;{otherCollection}&quot;. Picking it moves it here.
                             </span>
                           )}

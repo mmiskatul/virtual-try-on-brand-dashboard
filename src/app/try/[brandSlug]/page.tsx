@@ -258,7 +258,7 @@ export default function BrandTryOnPage() {
           </div>
           <div className="min-w-0">
             <p className="truncate text-[15px] font-bold text-slate-950">{brandName}</p>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Virtual Try-On</p>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">Virtual Try-On</p>
           </div>
         </div>
         <Link href={`/brands/${brandSlug}`} className="shrink-0 rounded-full border border-stone-200 px-3.5 py-2 text-[13px] font-semibold text-slate-900">

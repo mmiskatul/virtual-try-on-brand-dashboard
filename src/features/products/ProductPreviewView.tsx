@@ -112,13 +112,13 @@ export function ProductPreviewView({ productId }: { productId: string }) {
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <StatusBadge status={product.catalogStatus || 'ACTIVE'} />
                 {product.brandStorefrontPublished && (
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">On storefront</span>
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">On storefront</span>
                 )}
                 {product.marketplacePublished && (
-                  <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">On marketplace</span>
+                  <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700">On marketplace</span>
                 )}
                 {product.isTryOnEligible && (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">Try-On ready</span>
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Try-On ready</span>
                 )}
               </div>
               {(product.shortDescription || product.description) && (
@@ -136,7 +136,7 @@ export function ProductPreviewView({ productId }: { productId: string }) {
               <SectionCard title={`Colours & sizes (${variants.length})`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="text-[10px] uppercase tracking-wide text-slate-400">
+                    <thead className="text-[11px] uppercase tracking-wide text-slate-400">
                       <tr>
                         <th className="py-2 pr-3">Colour</th>
                         <th className="py-2 pr-3">Size</th>

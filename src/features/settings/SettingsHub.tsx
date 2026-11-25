@@ -100,7 +100,7 @@ export function SettingsHub() {
           actions={
             <Link
               href={`/brands/${profile.slug}`}
-              target="_blank"
+              target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50"
             >
               View live shop <ExternalLink className="h-3 w-3" />
@@ -120,7 +120,7 @@ export function SettingsHub() {
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event('settings:open-palette'))}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 hover:bg-slate-50"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-50"
             title="Jump to a setting from anywhere in Settings"
           >
             Ctrl K

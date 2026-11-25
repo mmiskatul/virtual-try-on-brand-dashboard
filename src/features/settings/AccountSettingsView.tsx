@@ -31,7 +31,7 @@ export function AccountSettingsView() {
               <span className="text-xs font-semibold text-slate-700">Your shop address</span>
               <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
                 <span className="truncate font-mono text-slate-600">/brands/{profile.slug}</span>
-                <Link href={`/brands/${profile.slug}`} target="_blank" className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-slate-900 hover:underline">
+                <Link href={`/brands/${profile.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-slate-900 hover:underline">
                   Open <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>
