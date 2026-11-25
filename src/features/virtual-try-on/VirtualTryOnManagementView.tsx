@@ -73,7 +73,8 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
         setServerReady(true);
       })
       .catch(() => {
-        /* keep the defaults; saving will report the real error */
+        // Keep the defaults, but say so: otherwise the screen looks like the saved settings.
+        if (!cancelled) notify('Could not load your saved try-on settings. Showing defaults for now.');
       });
     return () => {
       cancelled = true;
@@ -198,7 +199,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
                 {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 {copiedUrl ? 'Link copied' : 'Copy link'}
               </Button>
-              <Link href={`/try/${profile.slug}`} target="_blank">
+              <Link href={`/try/${profile.slug}`} target="_blank" rel="noopener noreferrer">
                 <Button size="sm" className="gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Preview as shopper <ExternalLink className="w-3 h-3" />
                 </Button>
@@ -487,7 +488,7 @@ export function VirtualTryOnManagementView({ initialTab = 'overview' }: { initia
             ) : (
               <div className="overflow-x-auto text-xs">
                 <table className="w-full text-left">
-                  <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
+                  <thead className="text-[11px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50">
                     <tr>
                       <th className="p-3">Garment</th>
                       <th className="p-3">Result</th>

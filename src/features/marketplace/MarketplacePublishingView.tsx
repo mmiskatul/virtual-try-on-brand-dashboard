@@ -56,6 +56,8 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
   }, [posts, tab]);
 
   const handleTransitionStatus = async (postId: string, productId: string, nextStatus: PublicationStatus) => {
+    const before = posts.find((p) => p.id === postId);
+    const beforeVisible = products.find((p) => p.id === productId)?.marketplacePublished ?? false;
     updateMarketplacePost(postId, {
       status: nextStatus,
       publishedAt: nextStatus === 'PUBLISHED' ? new Date().toISOString() : undefined,
@@ -66,7 +68,11 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
     try {
       await brandWorkspaceApi.setPublication(productId, 'marketplacePublished', isPublic);
     } catch {
-      // Updated in workspace
+      // The server did not accept it, so put the screen back the way it was.
+      if (before) updateMarketplacePost(postId, { status: before.status, publishedAt: before.publishedAt });
+      updateProduct(productId, { marketplacePublished: beforeVisible });
+      notify('Could not update the marketplace. Please try again.');
+      return;
     }
     notify(`Marketplace post transitioned to ${nextStatus}. Original catalog product remains intact.`);
   };
@@ -101,7 +107,12 @@ export function MarketplacePublishingView({ initialTab = 'overview' }: { initial
       updateProduct(selectedProd.id, { marketplacePublished: true });
       try {
         await brandWorkspaceApi.setPublication(selectedProd.id, 'marketplacePublished', true);
-      } catch {}
+      } catch {
+        updateProduct(selectedProd.id, { marketplacePublished: false });
+        updateMarketplacePost(newPost.id, { status: 'DRAFT' });
+        notify('Could not publish to the marketplace, so the post was saved as a draft.');
+        return;
+      }
     }
 
     setPostTitle('');
