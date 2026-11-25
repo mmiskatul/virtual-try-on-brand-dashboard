@@ -478,7 +478,7 @@ export function ProductsListView() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="stack-table w-full text-left text-xs">
                     <thead className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500">
                       <tr>
                         <th className="w-8 px-3 py-3">
@@ -499,7 +499,7 @@ export function ProductsListView() {
                     <tbody className="divide-y divide-slate-100">
                       {paged.map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50/70">
-                          <td className="px-3 py-3">
+                          <td data-label="Select" className="px-3 py-3">
                             <input
                               type="checkbox"
                               aria-label={`Select ${p.name}`}
@@ -507,7 +507,7 @@ export function ProductsListView() {
                               onChange={() => toggleSelect(p.id)}
                             />
                           </td>
-                          <td className="px-3 py-3">
+                          <td data-label="" className="stack-full px-3 py-3">
                             <div className="flex items-center gap-3">
                               <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                                 <SafeImage src={p.image} alt={p.name} fill className="object-cover" />
@@ -526,7 +526,7 @@ export function ProductsListView() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-3 font-bold text-slate-950">
+                          <td data-label="Price" className="px-3 py-3 font-bold text-slate-950">
                             {(() => {
                               const prices = [p.price, ...(p.variants || []).map((v) => v.price ?? p.price)];
                               const low = Math.min(...prices);
@@ -534,10 +534,10 @@ export function ProductsListView() {
                               return low === high ? `৳${low}` : `৳${low}–${high}`;
                             })()}
                           </td>
-                          <td className="px-3 py-3">
+                          <td data-label="Stock" className="px-3 py-3">
                             <StockLabel p={p} />
                           </td>
-                          <td className="px-3 py-3">
+                          <td data-label="Shown on" className="px-3 py-3">
                             <div className="flex flex-wrap gap-1.5">
                               {([
                                 ['brandStorefrontPublished', 'Store', p.brandStorefrontPublished],
@@ -560,7 +560,7 @@ export function ProductsListView() {
                               ))}
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-right">
+                          <td data-label="" className="px-3 py-3 text-right">
                             <div className="inline-flex items-center gap-1.5">
                               <Link
                                 href={`/dashboard/products/${p.id}/edit`}

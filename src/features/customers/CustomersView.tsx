@@ -140,7 +140,7 @@ export function CustomersView() {
             </div>
           ) : (
             <div className="overflow-x-auto -mx-2">
-              <table className="w-full text-sm min-w-[640px]">
+              <table className="stack-table w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
                     <th className="py-2.5 px-2 font-semibold">Customer</th>
@@ -153,16 +153,16 @@ export function CustomersView() {
                 <tbody className="divide-y divide-slate-100">
                   {visible.map((c) => (
                     <tr key={c.email} className="hover:bg-slate-50">
-                      <td className="py-3 px-2">
+                      <td data-label="" className="stack-full py-3 px-2">
                         <Link href={`/dashboard/customers/${encodeURIComponent(c.email)}`} className="block">
                           <span className="font-semibold text-slate-950">{c.name}</span>
                           <span className="block text-xs text-slate-500">{c.email}{c.city ? ` · ${c.city}` : ''}</span>
                         </Link>
                       </td>
-                      <td className="py-3 px-2 tabular-nums">{c.orderCount}</td>
-                      <td className="py-3 px-2 tabular-nums font-semibold">{money(c.totalSpent)}</td>
-                      <td className="py-3 px-2 text-slate-600">{day(c.lastOrderAt)}</td>
-                      <td className="py-3 px-2">
+                      <td data-label="Orders" className="py-3 px-2 tabular-nums">{c.orderCount}</td>
+                      <td data-label="Spent" className="py-3 px-2 tabular-nums font-semibold">{money(c.totalSpent)}</td>
+                      <td data-label="Last order" className="py-3 px-2 text-slate-600">{day(c.lastOrderAt)}</td>
+                      <td data-label="Type" className="py-3 px-2">
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${c.group === 'RETURNING' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                           {c.group === 'RETURNING' ? 'Returning' : 'New'}
                         </span>

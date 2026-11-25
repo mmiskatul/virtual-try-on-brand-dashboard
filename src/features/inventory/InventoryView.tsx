@@ -236,7 +236,7 @@ export function InventoryView({ initialTab = 'stock' }: { initialTab?: Inventory
                   <EmptyState title="No stock changes yet" description="When stock is added, removed or sold, it shows up here." />
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="stack-table w-full text-left text-xs">
                       <thead className="border-b border-slate-200 text-[11px] uppercase text-slate-400">
                         <tr>
                           <th className="py-2.5 pr-4">Product</th>
@@ -249,14 +249,14 @@ export function InventoryView({ initialTab = 'stock' }: { initialTab?: Inventory
                       <tbody className="divide-y divide-slate-100">
                         {logs.map((l) => (
                           <tr key={l.id}>
-                            <td className="py-3 pr-4">
+                            <td data-label="" className="stack-full py-3 pr-4">
                               <p className="font-bold text-slate-900">{nameOf(l.productId, l.productName)}</p>
                               <p className="font-mono text-[11px] text-slate-500">{l.variantSku}</p>
                             </td>
-                            <td className={`py-3 pr-4 text-right font-extrabold tabular-nums ${l.change >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{l.change >= 0 ? `+${l.change}` : l.change}</td>
-                            <td className="py-3 pr-4 text-right font-bold tabular-nums text-slate-900">{l.newStock}</td>
-                            <td className="py-3 pr-4 text-slate-600">{l.reason}</td>
-                            <td className="py-3 text-right text-slate-400">{l.timestamp}</td>
+                            <td data-label="Change" className={`py-3 pr-4 text-right font-extrabold tabular-nums ${l.change >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{l.change >= 0 ? `+${l.change}` : l.change}</td>
+                            <td data-label="Stock after" className="py-3 pr-4 text-right font-bold tabular-nums text-slate-900">{l.newStock}</td>
+                            <td data-label="Why" className="py-3 pr-4 text-slate-600">{l.reason}</td>
+                            <td data-label="When" className="py-3 text-right text-slate-400">{l.timestamp}</td>
                           </tr>
                         ))}
                       </tbody>

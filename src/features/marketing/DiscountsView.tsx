@@ -216,7 +216,7 @@ export function DiscountsView() {
             </div>
           ) : (
             <div className="overflow-x-auto -mx-2">
-              <table className="w-full text-sm min-w-[860px]">
+              <table className="stack-table w-full text-sm min-w-[860px]">
                 <thead>
                   <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
                     <th className="py-2.5 px-2 font-semibold">Code</th>
@@ -234,7 +234,7 @@ export function DiscountsView() {
                     const s = statFor(d.id);
                     return (
                       <tr key={d.id}>
-                        <td className="py-3 px-2">
+                        <td data-label="" className="stack-full py-3 px-2">
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono font-bold text-slate-950">{d.code}</span>
                             <button
@@ -255,14 +255,14 @@ export function DiscountsView() {
                             ].filter(Boolean).join(' · ')}
                           </span>
                         </td>
-                        <td className="py-3 px-2 font-semibold">{describeValue(d)}</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{s ? s.orders : '-'}</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{s ? money(s.revenue) : '-'}</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{s ? money(s.discountGiven) : '-'}</td>
-                        <td className="py-3 px-2">
+                        <td data-label="Gives" className="py-3 px-2 font-semibold">{describeValue(d)}</td>
+                        <td data-label="Orders" className="py-3 px-2 text-right tabular-nums">{s ? s.orders : '-'}</td>
+                        <td data-label="Sales" className="py-3 px-2 text-right tabular-nums">{s ? money(s.revenue) : '-'}</td>
+                        <td data-label="Given away" className="py-3 px-2 text-right tabular-nums">{s ? money(s.discountGiven) : '-'}</td>
+                        <td data-label="Status" className="py-3 px-2">
                           <span className={`text-xs font-bold px-2 py-1 rounded-full border ${STATUS_STYLE[st]}`}>{st}</span>
                         </td>
-                        <td className="py-3 px-2">
+                        <td data-label="On / off" className="py-3 px-2">
                           <div className="flex items-center justify-end gap-3">
                             <Switch label={`${d.code} is ${d.active ? 'on' : 'off'}`} checked={d.active} onChange={() => void toggle(d)} />
                             <Button type="button" size="sm" variant="outline" onClick={() => setToDelete(d)}>

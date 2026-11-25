@@ -63,3 +63,71 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---- Phones: tables turn into stacked cards ---------------------------------
+   Add class "stack-table" to a table and a data-label="Column name" to each cell.
+   Cells with data-label="" show their content without a label; add class
+   "stack-full" to let a cell (usually the first, with the name) use the full width. */
+@media (max-width: 639px) {
+  .stack-table {
+    min-width: 0 !important;
+  }
+  .stack-table thead {
+    display: none;
+  }
+  .stack-table tbody,
+  .stack-table tr,
+  .stack-table td {
+    display: block;
+  }
+  .stack-table tbody tr {
+    padding: 0.75rem 0.25rem;
+  }
+  .stack-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.3rem 0.5rem !important;
+    text-align: right;
+  }
+  .stack-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-align: left;
+  }
+  .stack-table td[data-label='']::before {
+    display: none;
+  }
+  .stack-table td[data-label=''] {
+    justify-content: flex-end;
+  }
+  .stack-table td.stack-full {
+    display: block;
+    text-align: left;
+  }
+}
+
+/* Never let one wide element push the whole page sideways on a phone. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* iOS zooms the page when a field under 16px is focused; keep fields at 16px on phones. */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
