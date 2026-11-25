@@ -10,6 +10,7 @@ import { DEFAULT_TRYON_CONFIG } from '../../../data/defaults';
 import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
+import { RealImage } from '../../../components/shared/RealImage';
 import { BrandLook, resolveBrandLook } from '../../../lib/brand-look';
 
 // Sample photos, one for each choice, used until the shopper uploads their own.
@@ -320,8 +321,8 @@ export default function BrandTryOnPage() {
 
                 {phase === 'done' && resultUrl ? (
                   <div className="space-y-3">
-                    <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-stone-100">
-                      <SafeImage src={resultUrl} alt="Your try-on" fill className="object-cover" />
+                    <div className="relative overflow-hidden rounded-2xl bg-stone-100">
+                      <RealImage src={resultUrl} alt="Your try-on" className="block h-auto w-full max-h-[80vh] object-contain" />
                       <span className="absolute left-3.5 top-3.5 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-bold shadow-md" style={{ color: look.accent }}>
                         <Check className="h-3.5 w-3.5" /> Looks great
                       </span>
@@ -338,9 +339,9 @@ export default function BrandTryOnPage() {
                       <h2 className="text-base font-bold">1. Your photo</h2>
                       <p className="text-xs text-slate-500">Stand straight, show your whole body, and use good light.</p>
                     </div>
-                    <div className={`relative flex aspect-[4/5] flex-col items-center justify-center overflow-hidden rounded-2xl text-center ${personImg ? 'bg-stone-100' : 'border-2 border-dashed border-stone-300 bg-stone-50'}`}>
+                    <div className={`relative flex flex-col items-center justify-center overflow-hidden rounded-2xl text-center ${personImg ? 'bg-stone-100' : 'aspect-[4/5] border-2 border-dashed border-stone-300 bg-stone-50'}`}>
                       {personImg ? (
-                        <SafeImage src={personImg} alt="Your photo" fill className="object-cover" />
+                        <RealImage src={personImg} alt="Your photo" className="block h-auto w-full max-h-[80vh] object-contain" />
                       ) : (
                         <div className="flex flex-col items-center gap-2.5 px-6">
                           <User className="h-16 w-16 text-stone-300" strokeWidth={1.2} />
