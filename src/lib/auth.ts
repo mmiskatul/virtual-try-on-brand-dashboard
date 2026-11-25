@@ -26,7 +26,9 @@ const providers: NextAuthOptions['providers'] = [
     },
     async authorize(credentials, req) {
       const cookieHeader = readCookieHeader(req);
-      if (cookieHeader && (cookieHeader.includes('vtry_brand_access=') || cookieHeader.includes('vtry_brand_refresh='))) {
+      // Only reuse an existing backend session when no credentials were typed; typed credentials always win.
+      const typedCredentials = Boolean(credentials?.email && credentials?.password);
+      if (!typedCredentials && cookieHeader && (cookieHeader.includes('vtry_brand_access=') || cookieHeader.includes('vtry_brand_refresh='))) {
         try {
           const sessionRes = await fetch(`${BACKEND_API_URL}/api/v1/auth/session`, {
             method: 'GET',
