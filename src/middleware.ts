@@ -39,6 +39,11 @@ const PUBLIC_META_PREFIXES = [
   '/sitemap.xml',
 ];
 
+/** True for the path itself or anything below it ("/try" and "/try/x", but not "/trying"). */
+function underPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 function buildMergedCookieHeader(rawCookie: string | null, setCookies: string[]): string {
   const cookieMap = new Map<string, string>();
   if (rawCookie) {
@@ -111,11 +116,13 @@ function createContentSecurityPolicy(nonce: string) {
 }
 
 // --- Strict Edge CORS Configuration ---
-const ALLOWED_ORIGIN_PATTERNS = [
-  /^https?:\/\/localhost(:\d+)?$/,
-  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-  // Official V-TRY Studio domains: vtrystudio.com, shop.brand.*, admin.*, www.*
+const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
+  // Official V-TRY Studio domains: vtrystudio.com and its subdomains (HTTPS only)
   /^https:\/\/([a-z0-9-]+\.)*vtrystudio\.com$/,
+  // Local development hosts are only trusted outside production.
+  ...(process.env.NODE_ENV !== 'production'
+    ? [/^https?:\/\/localhost(:\d+)?$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
+    : []),
 ];
 
 function isOriginAllowed(origin: string | null, requestOrigin?: string): boolean {
@@ -341,8 +348,8 @@ export async function middleware(request: NextRequest) {
   };
 
   const isAlwaysPublic =
-    PUBLIC_STOREFRONT_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
-    PUBLIC_META_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    PUBLIC_STOREFRONT_PREFIXES.some((prefix) => underPrefix(pathname, prefix)) ||
+    PUBLIC_META_PREFIXES.some((prefix) => underPrefix(pathname, prefix));
 
   // Public brand storefronts and NextAuth/metadata endpoints pass through with CSP headers
   if (isAlwaysPublic) {
@@ -459,7 +466,7 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  if (PUBLIC_AUTH_FLOW_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+  if (PUBLIC_AUTH_FLOW_PREFIXES.some((prefix) => underPrefix(pathname, prefix))) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-nonce', nonce);
     requestHeaders.set('Content-Security-Policy', cspHeader);
