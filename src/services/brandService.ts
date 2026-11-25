@@ -1080,6 +1080,8 @@ export const brandWorkspaceApi = {
     size?: string;
     /** The size of the garment they chose, so the picture shows how it fits compared with their own size. */
     garmentSize?: string;
+    /** The shopper's answer to the privacy tick box. The backend refuses the photo if the brand needs consent and this is false. */
+    consentGiven?: boolean;
   }): Promise<{ mode: 'live_ai' | 'unavailable'; resultUrl?: string; message?: string }> => {
     // 1. Create a try-on job. The backend makes the picture with Gemini and we wait for it.
     let jobId: string | undefined;
@@ -1095,6 +1097,7 @@ export const brandWorkspaceApi = {
           ...(params.gender ? { gender: params.gender } : {}),
           ...(params.size ? { size: params.size } : {}),
           ...(params.garmentSize ? { garmentSize: params.garmentSize } : {}),
+          ...(params.consentGiven !== undefined ? { consentGiven: params.consentGiven } : {}),
         }),
       });
       const job = submitRes?.data || submitRes;

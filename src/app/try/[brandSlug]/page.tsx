@@ -3,7 +3,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { AlertTriangle, Check, Sparkles, Upload, User } from 'lucide-react';
+import { AlertTriangle, Camera, Check, Sparkles, Upload, User } from 'lucide-react';
+import { CameraCapture } from '../../../components/shared/CameraCapture';
+import { fileToJpegDataUrl } from '../../../lib/photo';
 import { DEFAULT_TRYON_CONFIG } from '../../../data/defaults';
 import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
@@ -85,6 +87,7 @@ export default function BrandTryOnPage() {
   const [resultUrl, setResultUrl] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,13 +204,14 @@ export default function BrandTryOnPage() {
   const onUpload = async (file: File) => {
     setUploading(true);
     setNotice(null);
-    const up = await brandWorkspaceApi.uploadMediaFile(file);
+    // The picture is shrunk in the browser and sent with the try-on request, so shoppers need no account.
+    const prepared = await fileToJpegDataUrl(file);
     setUploading(false);
-    if (up.ok && up.url) {
-      setPersonImg(up.url);
+    if (prepared.ok) {
+      setPersonImg(prepared.dataUrl);
       setPhase('ready');
     } else {
-      setNotice(up.error || 'That photo could not be uploaded. Please try another one.');
+      setNotice(prepared.error);
     }
   };
 
@@ -229,6 +233,7 @@ export default function BrandTryOnPage() {
       gender,
       size,
       ...(garmentSize ? { garmentSize } : {}),
+      consentGiven: tryOnCfg.requireConsent ? consent : true,
     });
     if (res.mode === 'live_ai' && res.resultUrl) {
       setResultUrl(res.resultUrl);
@@ -300,6 +305,7 @@ export default function BrandTryOnPage() {
             <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
               {/* Left: your photo and your size (the result shows here too) */}
               <section className="space-y-5 rounded-[20px] border border-stone-200 bg-white p-4 text-slate-900 shadow-[0_12px_32px_-18px_rgba(20,20,30,0.18)] sm:p-5 lg:col-span-5">
+                <CameraCapture open={cameraOpen} onClose={() => setCameraOpen(false)} onCapture={(f) => void onUpload(f)} accent={look.accent} />
                 <input
                   ref={fileRef}
                   type="file"
@@ -338,9 +344,14 @@ export default function BrandTryOnPage() {
                       ) : (
                         <div className="flex flex-col items-center gap-2.5 px-6">
                           <User className="h-16 w-16 text-stone-300" strokeWidth={1.2} />
-                          <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} style={accentBtn} className="inline-flex items-center gap-2 border px-6 py-3 text-sm font-bold text-white disabled:opacity-60">
-                            <Upload className="h-4 w-4" /> {uploading ? 'Uploading…' : 'Upload photo'}
-                          </button>
+                          <div className="flex flex-wrap justify-center gap-2">
+                            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} style={accentBtn} className="inline-flex items-center gap-2 border px-5 py-3 text-sm font-bold text-white disabled:opacity-60">
+                              <Upload className="h-4 w-4" /> {uploading ? 'Preparing…' : 'Upload photo'}
+                            </button>
+                            <button type="button" onClick={() => setCameraOpen(true)} disabled={uploading} className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 disabled:opacity-60">
+                              <Camera className="h-4 w-4" /> Take photo
+                            </button>
+                          </div>
                           <button type="button" onClick={() => setPersonImg(SAMPLE_PHOTO[gender])} className="text-xs text-slate-500 underline">or use a sample photo</button>
                         </div>
                       )}
@@ -353,7 +364,10 @@ export default function BrandTryOnPage() {
                       )}
                     </div>
                     {personImg && phase !== 'processing' && (
-                      <button type="button" onClick={() => fileRef.current?.click()} className="w-full rounded-full border border-stone-200 bg-white py-2.5 text-[13px] font-bold">Change photo</button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => fileRef.current?.click()} className="rounded-full border border-stone-200 bg-white py-2.5 text-[13px] font-bold">Upload another</button>
+                        <button type="button" onClick={() => setCameraOpen(true)} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-stone-200 bg-white py-2.5 text-[13px] font-bold"><Camera className="h-3.5 w-3.5" /> Retake</button>
+                      </div>
                     )}
 
                     <div className="space-y-2 border-t border-stone-100 pt-4">
