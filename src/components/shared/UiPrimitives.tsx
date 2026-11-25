@@ -18,6 +18,7 @@ import { canPerform, ROLE_LABELS } from '../../config/permissions';
 import { ROLE_TITLES, useServerAccess } from '../../config/access';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { Button } from '../ui/button';
+import { useDialog } from '../../hooks/useDialog';
 
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80';
@@ -59,7 +60,7 @@ export function StatusBadge({ status }: { status: string }) {
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${cls}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${cls}`}>
       {status.replace(/_/g, ' ')}
     </span>
   );
@@ -102,7 +103,7 @@ export function PageHeader({
       <div className="space-y-1 min-w-0">
         {backHref && <BackLink href={backHref} label={backLabel} />}
         {eyebrow && (
-          <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
+          <p className="text-[11px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
             {eyebrow}
           </p>
         )}
@@ -374,12 +375,28 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const panelRef = useDialog<HTMLDivElement>(open, onCancel);
+  const titleId = React.useId();
+  const descId = React.useId();
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl">
-        <h3 className="text-base font-bold text-slate-900">{title}</h3>
-        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{description}</p>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        tabIndex={-1}
+        className="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl outline-none"
+      >
+        <h3 id={titleId} className="text-base font-bold text-slate-900">{title}</h3>
+        <p id={descId} className="text-xs sm:text-sm text-slate-600 leading-relaxed">{description}</p>
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={onCancel} className="w-full sm:w-auto">
             Cancel
@@ -430,7 +447,7 @@ export function SvgBarChart({
           const pct = Math.max(8, Math.round((val / maxVal) * 100));
           return (
             <div key={idx} className="flex flex-col items-center justify-end h-full gap-1.5 group min-w-0">
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 tabular-nums whitespace-nowrap">
+              <span className="text-[11px] sm:text-[11px] font-bold text-slate-500 tabular-nums whitespace-nowrap">
                 {prefix}
                 {val.toLocaleString()}
               </span>
@@ -440,7 +457,7 @@ export function SvgBarChart({
                   style={{ height: `${pct}%`, backgroundColor: color }}
                 />
               </div>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-600 truncate max-w-full">
+              <span className="text-[11px] sm:text-[11px] font-semibold text-slate-600 truncate max-w-full">
                 {row[labelKey]}
               </span>
             </div>

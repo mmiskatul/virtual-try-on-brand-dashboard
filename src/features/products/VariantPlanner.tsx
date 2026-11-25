@@ -85,11 +85,11 @@ function MultiSelect({
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div aria-hidden="true" className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute left-0 right-0 z-20 mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
             {groups.map((g) => (
               <div key={g.group} className="mb-2">
-                <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{g.group}</p>
+                <p className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{g.group}</p>
                 <div className="grid grid-cols-2 gap-1">
                   {g.options.map((option) => (
                     <button
@@ -111,7 +111,7 @@ function MultiSelect({
               </div>
             ))}
             <div className="border-t border-slate-100 pt-2">
-              <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{customLabel}</p>
+              <p className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{customLabel}</p>
               <div className="flex gap-1.5">
                 <input
                   value={custom}
@@ -204,7 +204,7 @@ function PhotoSlot({
           <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-slate-500">
             <ImagePlus className="h-5 w-5" />
             <span className="font-semibold">Upload photo</span>
-            <span className="text-[10px] text-slate-400">PNG, JPG or WEBP</span>
+            <span className="text-[11px] text-slate-400">PNG, JPG or WEBP</span>
           </button>
         )}
         {busy && (
@@ -384,7 +384,7 @@ export function VariantPlanner({
                     <span className="h-3.5 w-3.5 rounded-full border border-slate-300 bg-slate-200" />
                   )}
                   {section.color === NO_COLOR ? 'Your product' : section.color}
-                  <span className={`rounded-full px-1.5 text-[10px] tabular-nums ${isActive ? 'bg-white/20' : 'bg-slate-100 text-slate-600'}`}>{sectionTotal(section)}</span>
+                  <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${isActive ? 'bg-white/20' : 'bg-slate-100 text-slate-600'}`}>{sectionTotal(section)}</span>
                   {status === 'ok' ? (
                     <CheckCircle2 className={`h-3.5 w-3.5 ${isActive ? 'text-emerald-300' : 'text-emerald-500'}`} />
                   ) : (
@@ -495,7 +495,7 @@ export function VariantPlanner({
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="text-[10px] uppercase tracking-wider text-slate-400">
+                  <thead className="text-[11px] uppercase tracking-wider text-slate-400">
                     <tr>
                       <th className="px-4 py-2">Size</th>
                       <th className="px-2 py-2">In stock</th>
@@ -515,7 +515,7 @@ export function VariantPlanner({
                           </td>
                           <td className="px-2 py-2 font-semibold tabular-nums text-slate-700">
                             {inStock}
-                            {belowAlert && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">below alert</span>}
+                            {belowAlert && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">below alert</span>}
                           </td>
                           <td className="px-2 py-2">
                             <input

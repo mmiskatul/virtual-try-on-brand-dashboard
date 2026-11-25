@@ -43,7 +43,7 @@ function isLive(p: Product) {
 
 function StockLabel({ p }: { p: Product }) {
   if (p.stock <= 0) {
-    return <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">Out of stock</span>;
+    return <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">Out of stock</span>;
   }
   const low = p.stock < (p.lowStockThreshold || 5);
   const lowSizes = lowSizesOfVariants(p.variants);
@@ -53,7 +53,7 @@ function StockLabel({ p }: { p: Product }) {
         {p.stock} {low ? 'left' : 'units'}
       </span>
       {lowSizes.length > 0 && (
-        <span className="mt-0.5 block text-[10px] font-semibold text-amber-700" title="Sizes below their low-stock alert">
+        <span className="mt-0.5 block text-[11px] font-semibold text-amber-700" title="Sizes below their low-stock alert">
           Low: {lowSizes.map((s) => `${s.size} (${s.stock})`).join(', ')}
         </span>
       )}
@@ -295,7 +295,7 @@ export function ProductsListView() {
                 </Button>
                 {moreOpen && (
                   <>
-                    <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
+                    <div aria-hidden="true" className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
                     <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white text-xs font-semibold shadow-lg">
                       {canEdit && (
                         <button
@@ -387,7 +387,7 @@ export function ProductsListView() {
                   >
                     {c.label}
                     <span
-                      className={`rounded-full px-1.5 text-[10px] tabular-nums ${
+                      className={`rounded-full px-1.5 text-[11px] tabular-nums ${
                         chip === c.key ? 'bg-white/20' : 'bg-slate-100 text-slate-700'
                       }`}
                     >
@@ -479,7 +479,7 @@ export function ProductsListView() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                    <thead className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500">
                       <tr>
                         <th className="w-8 px-3 py-3">
                           <input
@@ -551,7 +551,7 @@ export function ProductsListView() {
                                   onClick={() => void toggleVisibility(p, field)}
                                   aria-label={`${label} for ${p.name}: ${on ? 'on' : 'off'}`}
                                   aria-pressed={on}
-                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold disabled:opacity-50 ${
+                                  className={`rounded-full border px-2.5 py-1 text-[11px] font-bold disabled:opacity-50 ${
                                     on ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-400 line-through'
                                   }`}
                                 >
