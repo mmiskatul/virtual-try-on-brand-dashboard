@@ -1198,7 +1198,7 @@ export function DashboardShell({
 
         {/* Main Workspace Content */}
         <main
-          className={`flex-1 px-3.5 py-4 pb-24 sm:p-6 lg:p-8 lg:pb-8 max-w-[1440px] w-full mx-auto space-y-5 sm:space-y-6 transition-opacity duration-150 ${
+          className={`flex-1 px-3.5 py-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 lg:p-8 lg:pb-8 max-w-[1440px] w-full mx-auto space-y-5 sm:space-y-6 transition-opacity duration-150 ${
             pendingHref && pendingHref !== pathname ? 'opacity-70' : 'opacity-100'
           }`}
         >
@@ -1217,7 +1217,7 @@ export function DashboardShell({
         {/* Mobile Quick Dock (< lg) */}
         <nav
           aria-label="Mobile quick navigation"
-          className="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(15,23,42,0.06)]"
+          className="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-[0_-4px_20px_rgba(15,23,42,0.06)]"
         >
           {[
             { label: 'Overview', href: '/dashboard', icon: LayoutDashboard, match: (p: string) => p === '/dashboard' },

@@ -1367,7 +1367,7 @@ export function ProductEditorView({ existingProductId }: { existingProductId?: s
         </div>
 
         {/* Sticky action bar */}
-        <div className="sticky bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+        <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] lg:bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Button variant="outline" size="sm" disabled={step === 0} onClick={() => goToStep(step - 1)}>
               Back

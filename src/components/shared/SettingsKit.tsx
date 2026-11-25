@@ -85,7 +85,7 @@ export function SaveBar({
   label?: string;
 }) {
   return (
-    <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+    <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
       <Button type="button" size="sm" disabled={!canEdit || saving || !dirty} onClick={onSave} className="gap-1.5">
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
         {saving ? 'Saving…' : label}
