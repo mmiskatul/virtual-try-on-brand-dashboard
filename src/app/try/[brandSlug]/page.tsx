@@ -11,6 +11,7 @@ import { brandWorkspaceApi } from '../../../services';
 import { Product } from '../../../types';
 import { SafeImage } from '../../../components/shared/UiPrimitives';
 import { RealImage } from '../../../components/shared/RealImage';
+import { StyleChips, styleChoicesFor } from '../../../components/shared/StyleChips';
 import { BrandLook, resolveBrandLook } from '../../../lib/brand-look';
 
 // Sample photos, one for each choice, used until the shopper uploads their own.
@@ -81,6 +82,8 @@ export default function BrandTryOnPage() {
   const [size, setSize] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [garmentSizePick, setGarmentSizePick] = useState<{ id: string; value: string } | null>(null);
+  // Styling choices belong to one garment, so they are kept with that garment's id and clear themselves when another is picked.
+  const [stylePick, setStylePick] = useState<{ id: string; value: string[] } | null>(null);
 
   const [personImg, setPersonImg] = useState('');
   const [consent, setConsent] = useState(false);
@@ -167,6 +170,7 @@ export default function BrandTryOnPage() {
     return garmentSizes.find((g) => g.inStock)?.name || '';
   })();
   const compare = fitNote(size, garmentSize);
+  const styleOptions = stylePick && stylePick.id === activeGarment?.id ? stylePick.value : [];
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading the try-on page...</div>;
@@ -234,6 +238,7 @@ export default function BrandTryOnPage() {
       gender,
       size,
       ...(garmentSize ? { garmentSize } : {}),
+      ...(styleOptions.length ? { styleOptions } : {}),
       consentGiven: tryOnCfg.requireConsent ? consent : true,
     });
     if (res.mode === 'live_ai' && res.resultUrl) {
@@ -474,6 +479,16 @@ export default function BrandTryOnPage() {
                         You wear <strong>{size}</strong> and chose garment size <strong>{garmentSize}</strong>.{compare ? ` ${compare}` : ''}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {activeGarment && styleChoicesFor(activeGarment.tryOnCategory).length > 0 && (
+                  <div className="mt-5 border-t border-stone-200 pt-5">
+                    <StyleChips
+                      category={activeGarment.tryOnCategory}
+                      value={styleOptions}
+                      onChange={(value) => setStylePick({ id: activeGarment.id, value })}
+                    />
                   </div>
                 )}
 
